@@ -138,8 +138,8 @@ export function NaradJi() {
           style={{ maxHeight: "calc(100vh - 120px)" }}>
           <div className="flex items-center gap-3 px-4 py-3 text-white"
             style={{ background: "linear-gradient(135deg, #7b1f1f 0%, #a52929 100%)" }}>
-            <div className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center text-xl shadow-md shrink-0">
-              🪗
+            <div className="w-11 h-11 rounded-full bg-amber-100 overflow-hidden shadow-md shrink-0 border-2 border-amber-300">
+              <img src={`${import.meta.env.BASE_URL}images/naradji-avatar.png`} alt="Narad Ji" className="w-full h-full object-cover object-top" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm leading-tight">Narad Ji</p>
@@ -155,8 +155,8 @@ export function NaradJi() {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
                 {msg.from === "bot" && (
-                  <div className="w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center text-sm shrink-0 mt-1 mr-2 shadow">
-                    🪗
+                  <div className="w-8 h-8 rounded-full bg-amber-100 overflow-hidden shrink-0 mt-1 mr-2 shadow border border-amber-200">
+                    <img src={`${import.meta.env.BASE_URL}images/naradji-avatar.png`} alt="Narad Ji" className="w-full h-full object-cover object-top" />
                   </div>
                 )}
                 <div className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm whitespace-pre-line leading-relaxed shadow-sm ${
@@ -222,16 +222,18 @@ export function NaradJi() {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-4 sm:right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95"
-        style={{ background: "linear-gradient(135deg, #7b1f1f 0%, #a52929 100%)" }}
+        className="fixed bottom-5 right-4 sm:right-6 z-50 w-16 h-16 rounded-full shadow-xl flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95 overflow-hidden border-4 border-amber-300"
+        style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8a000 100%)" }}
         aria-label="Open Narad Ji chatbot">
         {open ? (
-          <ChevronDown className="w-6 h-6" />
+          <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #7b1f1f 0%, #a52929 100%)" }}>
+            <ChevronDown className="w-6 h-6 text-white" />
+          </div>
         ) : (
-          <span className="text-2xl leading-none">🪗</span>
+          <img src={`${import.meta.env.BASE_URL}images/naradji-avatar.png`} alt="Narad Ji" className="w-full h-full object-cover object-top" />
         )}
         {!open && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full border-2 border-white animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse" />
         )}
       </button>
     </>
