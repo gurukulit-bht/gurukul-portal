@@ -1,0 +1,95 @@
+Create a modern, responsive website for Bhartiya Hindu Temple’s Gurukul Program, designed for parents and families to explore and enroll children in classes such as Hindi, Sanskrit, Dharma, Bhajans, and Cultural Education.
+
+🎯 Goals
+Provide a welcoming, spiritual, and culturally rich experience
+Make it easy for parents to understand programs and register children
+Highlight temple values, tradition, and community learning
+🏠 Home Page Requirements
+
+Design a visually appealing homepage with the following sections:
+
+1. Hero Section
+Title: “Bhartiya Hindu Temple Gurukul”
+Subtitle: “Nurturing Values, Language, and Culture in the Next Generation”
+Background: Temple, kids learning, or cultural imagery
+CTA Buttons:
+“Explore Courses”
+“Register Now”
+2. About Gurukul (Short Section)
+Brief description of Gurukul mission and values
+Focus on Dharma, Sanskriti, and holistic education
+Link to full “About Us” page
+3. Courses Overview
+Highlight key courses:
+Hindi
+Sanskrit
+Dharma / Shlokas
+Bhajans / Music
+Show:
+Age groups
+Levels (Beginner, Intermediate)
+Quick “Learn More” or “Enroll” buttons
+4. Announcements / Updates
+Show latest 3–5 announcements:
+New session registration
+Holidays
+Events
+Highlight urgent notices
+5. Upcoming Events / Calendar Preview
+Show next few events/classes
+Example:
+First Day of Classes
+Guru Purnima Celebration
+Annual Day
+6. Why Choose Gurukul
+Bullet points:
+Cultural and value-based education
+Experienced volunteers and teachers
+Community-driven learning
+Structured curriculum
+7. Testimonials (Optional)
+Parent feedback or student experiences
+8. Call to Action Section
+“Enroll Your Child Today”
+Button: “Register Now”
+9. Footer
+Temple contact details
+Address + map
+Social media links
+Quick links to key pages
+📌 Menu / Navigation Structure
+
+Create a simple, intuitive top navigation menu:
+
+Home
+About Us
+Courses Offered
+Announcements
+Calendar
+Parents Portal (Login/Register)
+Contact Us
+🎨 Design Guidelines
+Theme: Traditional + modern (Indian cultural aesthetics)
+Colors:
+Saffron / Orange
+Deep Red / Maroon
+Gold accents
+Fonts:
+Clean modern font for readability
+Optional Sanskrit-style heading font
+Use cultural icons (Om, diya, temple bells) subtly
+📱 Technical Requirements
+Fully responsive (mobile-first)
+Fast loading
+SEO-friendly structure
+Easy navigation for non-technical users
+Accessibility compliant
+🧩 Tone & Content Style
+Warm, welcoming, community-focused
+Family-friendly language
+Simple and clear for parents
+🚀 Optional Enhancements (if supported)
+Login/Register button for parents
+Dynamic announcements feed
+Calendar integration
+Course filtering by age

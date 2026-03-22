@@ -1,0 +1,26 @@
+packages:
+  "framer-motion": "For elegant page transitions and scroll animations fitting the premium aesthetic"
+  "date-fns": "For formatting calendar and event dates nicely"
+  "react-hook-form": "For robust form state management in Parents Portal and Contact"
+  "@hookform/resolvers": "For integrating Zod validation with forms"
+  "clsx": "For constructing className strings conditionally"
+  "tailwind-merge": "For merging tailwind classes safely"
+
+images:
+  - path: "artifacts/gurukul/public/images/hero-mandala.png"
+    description: "Elegant, abstract glowing mandala pattern in deep saffron, gold, and warm red tones. Subtle dark background, high premium quality, spiritual and traditional Indian aesthetic."
+    aspect_ratio: "16:9"
+  - path: "artifacts/gurukul/public/images/about-temple.png"
+    description: "Beautiful architectural silhouette of a traditional Hindu temple against a warm sunrise sky with soft glowing clouds, golden hour lighting."
+    aspect_ratio: "16:9"
+  - path: "artifacts/gurukul/public/images/lotus-motif.png"
+    description: "A simple, elegant line-art lotus flower glowing in gold on a transparent background, minimalist."
+    aspect_ratio: "1:1"
+  - path: "artifacts/gurukul/public/images/pattern-bg.png"
+    description: "Very subtle seamless traditional Indian paisley or floral pattern in faint warm grey/gold, to be used as a soft background texture."
+    aspect_ratio: "16:9"
+
+notes:
+  - API hooks are imported from @workspace/api-client-react
+  - Forms use react-hook-form with manual Zod schemas matching the API schemas
+  - Using framer-motion for a smooth, premium feel appropriate for a cultural institution

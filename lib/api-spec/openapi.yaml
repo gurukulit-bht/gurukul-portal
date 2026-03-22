@@ -1,15 +1,22 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for Bhartiya Hindu Temple Gurukul
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: announcements
+    description: Announcement operations
+  - name: events
+    description: Event operations
+  - name: courses
+    description: Course operations
+  - name: contact
+    description: Contact form operations
 paths:
   /healthz:
     get:
@@ -24,6 +31,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /announcements:
+    get:
+      operationId: listAnnouncements
+      tags: [announcements]
+      summary: List announcements
+      description: Returns list of announcements
+      responses:
+        "200":
+          description: List of announcements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Announcement"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List events
+      description: Returns list of upcoming events
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /courses:
+    get:
+      operationId: listCourses
+      tags: [courses]
+      summary: List courses
+      description: Returns list of courses offered
+      responses:
+        "200":
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [contact]
+      summary: Submit contact form
+      description: Submit a contact or registration inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactRequest"
+      responses:
+        "200":
+          description: Contact form submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +110,114 @@ components:
       required:
         - status
 
+    Announcement:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        date:
+          type: string
+        isUrgent:
+          type: boolean
+        category:
+          type: string
+      required:
+        - id
+        - title
+        - content
+        - date
+        - isUrgent
+        - category
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        location:
+          type: string
+        category:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - date
+        - time
+        - location
+        - category
+
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        ageGroup:
+          type: string
+        level:
+          type: string
+        schedule:
+          type: string
+        instructor:
+          type: string
+        icon:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - ageGroup
+        - level
+        - schedule
+        - instructor
+        - icon
+
+    ContactRequest:
+      type: object
+      properties:
+        parentName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        childName:
+          type: string
+        childAge:
+          type: integer
+        courseInterest:
+          type: string
+        message:
+          type: string
+      required:
+        - parentName
+        - email
+        - childName
+        - courseInterest
+
+    ContactResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - message
