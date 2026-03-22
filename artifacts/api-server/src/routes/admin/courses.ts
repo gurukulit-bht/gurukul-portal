@@ -9,7 +9,7 @@ import {
   studentsTable,
   paymentsTable,
 } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -26,6 +26,21 @@ async function buildAdminCourses() {
     })
     .from(teacherAssignmentsTable)
     .leftJoin(teachersTable, eq(teacherAssignmentsTable.teacherId, teachersTable.id));
+
+  // Live enrollment counts per level from the enrollments table
+  const enrollmentCounts = await db
+    .select({
+      courseLevelId: enrollmentsTable.courseLevelId,
+      count: sql<number>`cast(count(*) as int)`,
+    })
+    .from(enrollmentsTable)
+    .where(sql`${enrollmentsTable.status} = 'Enrolled'`)
+    .groupBy(enrollmentsTable.courseLevelId);
+
+  const countMap: Record<number, number> = {};
+  for (const row of enrollmentCounts) {
+    countMap[row.courseLevelId] = row.count;
+  }
 
   return courses.map((course) => {
     const courseLevels = levels
@@ -48,7 +63,7 @@ async function buildAdminCourses() {
           className: l.className,
           schedule: l.schedule ?? "",
           teacher: teacherNames.join(" / ") || "TBD",
-          enrolled: l.enrolled,
+          enrolled: countMap[l.id] ?? 0,   // live count from enrollments table
           capacity: l.capacity,
           status: l.status,
         };
@@ -109,16 +124,16 @@ router.get("/levels/:id/students", async (req, res) => {
 });
 
 // PUT /api/admin/courses/levels/:id
+// Note: enrolled count is computed live from the enrollments table — not editable here.
 router.put("/levels/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { schedule, capacity, enrolled, status } = req.body;
+    const { schedule, capacity, status } = req.body;
     const [level] = await db
       .update(courseLevelsTable)
       .set({
         schedule: schedule || undefined,
         capacity: capacity !== undefined ? parseInt(capacity) : undefined,
-        enrolled: enrolled !== undefined ? parseInt(enrolled) : undefined,
         status: status || undefined,
       })
       .where(eq(courseLevelsTable.id, id))

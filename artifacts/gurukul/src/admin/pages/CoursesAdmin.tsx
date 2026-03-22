@@ -109,7 +109,7 @@ function LevelRow({
     <div className="border-b border-border last:border-b-0">
       {isEditing ? (
         <div className="px-6 py-4 space-y-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Schedule</Label>
               <Input value={editForm.schedule ?? ""} onChange={(e) => onChange({ schedule: e.target.value })} className="rounded-lg h-8 text-sm" />
@@ -117,10 +117,6 @@ function LevelRow({
             <div className="space-y-1">
               <Label className="text-xs">Capacity</Label>
               <Input type="number" min={0} value={editForm.capacity ?? 0} onChange={(e) => onChange({ capacity: +e.target.value })} className="rounded-lg h-8 text-sm" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Enrolled</Label>
-              <Input type="number" min={0} value={editForm.enrolled ?? 0} onChange={(e) => onChange({ enrolled: +e.target.value })} className="rounded-lg h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Status</Label>
@@ -294,7 +290,6 @@ export default function CoursesAdmin() {
       const updated = await adminApi.courses.updateLevel(editingLevel.levelId, {
         schedule: editForm.schedule,
         capacity: editForm.capacity,
-        enrolled: editForm.enrolled,
         status: editForm.status,
       });
       setCourses((prev) =>
