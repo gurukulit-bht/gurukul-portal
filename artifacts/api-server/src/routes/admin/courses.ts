@@ -5,6 +5,9 @@ import {
   courseLevelsTable,
   teacherAssignmentsTable,
   teachersTable,
+  enrollmentsTable,
+  studentsTable,
+  paymentsTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -68,6 +71,40 @@ router.get("/", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to fetch admin courses");
     res.status(500).json({ error: "Failed to fetch admin courses" });
+  }
+});
+
+// GET /api/admin/courses/levels/:id/students
+// Returns all students enrolled in a specific course level, with payment status.
+router.get("/levels/:id/students", async (req, res) => {
+  try {
+    const levelId = parseInt(req.params.id);
+    const rows = await db
+      .select({
+        enrollmentId: enrollmentsTable.id,
+        enrollDate: enrollmentsTable.enrollDate,
+        enrollStatus: enrollmentsTable.status,
+        studentId: studentsTable.id,
+        studentCode: studentsTable.studentCode,
+        studentName: studentsTable.name,
+        parentName: studentsTable.parentName,
+        email: studentsTable.email,
+        phone: studentsTable.phone,
+        paymentStatus: paymentsTable.paymentStatus,
+        amountDue: paymentsTable.amountDue,
+        amountPaid: paymentsTable.amountPaid,
+        paymentDate: paymentsTable.paymentDate,
+      })
+      .from(enrollmentsTable)
+      .innerJoin(studentsTable, eq(enrollmentsTable.studentId, studentsTable.id))
+      .leftJoin(paymentsTable, eq(paymentsTable.enrollmentId, enrollmentsTable.id))
+      .where(eq(enrollmentsTable.courseLevelId, levelId))
+      .orderBy(studentsTable.name);
+
+    res.json(rows);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch level students");
+    res.status(500).json({ error: "Failed to fetch level students" });
   }
 });
 

@@ -46,5 +46,6 @@ export const adminApi = {
   courses: {
     list: () => request<unknown[]>("GET", "/courses"),
     updateLevel: (levelId: number, data: unknown) => request("PUT", `/courses/levels/${levelId}`, data),
+    levelStudents: (levelId: number) => request<unknown[]>("GET", `/courses/levels/${levelId}/students`),
   },
 };
