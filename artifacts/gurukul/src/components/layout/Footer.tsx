@@ -49,11 +49,11 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex gap-3 text-white/80">
                 <MapPin className="w-5 h-5 text-accent shrink-0" />
-                <span>12345 Temple Road<br/>City, State 12345</span>
+                <span>3671 Hyatts Rd<br/>Powell, OH 43065</span>
               </li>
               <li className="flex gap-3 text-white/80">
                 <Phone className="w-5 h-5 text-accent shrink-0" />
-                <span>(555) 123-4567</span>
+                <span>(740) 369-0717</span>
               </li>
               <li className="flex gap-3 text-white/80">
                 <Mail className="w-5 h-5 text-accent shrink-0" />

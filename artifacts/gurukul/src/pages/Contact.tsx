@@ -79,8 +79,8 @@ export default function Contact() {
                   <div>
                     <h4 className="font-bold text-lg mb-1">Temple Location</h4>
                     <p className="text-white/80 leading-relaxed">
-                      12345 Temple Road<br />
-                      City, State 12345
+                      3671 Hyatts Rd<br />
+                      Powell, OH 43065
                     </p>
                   </div>
                 </div>
@@ -92,8 +92,7 @@ export default function Contact() {
                   <div>
                     <h4 className="font-bold text-lg mb-1">Phone</h4>
                     <p className="text-white/80 leading-relaxed">
-                      Main: (555) 123-4567<br />
-                      Gurukul Admin: (555) 987-6543
+                      (740) 369-0717
                     </p>
                   </div>
                 </div>
