@@ -102,6 +102,31 @@ export default function Home() {
         </div>
       )}
 
+      {/* Shloka / Motto Section */}
+      <section className="py-16 bg-gradient-to-r from-secondary via-secondary/95 to-secondary relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none opacity-10">
+          <img src={`${import.meta.env.BASE_URL}images/hero-mandala.png`} alt="" className="w-full h-full object-cover" />
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
+        >
+          <div className="text-accent text-4xl mb-6 opacity-60">॥</div>
+          <p className="text-2xl md:text-3xl font-display text-white leading-relaxed tracking-wide mb-6" lang="sa">
+            विद्या ददाति विनयं विनयाद्याति पात्रताम् ।<br />
+            पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम् ॥
+          </p>
+          <div className="w-16 h-0.5 bg-accent mx-auto mb-6" />
+          <p className="text-white/75 text-base md:text-lg italic leading-relaxed max-w-2xl mx-auto">
+            "Knowledge gives humility, from humility comes worthiness, from worthiness one earns wealth, from wealth one follows dharma, and from dharma comes true happiness."
+          </p>
+          <p className="text-accent/70 text-sm mt-4 font-medium tracking-widest uppercase">— Hitopadesa</p>
+        </motion.div>
+      </section>
+
       {/* Quick Links Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
