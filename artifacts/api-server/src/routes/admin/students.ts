@@ -7,50 +7,56 @@ import {
   coursesTable,
   paymentsTable,
 } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+/**
+ * Returns one row per enrollment, not one row per student.
+ * A student enrolled in two courses will appear twice — once
+ * for each enrollment with its own payment record.
+ */
 async function buildStudentList() {
-  const students = await db.select().from(studentsTable).orderBy(studentsTable.studentCode);
-  const enrollments = await db.select().from(enrollmentsTable);
-  const courseLevels = await db.select().from(courseLevelsTable);
-  const courses = await db.select().from(coursesTable);
-  const payments = await db.select().from(paymentsTable);
+  const rows = await db
+    .select({
+      studentCode:   studentsTable.studentCode,
+      studentName:   studentsTable.name,
+      parentName:    studentsTable.parentName,
+      email:         studentsTable.email,
+      phone:         studentsTable.phone,
+      enrollmentId:  enrollmentsTable.id,
+      enrollDate:    enrollmentsTable.enrollDate,
+      enrollStatus:  enrollmentsTable.status,
+      levelNumber:   courseLevelsTable.levelNumber,
+      schedule:      courseLevelsTable.schedule,
+      courseName:    coursesTable.name,
+      paymentStatus: paymentsTable.paymentStatus,
+      amountDue:     paymentsTable.amountDue,
+      amountPaid:    paymentsTable.amountPaid,
+      paymentMethod: paymentsTable.paymentMethod,
+      receiptId:     paymentsTable.receiptId,
+    })
+    .from(studentsTable)
+    .leftJoin(enrollmentsTable, eq(enrollmentsTable.studentId, studentsTable.id))
+    .leftJoin(courseLevelsTable, eq(courseLevelsTable.id, enrollmentsTable.courseLevelId))
+    .leftJoin(coursesTable, eq(coursesTable.id, courseLevelsTable.courseId))
+    .leftJoin(paymentsTable, eq(paymentsTable.enrollmentId, enrollmentsTable.id))
+    .orderBy(asc(studentsTable.studentCode), asc(enrollmentsTable.id));
 
-  const courseMap: Record<number, string> = {};
-  courses.forEach((c) => { courseMap[c.id] = c.name; });
-
-  const levelMap: Record<number, { levelNumber: number; schedule: string; courseId: number }> = {};
-  courseLevels.forEach((l) => {
-    levelMap[l.id] = { levelNumber: l.levelNumber, schedule: l.schedule ?? "", courseId: l.courseId };
-  });
-
-  const paymentMap: Record<number, typeof payments[0]> = {};
-  payments.forEach((p) => { paymentMap[p.enrollmentId] = p; });
-
-  return students.map((s) => {
-    const enrollment = enrollments.find((e) => e.studentId === s.id);
-    const level = enrollment ? levelMap[enrollment.courseLevelId] : null;
-    const payment = enrollment ? paymentMap[enrollment.id] : null;
-    const courseName = level ? courseMap[level.courseId] : "";
-
-    return {
-      id: s.studentCode,
-      dbId: s.id,
-      name: s.name,
-      parentName: s.parentName,
-      course: courseName,
-      level: level ? `Level ${level.levelNumber}` : "",
-      timing: level?.schedule ?? "",
-      enrollDate: enrollment?.enrollDate ?? "",
-      paymentStatus: payment?.paymentStatus ?? "Pending",
-      amountDue: parseFloat(payment?.amountDue ?? "150"),
-      amountPaid: parseFloat(payment?.amountPaid ?? "0"),
-      paymentMethod: payment?.paymentMethod ?? "-",
-      receiptId: payment?.receiptId ?? "-",
-    };
-  });
+  return rows.map((r) => ({
+    id:            r.studentCode,
+    name:          r.studentName,
+    parentName:    r.parentName,
+    course:        r.courseName ?? "",
+    level:         r.levelNumber != null ? `Level ${r.levelNumber}` : "",
+    timing:        r.schedule ?? "",
+    enrollDate:    r.enrollDate ?? "",
+    paymentStatus: (r.paymentStatus ?? "Pending") as "Paid" | "Pending" | "Overdue",
+    amountDue:     parseFloat(r.amountDue ?? "150"),
+    amountPaid:    parseFloat(r.amountPaid ?? "0"),
+    paymentMethod: r.paymentMethod ?? "-",
+    receiptId:     r.receiptId ?? "-",
+  }));
 }
 
 // GET /api/admin/students
