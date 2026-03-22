@@ -1,18 +1,18 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
+import teachersRouter from "./teachers";
+import studentsRouter from "./students";
+import inventoryRouter from "./inventory";
 import announcementsRouter from "./announcements";
 import eventsRouter from "./events";
 import coursesRouter from "./courses";
-import contactRouter from "./contact";
-import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
-router.use(healthRouter);
+router.use("/teachers", teachersRouter);
+router.use("/students", studentsRouter);
+router.use("/inventory", inventoryRouter);
 router.use("/announcements", announcementsRouter);
 router.use("/events", eventsRouter);
 router.use("/courses", coursesRouter);
-router.use("/contact", contactRouter);
-router.use("/admin", adminRouter);
 
 export default router;

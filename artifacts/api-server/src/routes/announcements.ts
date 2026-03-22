@@ -18,7 +18,9 @@ router.get("/", async (req, res) => {
         content: a.content,
         date: a.date,
         isUrgent: a.isUrgent,
+        isActive: a.isActive,
         category: a.category,
+        expiryDate: a.expiryDate,
       }))
     );
   } catch (err) {

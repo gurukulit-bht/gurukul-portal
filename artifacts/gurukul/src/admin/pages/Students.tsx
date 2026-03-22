@@ -1,17 +1,24 @@
-import { useState, useMemo } from "react";
-import { mockStudents, Student } from "../mockData";
-import { Search, Download, ChevronUp, ChevronDown, Filter } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { adminApi } from "@/lib/adminApi";
+import { Search, Download, ChevronUp, ChevronDown, Filter, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const courses = ["All", "Hindi", "Dharma", "Telugu", "Tamil", "Sanskrit", "Gujarati"];
+type Student = {
+  id: string; name: string; parentName: string; course: string; level: string;
+  timing: string; enrollDate: string; paymentStatus: "Paid" | "Pending" | "Overdue";
+  amountDue: number; amountPaid: number; paymentMethod: string; receiptId: string;
+};
+
+const coursesList = ["All", "Hindi", "Dharma", "Telugu", "Tamil", "Sanskrit", "Gujarati"];
 const paymentStatuses = ["All", "Paid", "Pending", "Overdue"];
 const levels = ["All", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6", "Level 7"];
 
 type SortKey = keyof Student;
 
 export default function Students() {
-  const [students] = useState<Student[]>(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterCourse, setFilterCourse] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
@@ -20,8 +27,12 @@ export default function Students() {
   const [sortAsc, setSortAsc] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
+  useEffect(() => {
+    adminApi.students.list().then((d) => setStudents(d as Student[])).finally(() => setLoading(false));
+  }, []);
+
   const filtered = useMemo(() => {
-    let data = students.filter(s =>
+    let data = students.filter((s) =>
       (filterCourse === "All" || s.course === filterCourse) &&
       (filterStatus === "All" || s.paymentStatus === filterStatus) &&
       (filterLevel === "All" || s.level === filterLevel) &&
@@ -38,12 +49,12 @@ export default function Students() {
     return data;
   }, [students, search, filterCourse, filterStatus, filterLevel, sortKey, sortAsc]);
 
-  const totalPaid = filtered.filter(s => s.paymentStatus === "Paid").reduce((a, s) => a + s.amountPaid, 0);
-  const totalPending = filtered.filter(s => s.paymentStatus !== "Paid").reduce((a, s) => a + (s.amountDue - s.amountPaid), 0);
-  const totalOverdue = filtered.filter(s => s.paymentStatus === "Overdue").length;
+  const totalPaid = filtered.filter((s) => s.paymentStatus === "Paid").reduce((a, s) => a + s.amountPaid, 0);
+  const totalPending = filtered.filter((s) => s.paymentStatus !== "Paid").reduce((a, s) => a + (s.amountDue - s.amountPaid), 0);
+  const totalOverdue = filtered.filter((s) => s.paymentStatus === "Overdue").length;
 
   function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortAsc(a => !a);
+    if (sortKey === key) setSortAsc((a) => !a);
     else { setSortKey(key); setSortAsc(true); }
   }
 
@@ -54,15 +65,19 @@ export default function Students() {
 
   function exportCSV() {
     const headers = ["Student ID", "Name", "Parent Name", "Course", "Level", "Timing", "Enroll Date", "Payment Status", "Amount Due", "Amount Paid", "Method", "Receipt ID"];
-    const rows = filtered.map(s => [s.id, s.name, s.parentName, s.course, s.level, s.timing, s.enrollDate, s.paymentStatus, s.amountDue, s.amountPaid, s.paymentMethod, s.receiptId]);
-    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const rows = filtered.map((s) => [s.id, s.name, s.parentName, s.course, s.level, s.timing, s.enrollDate, s.paymentStatus, s.amountDue, s.amountPaid, s.paymentMethod, s.receiptId]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gurukul-students.csv"; a.click();
   }
 
   const statusBadge: Record<string, string> = {
-    Paid: "bg-green-100 text-green-700", Pending: "bg-orange-100 text-orange-700", Overdue: "bg-red-100 text-red-700"
+    Paid: "bg-green-100 text-green-700", Pending: "bg-orange-100 text-orange-700", Overdue: "bg-red-100 text-red-700",
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -98,7 +113,7 @@ export default function Students() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search by name, parent, or ID..." className="pl-9 rounded-xl" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Search by name, parent, or ID..." className="pl-9 rounded-xl" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2 rounded-xl shrink-0">
           <Filter className="w-4 h-4" /> Filters
@@ -110,7 +125,7 @@ export default function Students() {
           <div className="space-y-1.5 min-w-32">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</label>
             <div className="flex flex-wrap gap-1">
-              {courses.map(c => (
+              {coursesList.map((c) => (
                 <button key={c} onClick={() => setFilterCourse(c)} className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${filterCourse === c ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>{c}</button>
               ))}
             </div>
@@ -118,7 +133,7 @@ export default function Students() {
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Payment Status</label>
             <div className="flex flex-wrap gap-1">
-              {paymentStatuses.map(s => (
+              {paymentStatuses.map((s) => (
                 <button key={s} onClick={() => setFilterStatus(s)} className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${filterStatus === s ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>{s}</button>
               ))}
             </div>
@@ -126,7 +141,7 @@ export default function Students() {
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Level</label>
             <div className="flex flex-wrap gap-1">
-              {levels.map(l => (
+              {levels.map((l) => (
                 <button key={l} onClick={() => setFilterLevel(l)} className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${filterLevel === l ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>{l}</button>
               ))}
             </div>
@@ -152,7 +167,7 @@ export default function Students() {
                   { label: "Paid", key: "amountPaid" as SortKey },
                   { label: "Method", key: "paymentMethod" as SortKey },
                   { label: "Receipt", key: "receiptId" as SortKey },
-                ].map(col => (
+                ].map((col) => (
                   <th key={col.key} onClick={() => toggleSort(col.key)}
                     className="text-left font-semibold text-muted-foreground px-4 py-3 whitespace-nowrap cursor-pointer hover:text-secondary transition-colors select-none">
                     {col.label}<SortIcon k={col.key} />
@@ -162,7 +177,7 @@ export default function Students() {
             </thead>
             <tbody>
               {filtered.length === 0 && <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">No students found.</td></tr>}
-              {filtered.map(s => (
+              {filtered.map((s) => (
                 <tr key={s.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.id}</td>
                   <td className="px-4 py-3 font-medium text-secondary whitespace-nowrap">{s.name}</td>

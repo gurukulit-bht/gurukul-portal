@@ -1,26 +1,64 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { mockAdminAnnouncements, mockAdminCourses, mockAdminEvents, mockInventory, mockStudents, mockTeachers } from "../mockData";
+import { adminApi } from "@/lib/adminApi";
 import { BookOpen, Users, GraduationCap, Megaphone, Calendar, Package, AlertTriangle, CreditCard, ArrowRight } from "lucide-react";
 
+type Student = { paymentStatus: string; amountDue: number; amountPaid: number };
+type Teacher = { status: string };
+type Announcement = { isActive: boolean };
+type InventoryItem = { id: number; name: string; category: string; currentStock: number; reorderLevel: number };
+type AdminEvent = { id: number; title: string; date: string; time: string };
+type AdminCourse = { id: number; name: string; icon: string; levels: { enrolled: number; capacity: number }[] };
+
 export default function Dashboard() {
-  const totalStudents = mockStudents.length;
-  const pendingPayments = mockStudents.filter(s => s.paymentStatus !== "Paid").length;
-  const overduePayments = mockStudents.filter(s => s.paymentStatus === "Overdue").length;
-  const lowStockItems = mockInventory.filter(i => i.currentStock <= i.reorderLevel).length;
-  const activeCourses = mockAdminCourses.length;
-  const upcomingEvents = mockAdminEvents.filter(e => new Date(e.date) >= new Date()).slice(0, 3);
-  const totalEnrolled = mockAdminCourses.reduce((a, c) => a + c.levels.reduce((b, l) => b + l.enrolled, 0), 0);
-  const totalRevenue = mockStudents.filter(s => s.paymentStatus === "Paid").reduce((a, s) => a + s.amountPaid, 0);
-  const pendingRevenue = mockStudents.filter(s => s.paymentStatus !== "Paid").reduce((a, s) => a + (s.amountDue - s.amountPaid), 0);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [courses, setCourses] = useState<AdminCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      adminApi.students.list().then((d) => setStudents(d as Student[])),
+      adminApi.teachers.list().then((d) => setTeachers(d as Teacher[])),
+      adminApi.announcements.list().then((d) => setAnnouncements(d as Announcement[])),
+      adminApi.inventory.list().then((d) => setInventory(d as InventoryItem[])),
+      adminApi.events.list().then((d) => setEvents(d as AdminEvent[])),
+      adminApi.courses.list().then((d) => setCourses(d as AdminCourse[])),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  const totalStudents = students.length;
+  const pendingPayments = students.filter((s) => s.paymentStatus !== "Paid").length;
+  const overduePayments = students.filter((s) => s.paymentStatus === "Overdue").length;
+  const lowStockItems = inventory.filter((i) => i.currentStock <= i.reorderLevel).length;
+  const activeCourses = courses.length;
+  const upcomingEvents = [...events]
+    .filter((e) => new Date(e.date) >= new Date())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 3);
+  const totalEnrolled = courses.reduce((a, c) => a + c.levels.reduce((b, l) => b + l.enrolled, 0), 0);
+  const totalRevenue = students.filter((s) => s.paymentStatus === "Paid").reduce((a, s) => a + s.amountPaid, 0);
+  const pendingRevenue = students.filter((s) => s.paymentStatus !== "Paid").reduce((a, s) => a + (s.amountDue - s.amountPaid), 0);
 
   const stats = [
     { label: "Active Courses", value: activeCourses, icon: BookOpen, color: "bg-blue-500", link: "/admin/courses" },
     { label: "Total Enrollments", value: totalEnrolled, icon: GraduationCap, color: "bg-green-500", link: "/admin/students" },
-    { label: "Total Teachers", value: mockTeachers.filter(t => t.status === "Active").length, icon: Users, color: "bg-purple-500", link: "/admin/teachers" },
+    { label: "Total Teachers", value: teachers.filter((t) => t.status === "Active").length, icon: Users, color: "bg-purple-500", link: "/admin/teachers" },
     { label: "Pending Payments", value: pendingPayments, icon: CreditCard, color: "bg-orange-500", link: "/admin/students" },
-    { label: "Announcements", value: mockAdminAnnouncements.filter(a => a.isActive).length, icon: Megaphone, color: "bg-primary", link: "/admin/announcements" },
+    { label: "Announcements", value: announcements.filter((a) => a.isActive).length, icon: Megaphone, color: "bg-primary", link: "/admin/announcements" },
     { label: "Low Stock Alerts", value: lowStockItems, icon: Package, color: "bg-red-500", link: "/admin/inventory" },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground text-sm">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -41,7 +79,7 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.map(stat => (
+        {stats.map((stat) => (
           <Link key={stat.label} href={stat.link} className="bg-white rounded-2xl p-5 shadow-sm border border-border hover:shadow-md transition-all group">
             <div className="flex items-start justify-between">
               <div>
@@ -91,7 +129,8 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {upcomingEvents.map(event => (
+            {upcomingEvents.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No upcoming events</p>}
+            {upcomingEvents.map((event) => (
               <div key={event.id} className="flex gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex flex-col items-center justify-center text-primary shrink-0">
                   <Calendar className="w-4 h-4" />
@@ -113,10 +152,10 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {mockAdminCourses.map(course => {
+            {courses.map((course) => {
               const enrolled = course.levels.reduce((a, l) => a + l.enrolled, 0);
               const capacity = course.levels.reduce((a, l) => a + l.capacity, 0);
-              const pct = Math.round((enrolled / capacity) * 100);
+              const pct = capacity > 0 ? Math.round((enrolled / capacity) * 100) : 0;
               return (
                 <div key={course.id} className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -140,7 +179,7 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="space-y-2">
-            {mockInventory.filter(i => i.currentStock <= i.reorderLevel).map(item => (
+            {inventory.filter((i) => i.currentStock <= i.reorderLevel).map((item) => (
               <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
                 <div>
                   <div className="text-sm font-medium text-red-800">{item.name}</div>

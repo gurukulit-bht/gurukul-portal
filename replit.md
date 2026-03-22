@@ -18,11 +18,24 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Gurukul Admin Portal
 
-Accessible at `/admin/login`. Credentials: `gurukuluser01` / `gurukuladmin`.
+Accessible at `/admin`. Credentials: `gurukuluser01` / `gurukuladmin`.
 
-Pages: Dashboard, Announcements, Calendar, Courses & Classes (7 levels each), Teacher Assignment, Students & Payments, Inventory, Settings.
+Pages: Dashboard, Teachers, Students & Payments, Inventory, Announcements, Calendar, Courses.
 
-Auth is localStorage-based (demo). All admin data is mock (in `artifacts/gurukul/src/admin/mockData.ts`). Routes are protected — unauthenticated access redirects to `/admin/login`. Admin pages use their own sidebar layout (no public Navbar/Footer).
+Auth is localStorage-based (demo). **All admin data is live from PostgreSQL** via API endpoints at `/api/admin/*`. Frontend utility: `artifacts/gurukul/src/lib/adminApi.ts`. Routes are protected — unauthenticated access redirects to `/admin`. Admin pages use their own sidebar layout (no public Navbar/Footer).
+
+### Admin API Routes (`/api/admin/`)
+- `GET/POST /teachers` — teacher list with course assignments; `PUT/DELETE /teachers/:id`
+- `GET /students` — students joined with enrollments, courses, payments
+- `GET/POST /inventory` — inventory items; `PUT/DELETE /inventory/:id`; `PATCH /inventory/:id/replenish`
+- `GET/POST /announcements` — announcements; `PUT/DELETE /announcements/:id`; `PATCH /announcements/:id/toggle`
+- `GET/POST /events` — calendar events; `PUT/DELETE /events/:id`
+- `GET /courses` — courses with levels and enrollment counts; `PUT /courses/levels/:id`
+
+### DB Schema (`lib/db/src/schema/gurukul.ts`)
+Tables: courses, course_levels, teachers, teacher_assignments, students, enrollments, payments, inventory, announcements, events, contact_submissions. Enums: payment_status, payment_method, enrollment_status, event_category.
+
+Seed runs on API server startup. Push schema: `cd lib/db && pnpm run push-force`.
 
 ## Structure
 
