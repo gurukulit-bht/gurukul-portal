@@ -37,6 +37,9 @@ export interface Course {
   schedule: string;
   instructor: string;
   icon: string;
+  learningAreas?: string | null;
+  levelsDetail?: string | null;
+  outcome?: string | null;
 }
 
 export interface ContactRequest {

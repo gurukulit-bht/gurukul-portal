@@ -32,6 +32,9 @@ export const coursesTable = pgTable("courses", {
   schedule: text("schedule").notNull(),
   instructor: text("instructor").notNull(),
   icon: text("icon").notNull().default("📚"),
+  learningAreas: text("learning_areas"),
+  levelsDetail: text("levels_detail"),
+  outcome: text("outcome"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

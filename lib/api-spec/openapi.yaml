@@ -178,6 +178,15 @@ components:
           type: string
         icon:
           type: string
+        learningAreas:
+          type: string
+          nullable: true
+        levelsDetail:
+          type: string
+          nullable: true
+        outcome:
+          type: string
+          nullable: true
       required:
         - id
         - name

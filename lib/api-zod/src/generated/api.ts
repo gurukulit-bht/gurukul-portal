@@ -59,6 +59,9 @@ export const ListCoursesResponseItem = zod.object({
   schedule: zod.string(),
   instructor: zod.string(),
   icon: zod.string(),
+  learningAreas: zod.string().nullish(),
+  levelsDetail: zod.string().nullish(),
+  outcome: zod.string().nullish(),
 });
 export const ListCoursesResponse = zod.array(ListCoursesResponseItem);
 

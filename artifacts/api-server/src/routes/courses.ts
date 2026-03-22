@@ -21,6 +21,9 @@ router.get("/", async (req, res) => {
         schedule: c.schedule,
         instructor: c.instructor,
         icon: c.icon,
+        learningAreas: c.learningAreas ?? null,
+        levelsDetail: c.levelsDetail ?? null,
+        outcome: c.outcome ?? null,
       }))
     );
   } catch (err) {
