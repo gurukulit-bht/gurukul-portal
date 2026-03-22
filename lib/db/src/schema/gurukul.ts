@@ -1,13 +1,34 @@
-import { pgTable, text, serial, boolean, integer, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  pgEnum,
+  text,
+  serial,
+  boolean,
+  integer,
+  numeric,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+export const teacherStatusEnum = pgEnum("teacher_status", ["Active", "Inactive"]);
+export const courseLevelStatusEnum = pgEnum("course_level_status", ["Active", "Inactive"]);
+export const enrollmentStatusEnum = pgEnum("enrollment_status", ["Enrolled", "Completed", "Withdrawn"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["Paid", "Pending", "Overdue"]);
+
+// ─── Existing tables (extended, backward-compatible) ─────────────────────────
 
 export const announcementsTable = pgTable("announcements", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  date: text("date").notNull(),
+  date: text("date").notNull(),                          // publishDate
+  expiryDate: text("expiry_date"),                       // NEW — nullable
   isUrgent: boolean("is_urgent").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true), // NEW — default active
   category: text("category").notNull().default("General"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -20,6 +41,7 @@ export const eventsTable = pgTable("events", {
   time: text("time").notNull(),
   location: text("location").notNull(),
   category: text("category").notNull().default("General"),
+  isRecurring: boolean("is_recurring").notNull().default(false), // NEW
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -50,16 +72,210 @@ export const contactsTable = pgTable("contacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Teachers ─────────────────────────────────────────────────────────────────
+// One row per teacher. Independent of courses.
+
+export const teachersTable = pgTable("teachers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone"),
+  bio: text("bio"),
+  status: teacherStatusEnum("status").notNull().default("Active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Teacher Assignments ──────────────────────────────────────────────────────
+// Links a teacher to a course with an optional level range and timing.
+// A teacher can be assigned to many courses; a course can have many teachers.
+
+export const teacherAssignmentsTable = pgTable("teacher_assignments", {
+  id: serial("id").primaryKey(),
+  teacherId: integer("teacher_id")
+    .notNull()
+    .references(() => teachersTable.id, { onDelete: "cascade" }),
+  courseId: integer("course_id")
+    .notNull()
+    .references(() => coursesTable.id, { onDelete: "cascade" }),
+  levelFrom: integer("level_from").notNull().default(1),   // e.g., 1
+  levelTo: integer("level_to").notNull().default(7),       // e.g., 3 = handles L1–L3
+  timing: text("timing"),                                   // e.g., "Sundays 10–11 AM"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Course Levels ────────────────────────────────────────────────────────────
+// Each course has up to 7 levels. This is the granular class unit.
+
+export const courseLevelsTable = pgTable("course_levels", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id")
+    .notNull()
+    .references(() => coursesTable.id, { onDelete: "cascade" }),
+  levelNumber: integer("level_number").notNull(),  // 1–7
+  className: text("class_name").notNull(),          // e.g., "Level 1"
+  schedule: text("schedule"),                        // e.g., "Sundays 10–11 AM"
+  capacity: integer("capacity").notNull().default(20),
+  enrolled: integer("enrolled").notNull().default(0),
+  status: courseLevelStatusEnum("status").notNull().default("Active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Students ─────────────────────────────────────────────────────────────────
+// One row per student (child). Parent info lives here too.
+
+export const studentsTable = pgTable("students", {
+  id: serial("id").primaryKey(),
+  studentCode: text("student_code").notNull().unique(), // e.g., GK-001
+  name: text("name").notNull(),
+  parentName: text("parent_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Enrollments ──────────────────────────────────────────────────────────────
+// A student may be enrolled in multiple course levels (one row each).
+
+export const enrollmentsTable = pgTable("enrollments", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id")
+    .notNull()
+    .references(() => studentsTable.id, { onDelete: "cascade" }),
+  courseLevelId: integer("course_level_id")
+    .notNull()
+    .references(() => courseLevelsTable.id, { onDelete: "restrict" }),
+  enrollDate: text("enroll_date").notNull(),
+  status: enrollmentStatusEnum("status").notNull().default("Enrolled"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Payments ─────────────────────────────────────────────────────────────────
+// One payment record per enrollment (1-to-1, but kept separate for audit trail).
+
+export const paymentsTable = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  enrollmentId: integer("enrollment_id")
+    .notNull()
+    .unique()
+    .references(() => enrollmentsTable.id, { onDelete: "cascade" }),
+  amountDue: numeric("amount_due", { precision: 10, scale: 2 }).notNull().default("150.00"),
+  amountPaid: numeric("amount_paid", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("Pending"),
+  paymentMethod: text("payment_method"),   // Check, Zelle, Cash
+  receiptId: text("receipt_id"),
+  paymentDate: text("payment_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Inventory ────────────────────────────────────────────────────────────────
+// Temple Gurukul supplies and materials stock tracking.
+
+export const inventoryTable = pgTable("inventory", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),           // Books, Bags, Papers, Supplies
+  dateProcured: text("date_procured"),
+  quantityProcured: integer("quantity_procured").notNull().default(0),
+  currentStock: integer("current_stock").notNull().default(0),
+  reorderLevel: integer("reorder_level").notNull().default(5),
+  lastReplenishment: text("last_replenishment"),
+  vendor: text("vendor"),
+  remarks: text("remarks"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Relations ────────────────────────────────────────────────────────────────
+
+export const coursesRelations = relations(coursesTable, ({ many }) => ({
+  levels: many(courseLevelsTable),
+  teacherAssignments: many(teacherAssignmentsTable),
+}));
+
+export const courseLevelsRelations = relations(courseLevelsTable, ({ one, many }) => ({
+  course: one(coursesTable, {
+    fields: [courseLevelsTable.courseId],
+    references: [coursesTable.id],
+  }),
+  enrollments: many(enrollmentsTable),
+}));
+
+export const teachersRelations = relations(teachersTable, ({ many }) => ({
+  assignments: many(teacherAssignmentsTable),
+}));
+
+export const teacherAssignmentsRelations = relations(teacherAssignmentsTable, ({ one }) => ({
+  teacher: one(teachersTable, {
+    fields: [teacherAssignmentsTable.teacherId],
+    references: [teachersTable.id],
+  }),
+  course: one(coursesTable, {
+    fields: [teacherAssignmentsTable.courseId],
+    references: [coursesTable.id],
+  }),
+}));
+
+export const studentsRelations = relations(studentsTable, ({ many }) => ({
+  enrollments: many(enrollmentsTable),
+}));
+
+export const enrollmentsRelations = relations(enrollmentsTable, ({ one }) => ({
+  student: one(studentsTable, {
+    fields: [enrollmentsTable.studentId],
+    references: [studentsTable.id],
+  }),
+  courseLevel: one(courseLevelsTable, {
+    fields: [enrollmentsTable.courseLevelId],
+    references: [courseLevelsTable.id],
+  }),
+  payment: one(paymentsTable, {
+    fields: [enrollmentsTable.id],
+    references: [paymentsTable.enrollmentId],
+  }),
+}));
+
+export const paymentsRelations = relations(paymentsTable, ({ one }) => ({
+  enrollment: one(enrollmentsTable, {
+    fields: [paymentsTable.enrollmentId],
+    references: [enrollmentsTable.id],
+  }),
+}));
+
+// ─── Insert Schemas (Zod validation) ─────────────────────────────────────────
+
 export const insertAnnouncementSchema = createInsertSchema(announcementsTable).omit({ id: true, createdAt: true });
 export const insertEventSchema = createInsertSchema(eventsTable).omit({ id: true, createdAt: true });
 export const insertCourseSchema = createInsertSchema(coursesTable).omit({ id: true, createdAt: true });
 export const insertContactSchema = createInsertSchema(contactsTable).omit({ id: true, createdAt: true });
+export const insertTeacherSchema = createInsertSchema(teachersTable).omit({ id: true, createdAt: true });
+export const insertTeacherAssignmentSchema = createInsertSchema(teacherAssignmentsTable).omit({ id: true, createdAt: true });
+export const insertCourseLevelSchema = createInsertSchema(courseLevelsTable).omit({ id: true, createdAt: true });
+export const insertStudentSchema = createInsertSchema(studentsTable).omit({ id: true, createdAt: true });
+export const insertEnrollmentSchema = createInsertSchema(enrollmentsTable).omit({ id: true, createdAt: true });
+export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true, createdAt: true });
+export const insertInventorySchema = createInsertSchema(inventoryTable).omit({ id: true, createdAt: true });
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Announcement = typeof announcementsTable.$inferSelect;
 export type Event = typeof eventsTable.$inferSelect;
 export type Course = typeof coursesTable.$inferSelect;
 export type Contact = typeof contactsTable.$inferSelect;
+export type Teacher = typeof teachersTable.$inferSelect;
+export type TeacherAssignment = typeof teacherAssignmentsTable.$inferSelect;
+export type CourseLevel = typeof courseLevelsTable.$inferSelect;
+export type Student = typeof studentsTable.$inferSelect;
+export type Enrollment = typeof enrollmentsTable.$inferSelect;
+export type Payment = typeof paymentsTable.$inferSelect;
+export type InventoryItem = typeof inventoryTable.$inferSelect;
+
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type InsertContact = z.infer<typeof insertContactSchema>;
+export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
+export type InsertTeacherAssignment = z.infer<typeof insertTeacherAssignmentSchema>;
+export type InsertCourseLevel = z.infer<typeof insertCourseLevelSchema>;
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
