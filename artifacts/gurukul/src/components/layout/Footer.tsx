@@ -10,7 +10,7 @@ export function Footer() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
           
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -39,8 +39,24 @@ export function Footer() {
             <ul className="space-y-3">
               <li><Link href="/about" className="text-white/80 hover:text-accent transition-colors">About Gurukul</Link></li>
               <li><Link href="/courses" className="text-white/80 hover:text-accent transition-colors">Courses Offered</Link></li>
+              <li><Link href="/announcements" className="text-white/80 hover:text-accent transition-colors">Announcements</Link></li>
               <li><Link href="/calendar" className="text-white/80 hover:text-accent transition-colors">Academic Calendar</Link></li>
               <li><Link href="/parents" className="text-white/80 hover:text-accent transition-colors">Parents Portal</Link></li>
+              <li><Link href="/contact" className="text-white/80 hover:text-accent transition-colors">Contact Us</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-display font-bold text-lg text-accent mb-6">Admin Portal</h3>
+            <ul className="space-y-3">
+              <li><Link href="/admin/dashboard" className="text-white/80 hover:text-accent transition-colors">Dashboard</Link></li>
+              <li><Link href="/admin/announcements" className="text-white/80 hover:text-accent transition-colors">Announcements</Link></li>
+              <li><Link href="/admin/calendar" className="text-white/80 hover:text-accent transition-colors">Calendar</Link></li>
+              <li><Link href="/admin/courses" className="text-white/80 hover:text-accent transition-colors">Courses & Classes</Link></li>
+              <li><Link href="/admin/teachers" className="text-white/80 hover:text-accent transition-colors">Teacher Assignment</Link></li>
+              <li><Link href="/admin/students" className="text-white/80 hover:text-accent transition-colors">Students & Payments</Link></li>
+              <li><Link href="/admin/inventory" className="text-white/80 hover:text-accent transition-colors">Inventory</Link></li>
+              <li><Link href="/admin/settings" className="text-white/80 hover:text-accent transition-colors">Settings</Link></li>
             </ul>
           </div>
 
