@@ -16,6 +16,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Gurukul Admin Portal
+
+Accessible at `/admin/login`. Credentials: `gurukuluser01` / `gurukuladmin`.
+
+Pages: Dashboard, Announcements, Calendar, Courses & Classes (7 levels each), Teacher Assignment, Students & Payments, Inventory, Settings.
+
+Auth is localStorage-based (demo). All admin data is mock (in `artifacts/gurukul/src/admin/mockData.ts`). Routes are protected — unauthenticated access redirects to `/admin/login`. Admin pages use their own sidebar layout (no public Navbar/Footer).
+
 ## Structure
 
 ```text

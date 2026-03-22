@@ -14,6 +14,7 @@ import Calendar from "@/pages/Calendar";
 import ParentsPortal from "@/pages/ParentsPortal";
 import Contact from "@/pages/Contact";
 import NotFound from "@/pages/not-found";
+import AdminApp from "@/admin/AdminApp";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +25,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function Layout({ children }: { children: React.ReactNode }) {
+function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -38,18 +39,24 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/about" component={About} />
-        <Route path="/courses" component={Courses} />
-        <Route path="/announcements" component={Announcements} />
-        <Route path="/calendar" component={Calendar} />
-        <Route path="/parents" component={ParentsPortal} />
-        <Route path="/contact" component={Contact} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <Route path="/admin/:rest*" component={AdminApp} />
+      <Route path="/admin" component={AdminApp} />
+      <Route>
+        <PublicLayout>
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/about" component={About} />
+            <Route path="/courses" component={Courses} />
+            <Route path="/announcements" component={Announcements} />
+            <Route path="/calendar" component={Calendar} />
+            <Route path="/parents" component={ParentsPortal} />
+            <Route path="/contact" component={Contact} />
+            <Route component={NotFound} />
+          </Switch>
+        </PublicLayout>
+      </Route>
+    </Switch>
   );
 }
 

@@ -1,0 +1,179 @@
+Create a secure Gurukul Admin Section for the Bhartiya Hindu Temple Gurukul website. This admin area must be accessible only after login and should have a clean, modern, responsive interface suitable for temple administrators.
+
+Login and Access
+Create a login-protected admin portal
+Use a dummy admin user for demo purposes:
+Username: gurukuluser01
+Password: gurukuladmin
+After successful login, redirect the user to the Gurukul Admin Dashboard
+Unauthorized users must not be able to access admin pages directly
+Include logout functionality
+Show invalid login message for incorrect credentials
+Admin Dashboard Requirements
+
+Build the admin section with a left navigation menu and dashboard-style layout.
+
+Main Admin Menu
+Dashboard
+Announcements
+Calendar
+Courses & Classes
+Teacher Assignment
+Students & Payments
+Inventory
+Settings
+Logout
+Functional Requirements
+1. Announcements Management
+
+Admin should be able to:
+
+View all announcements
+Add new announcements
+Edit existing announcements
+Delete announcements
+Set publish date and expiry date
+Mark announcements as active/inactive
+Categorize announcements such as General, Holiday, Event, Urgent, Course-specific
+2. Calendar Management
+
+Admin should be able to:
+
+View calendar events in monthly and list format
+Add, edit, and delete calendar events
+Create events for classes, holidays, exams, temple events, and special programs
+Set event date, time, description, location, and category
+Mark recurring events where needed
+3. Courses and Classes Management
+
+Admin should be able to:
+
+View all courses offered by Gurukul:
+Hindi
+Dharma
+Telugu
+Tamil
+Sanskrit
+Gujarati
+Each course should have 7 levels
+Level 1
+Level 2
+Level 3
+Level 4
+Level 5
+Level 6
+Level 7
+Display each course with:
+Course name
+Description
+Number of levels
+Class schedule
+Assigned teacher
+Total enrolled students
+Capacity
+Status (Active/Inactive)
+Allow admin to create, edit, archive, and view classes under each course level
+4. Teacher Assignment
+
+Admin should be able to:
+
+View list of teachers
+Assign teachers to specific course levels/classes
+Reassign teachers
+See teacher name, email, phone, assigned course, assigned level, and class timing
+Prevent duplicate assignment conflicts for same time slot
+Show teacher-course mapping in a simple table
+5. Students and Payment Details
+
+Admin should be able to:
+
+View list of enrolled students in all classes
+Filter by course, level, class, and payment status
+Display data in a table with the following columns:
+Student ID
+Student Name
+Parent Name
+Course
+Level
+Class Timing
+Enrollment Date
+Payment Status
+Amount Due
+Amount Paid
+Payment Method
+Receipt / Transaction ID
+Add search and sort functionality
+Show totals for paid, pending, and overdue payments
+Allow export of table data
+6. Inventory Section
+
+Admin should be able to manage inventory for:
+
+Books
+Bags
+Papers
+Other Gurukul supplies
+
+For each inventory item, show:
+
+Item name
+Category
+Date procured
+Quantity procured
+Current stock
+Reorder level
+Replenishment details
+Last replenishment date
+Vendor or source
+Remarks
+
+Admin actions should include:
+
+Add inventory item
+Edit inventory details
+Update stock
+Record replenishment
+View low-stock alerts
+View stock history
+UI / UX Requirements
+Use a clean admin dashboard design
+Responsive layout for desktop and tablet
+Left-side menu navigation
+Top header with logged-in admin name
+Dashboard cards for quick summary:
+Total courses
+Total classes
+Total teachers
+Total enrolled students
+Pending payments
+Low stock items
+Use tables, cards, and simple forms
+Keep the UI intuitive and easy for non-technical temple admins
+Sample Dashboard Widgets
+Total Announcements
+Upcoming Calendar Events
+Active Courses
+Total Students Enrolled
+Payment Pending Count
+Inventory Low Stock Alerts
+Technical Expectations
+Build as a demo-ready admin portal
+Use mock data for courses, teachers, students, payment records, and inventory
+Implement dummy authentication using the provided credentials
+Use modular components for future integration with real backend APIs
+Include basic validation for forms
+Protect admin routes after login
+Output Expected
+
+Create:
+
+Login page
+Gurukul Admin Dashboard
+Announcements management page
+Calendar management page
+Courses and classes page
+Teacher assignment page
+Students and payments page
+Inventory page
+
+Use realistic sample data and make the application visually polished, professional, and easy to extend later.
