@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { NaradJi } from "@/components/NaradJi";
 
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -33,6 +34,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <Footer />
+      <NaradJi />
     </div>
   );
 }
