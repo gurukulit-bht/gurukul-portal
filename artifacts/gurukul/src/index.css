@@ -111,3 +111,8 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-secondary via-primary to-accent;
   }
 }
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
