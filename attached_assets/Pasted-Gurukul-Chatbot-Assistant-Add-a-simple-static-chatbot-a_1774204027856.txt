@@ -1,0 +1,86 @@
+Gurukul Chatbot Assistant
+
+Add a simple, static chatbot assistant to the Gurukul website and admin-connected data views. The chatbot should help users quickly find information related to:
+
+Announcements
+Calendar events
+Courses offered
+Course levels
+Class schedule
+Basic enrollment guidance
+Chatbot Requirements
+Place chatbot as a floating chat icon on the bottom-right of the website
+The chatbot should be available on public pages, especially:
+Home
+Courses Offered
+Announcements
+Calendar
+Parents
+Use a simple static or rule-based chatbot, no need for advanced AI
+It should answer predefined questions based on static/mock data already present in the site
+It should support quick replies / suggested prompts such as:
+“What courses are offered?”
+“Show upcoming events”
+“Any new announcements?”
+“What is Level 1 Hindi?”
+“When does the next session start?”
+“How do I register?”
+If the answer is not found, it should respond with a friendly fallback such as:
+“I’m still learning. Please check the Announcements, Calendar, or Courses page.”
+Chatbot Behavior
+
+The chatbot should be able to provide:
+
+Latest announcements summary
+Upcoming calendar events summary
+Basic details about each course:
+Hindi
+Dharma
+Telugu
+Tamil
+Sanskrit
+Gujarati
+Information that each course has 7 levels
+Simple guidance to parents on where to register or whom to contact
+UI Requirements
+Friendly and approachable design
+Small floating widget with expandable chat window
+Show temple-friendly welcoming message
+Include quick action buttons
+Mobile responsive
+Keep design simple, warm, and culturally appropriate
+Suggested Funny / Friendly Hindu Mythology-Inspired Names
+
+Choose one name for the chatbot:
+
+Narad Ji – playful messenger, great for announcements and updates
+Hanuman Helper – friendly and dependable guide
+Ganesha Guide – wise and welcoming assistant
+Chatur Chitragupt – funny and organized, especially for records and info
+Vidya Vinayak – knowledge-focused and respectful
+GuruBot Narada – modern + mythology blend
+Recommended Name
+
+Use Narad Ji as the chatbot name, because it is memorable, friendly, and naturally associated with sharing news, updates, and messages.
+
+Sample Welcome Message
+
+“Namaste! I’m Narad Ji, your Gurukul helper. I can share updates on courses, announcements, and upcoming events.”
+
+Sample Static Responses
+For announcements: show latest 3 announcements
+For calendar: show next 3 upcoming events
+For courses: list all courses and brief descriptions
+For registration: direct users to Parents Portal / Register page
+Technical Expectations
+Build chatbot using static JSON or predefined response logic
+Connect it to mock announcement, calendar, and course data
+No real AI backend needed
+Keep it modular so it can later be replaced with a smarter chatbot
+Updated Short Prompt Version
+
+Create a login-protected Gurukul Admin Portal and public-facing Gurukul website for Bhartiya Hindu Temple. Include a simple static chatbot named Narad Ji that helps users with announcements, calendar events, courses, course levels, and registration guidance. The chatbot should appear as a floating widget on the website, respond using predefined/mock data, and provide friendly quick replies such as “What courses are offered?”, “Any new announcements?”, and “Show upcoming events.”
+
+A slightly more fun chatbot intro you can use on the site:
+
+“Namaste! I’m Narad Ji — not here to create mischief, only to share the latest Gurukul news, classes, and events.”

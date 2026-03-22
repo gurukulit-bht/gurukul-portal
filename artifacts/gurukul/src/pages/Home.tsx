@@ -1,65 +1,54 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Calendar, Bell, Users, BookOpen, ArrowRight, MapPin } from "lucide-react";
+import { Calendar, Bell, Users, BookOpen, ArrowRight, MapPin, Clock } from "lucide-react";
 import { useListAnnouncements, useListCourses, useListEvents } from "@workspace/api-client-react";
 import { format } from "date-fns";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-};
-
 export default function Home() {
   const { data: courses = [], isLoading: loadingCourses } = useListCourses();
-  const { data: announcements = [], isLoading: loadingAnnouncements } = useListAnnouncements();
+  const { data: announcements = [] } = useListAnnouncements();
   const { data: events = [], isLoading: loadingEvents } = useListEvents();
 
-  const urgentAnnouncements = announcements.filter(a => a.isUrgent).slice(0, 2);
-  const featuredCourses = courses.slice(0, 4);
-  const upcomingEvents = events.slice(0, 3);
+  const urgentAnnouncements = announcements.filter(a => a.isUrgent).slice(0, 1);
+  const upcomingEvents = events.slice(0, 4);
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center pt-20 overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src={`${import.meta.env.BASE_URL}images/hero-mandala.png`} 
-            alt="Hero Background" 
-            className="w-full h-full object-cover opacity-15 mix-blend-multiply"
+
+      {/* ── Hero ── */}
+      <section className="relative pt-20 pb-10 overflow-hidden bg-gradient-to-br from-background via-background to-accent/5">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img
+            src={`${import.meta.env.BASE_URL}images/hero-mandala.png`}
+            alt=""
+            className="w-full h-full object-cover opacity-10 mix-blend-multiply"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }}
+          <div className="grid lg:grid-cols-5 gap-8 items-center">
+
+            {/* Left: Text */}
+            <motion.div
+              initial={{ opacity: 0, x: -24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="max-w-2xl"
+              transition={{ duration: 0.7 }}
+              className="lg:col-span-3"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-medium mb-6">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Admissions open for {new Date().getFullYear()}
               </div>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight mb-4">
                 Rooted in <span className="text-gradient">Tradition</span>,<br />
                 Growing in Wisdom.
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-base md:text-lg text-muted-foreground mb-6 leading-relaxed max-w-xl">
                 Empowering the next generation with cultural knowledge, spiritual values, and a profound understanding of Sanatana Dharma.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-3 mb-8">
                 <Button size="lg" asChild>
                   <Link href="/parents">Enroll Your Child</Link>
                 </Button>
@@ -67,173 +56,191 @@ export default function Home() {
                   <Link href="/courses">Explore Courses</Link>
                 </Button>
               </div>
+
+              {/* Quick nav strip */}
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { icon: BookOpen, label: "6 Courses", href: "/courses" },
+                  { icon: Calendar, label: "Academic Calendar", href: "/calendar" },
+                  { icon: Users, label: "Parents Portal", href: "/parents" },
+                ].map(({ icon: Icon, label, href }) => (
+                  <Link key={href} href={href}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
+                    <Icon className="w-4 h-4 text-primary" />
+                    {label}
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                ))}
+              </div>
             </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
+
+            {/* Right: Image + Shloka card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="hidden lg:block relative"
+              transition={{ duration: 0.7, delay: 0.15 }}
+              className="lg:col-span-2 flex flex-col gap-4"
             >
-              <div className="aspect-square rounded-full bg-gradient-to-tr from-accent/20 to-primary/20 absolute -inset-4 blur-3xl" />
-              <img 
-                src={`${import.meta.env.BASE_URL}images/about-temple.png`} 
-                alt="Temple" 
-                className="relative z-10 w-full h-auto rounded-3xl shadow-2xl object-cover aspect-[4/3] border-4 border-white"
-              />
+              <div className="relative">
+                <div className="absolute -inset-2 bg-gradient-to-tr from-accent/20 to-primary/20 rounded-3xl blur-2xl" />
+                <img
+                  src={`${import.meta.env.BASE_URL}images/about-temple.png`}
+                  alt="Bhartiya Hindu Temple"
+                  className="relative z-10 w-full rounded-2xl shadow-xl object-cover aspect-[4/3] border-2 border-white/80"
+                />
+              </div>
+
+              {/* Shloka card — compact, embedded next to hero */}
+              <div className="bg-secondary rounded-2xl px-5 py-4 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10 pointer-events-none">
+                  <img src={`${import.meta.env.BASE_URL}images/hero-mandala.png`} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="relative z-10 text-center">
+                  <p className="text-sm md:text-base font-display text-white/90 leading-relaxed mb-2" lang="sa">
+                    विद्या ददाति विनयं विनयाद्याति पात्रताम् ।<br />
+                    पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम् ॥
+                  </p>
+                  <div className="w-10 h-px bg-accent mx-auto mb-2" />
+                  <p className="text-white/60 text-xs italic leading-relaxed">
+                    "Knowledge gives humility; humility brings worthiness; from worthiness comes dharma and true happiness."
+                  </p>
+                  <p className="text-accent/70 text-xs mt-1 font-medium tracking-widest uppercase">— Hitopadesa</p>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Urgent Announcements Bar */}
+      {/* ── Urgent Announcements Bar ── */}
       {urgentAnnouncements.length > 0 && (
-        <div className="bg-destructive text-destructive-foreground py-3">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-4 overflow-hidden">
-            <Bell className="w-5 h-5 shrink-0 animate-bounce" />
-            <div className="flex-1 truncate">
+        <div className="bg-destructive text-destructive-foreground py-2.5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-4">
+            <Bell className="w-4 h-4 shrink-0 animate-bounce" />
+            <p className="flex-1 text-sm truncate">
               <span className="font-bold mr-2">URGENT:</span>
-              {urgentAnnouncements[0].title} - {urgentAnnouncements[0].content}
-            </div>
-            <Link href="/announcements" className="text-sm font-medium underline underline-offset-4 shrink-0 hover:text-white/80">
+              {urgentAnnouncements[0].title} — {urgentAnnouncements[0].content}
+            </p>
+            <Link href="/announcements" className="text-xs font-semibold underline underline-offset-4 shrink-0 hover:opacity-80">
               View All
             </Link>
           </div>
         </div>
       )}
 
-      {/* Shloka / Motto Section */}
-      <section className="py-16 bg-gradient-to-r from-secondary via-secondary/95 to-secondary relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-10">
-          <img src={`${import.meta.env.BASE_URL}images/hero-mandala.png`} alt="" className="w-full h-full object-cover" />
-        </div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
-        >
-          <div className="text-accent text-4xl mb-6 opacity-60">॥</div>
-          <p className="text-2xl md:text-3xl font-display text-white leading-relaxed tracking-wide mb-6" lang="sa">
-            विद्या ददाति विनयं विनयाद्याति पात्रताम् ।<br />
-            पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम् ॥
-          </p>
-          <div className="w-16 h-0.5 bg-accent mx-auto mb-6" />
-          <p className="text-white/75 text-base md:text-lg italic leading-relaxed max-w-2xl mx-auto">
-            "Knowledge gives humility, from humility comes worthiness, from worthiness one earns wealth, from wealth one follows dharma, and from dharma comes true happiness."
-          </p>
-          <p className="text-accent/70 text-sm mt-4 font-medium tracking-widest uppercase">— Hitopadesa</p>
-        </motion.div>
-      </section>
-
-      {/* Quick Links Section */}
-      <section className="py-20 bg-white">
+      {/* ── Courses + Events side-by-side ── */}
+      <section className="py-10 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-          >
-            {[
-              { icon: BookOpen, title: "Our Curriculum", desc: "Structured learning from shlokas to languages.", link: "/courses" },
-              { icon: Calendar, title: "Academic Calendar", desc: "Stay updated with class schedules and holidays.", link: "/calendar" },
-              { icon: Users, title: "Parents Portal", desc: "Manage enrollment and student progress easily.", link: "/parents" }
-            ].map((feature, i) => (
-              <motion.div key={i} variants={item} className="glass-card rounded-2xl p-8 text-center group hover:-translate-y-2 transition-all duration-300">
-                <div className="w-16 h-16 mx-auto bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
-                  <feature.icon className="w-8 h-8" />
+          <div className="grid lg:grid-cols-3 gap-8">
+
+            {/* Courses — takes 2/3 width */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-secondary">Our Courses</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">Six languages, all age groups, structured levels</p>
                 </div>
-                <h3 className="text-2xl font-display font-bold text-secondary mb-3">{feature.title}</h3>
-                <p className="text-muted-foreground mb-6">{feature.desc}</p>
-                <Link href={feature.link} className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all">
-                  Learn More <ArrowRight className="w-4 h-4" />
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Featured Courses */}
-      <section className="py-24 bg-background relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-50">
-           <img src={`${import.meta.env.BASE_URL}images/pattern-bg.png`} alt="" className="w-full h-full object-cover opacity-30" />
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-4xl font-display font-bold text-secondary mb-4">Explore Our Courses</h2>
-            <p className="text-lg text-muted-foreground">Comprehensive programs designed to instill cultural pride and knowledge at every age level.</p>
-          </div>
-
-          {loadingCourses ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1,2,3,4].map(i => <div key={i} className="h-64 bg-black/5 animate-pulse rounded-2xl" />)}
-            </div>
-          ) : (
-            <motion.div 
-              variants={container}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-            >
-              {featuredCourses.map(course => (
-                <motion.div key={course.id} variants={item} className="bg-white rounded-2xl p-6 shadow-lg shadow-black/5 border border-border hover:shadow-xl hover:border-primary/30 transition-all group">
-                  <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
-                    {course.icon}
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">{course.name}</h3>
-                  <div className="flex items-center gap-2 text-sm text-primary mb-3">
-                    <span className="px-2 py-1 bg-primary/10 rounded-md">{course.ageGroup}</span>
-                    <span className="px-2 py-1 bg-primary/10 rounded-md">{course.level}</span>
-                  </div>
-                  <p className="text-muted-foreground text-sm line-clamp-3 mb-6">{course.description}</p>
-                  <Link href="/courses" className="text-secondary font-medium text-sm flex items-center gap-1 hover:text-primary">
-                    View Details <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-          
-          <div className="text-center mt-12">
-            <Button variant="outline" size="lg" asChild>
-              <Link href="/courses">View All Courses</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Upcoming Events Mini */}
-      <section className="py-20 bg-secondary text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-            <div>
-              <h2 className="text-4xl font-display font-bold text-accent mb-4">Upcoming Events</h2>
-              <p className="text-white/70 max-w-xl">Join us for celebrations, special assemblies, and cultural programs throughout the year.</p>
-            </div>
-            <Button variant="outline" className="text-white border-white hover:bg-white hover:text-secondary" asChild>
-              <Link href="/calendar">Full Calendar</Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {upcomingEvents.map(event => (
-              <div key={event.id} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="text-accent font-bold mb-2">
-                  {format(new Date(event.date), "MMMM d, yyyy")} • {event.time}
-                </div>
-                <h3 className="text-xl font-bold mb-2">{event.title}</h3>
-                <p className="text-white/70 text-sm mb-4 line-clamp-2">{event.description}</p>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-accent" />
-                  <span>{event.location}</span>
-                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/courses">View All</Link>
+                </Button>
               </div>
-            ))}
+
+              {loadingCourses ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[1,2,3,4,5,6].map(i => <div key={i} className="h-28 bg-black/5 animate-pulse rounded-2xl" />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {courses.map(course => (
+                    <Link key={course.id} href="/courses"
+                      className="group bg-gray-50 hover:bg-primary/5 border border-border hover:border-primary/30 rounded-2xl p-4 transition-all">
+                      <div className="text-2xl mb-2 group-hover:scale-110 transition-transform inline-block">{course.icon}</div>
+                      <h3 className="font-bold text-secondary text-sm">{course.name}</h3>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">{course.ageGroup}</span>
+                      </div>
+                      <p className="text-muted-foreground text-xs mt-2 line-clamp-2 leading-relaxed">{course.description}</p>
+                      <span className="text-primary text-xs font-medium mt-2 flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Learn more <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Events — takes 1/3 width */}
+            <div className="lg:col-span-1">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-secondary">Upcoming</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">Events & programs</p>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/calendar">Calendar</Link>
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {loadingEvents
+                  ? [1,2,3].map(i => <div key={i} className="h-20 bg-black/5 animate-pulse rounded-xl" />)
+                  : upcomingEvents.map(event => (
+                    <div key={event.id} className="flex gap-3 bg-secondary/5 hover:bg-secondary/10 rounded-xl p-3 transition-colors group border border-secondary/10">
+                      <div className="w-10 h-10 bg-secondary rounded-xl flex flex-col items-center justify-center text-accent text-center shrink-0">
+                        <span className="text-[10px] font-semibold uppercase leading-none">
+                          {format(new Date(event.date), "MMM")}
+                        </span>
+                        <span className="text-base font-bold leading-none">
+                          {format(new Date(event.date), "d")}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold text-secondary leading-tight truncate">{event.title}</h4>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          {event.time}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+
+              {/* Contact info strip */}
+              <div className="mt-5 bg-primary/5 border border-primary/15 rounded-2xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-widest">Contact Us</p>
+                <p className="text-sm text-muted-foreground">3671 Hyatts Rd, Powell, OH 43065</p>
+                <p className="text-sm text-muted-foreground">(740) 369-0717</p>
+                <p className="text-sm text-primary font-medium">gurukul@bhtohio.org</p>
+                <Button size="sm" className="w-full mt-2 rounded-xl" asChild>
+                  <Link href="/contact">Get In Touch</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Bottom CTA strip ── */}
+      <section className="bg-secondary py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h3 className="text-xl font-display font-bold text-accent">Ready to join the Gurukul family?</h3>
+              <p className="text-white/70 text-sm mt-1">Enroll today and give your child the gift of cultural heritage.</p>
+            </div>
+            <div className="flex gap-3 shrink-0">
+              <Button asChild className="bg-accent text-secondary hover:bg-accent/90 font-bold">
+                <Link href="/parents">Enroll Now</Link>
+              </Button>
+              <Button variant="outline" asChild className="text-white border-white hover:bg-white hover:text-secondary">
+                <Link href="/about">Learn More</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
