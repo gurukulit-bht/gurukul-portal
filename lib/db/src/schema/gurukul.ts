@@ -184,6 +184,43 @@ export const inventoryTable = pgTable("inventory", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Attendance ───────────────────────────────────────────────────────────────
+
+export const attendanceStatusEnum = pgEnum("attendance_status", ["Present", "Absent", "Late"]);
+
+export const attendanceRecordsTable = pgTable("attendance_records", {
+  id:            serial("id").primaryKey(),
+  courseLevelId: integer("course_level_id")
+    .notNull()
+    .references(() => courseLevelsTable.id, { onDelete: "cascade" }),
+  studentId:     integer("student_id")
+    .notNull()
+    .references(() => studentsTable.id, { onDelete: "cascade" }),
+  date:          text("date").notNull(),
+  status:        attendanceStatusEnum("status").notNull(),
+  recordedBy:    text("recorded_by").notNull(),
+  createdAt:     timestamp("created_at").defaultNow(),
+});
+
+// ─── Parent Notifications ─────────────────────────────────────────────────────
+
+export const notificationStatusEnum   = pgEnum("notification_status",   ["Draft", "Published", "Sent"]);
+export const notificationPriorityEnum = pgEnum("notification_priority",  ["High", "Normal", "Low"]);
+
+export const parentNotificationsTable = pgTable("parent_notifications", {
+  id:          serial("id").primaryKey(),
+  title:       text("title").notNull(),
+  message:     text("message").notNull(),
+  courseId:    integer("course_id").references(() => coursesTable.id, { onDelete: "set null" }),
+  courseName:  text("course_name"),
+  audience:    text("audience").notNull().default("All Students"),
+  priority:    notificationPriorityEnum("priority").notNull().default("Normal"),
+  status:      notificationStatusEnum("status").notNull().default("Draft"),
+  createdBy:   text("created_by").notNull(),
+  createdAt:   timestamp("created_at").defaultNow(),
+  publishedAt: timestamp("published_at"),
+});
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 
 export const coursesRelations = relations(coursesTable, ({ many }) => ({
@@ -253,6 +290,8 @@ export const insertStudentSchema = createInsertSchema(studentsTable).omit({ id: 
 export const insertEnrollmentSchema = createInsertSchema(enrollmentsTable).omit({ id: true, createdAt: true });
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true, createdAt: true });
 export const insertInventorySchema = createInsertSchema(inventoryTable).omit({ id: true, createdAt: true });
+export const insertAttendanceSchema       = createInsertSchema(attendanceRecordsTable).omit({ id: true, createdAt: true });
+export const insertParentNotificationSchema = createInsertSchema(parentNotificationsTable).omit({ id: true, createdAt: true, publishedAt: true });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

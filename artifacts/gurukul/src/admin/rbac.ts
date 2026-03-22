@@ -1,0 +1,45 @@
+export type UserRole = "admin" | "teacher" | "assistant";
+
+export type Permission =
+  | "dashboard"
+  | "announcements"
+  | "calendar"
+  | "courses"
+  | "teachers"
+  | "students"
+  | "inventory"
+  | "settings"
+  | "documents"
+  | "attendance"
+  | "notifications"
+  | "roles";
+
+const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  admin: [
+    "dashboard", "announcements", "calendar", "courses", "teachers",
+    "students", "inventory", "settings", "documents", "attendance",
+    "notifications", "roles",
+  ],
+  teacher: ["courses", "documents", "attendance", "notifications"],
+  assistant: ["courses", "documents", "attendance", "notifications"],
+};
+
+export function canAccess(role: UserRole, permission: Permission): boolean {
+  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+export function getRoleLabel(role: UserRole): string {
+  switch (role) {
+    case "admin":     return "Gurukul Admin";
+    case "teacher":   return "Teacher";
+    case "assistant": return "Assistant";
+  }
+}
+
+export function getRoleBadgeColor(role: UserRole): string {
+  switch (role) {
+    case "admin":     return "bg-red-100 text-red-800";
+    case "teacher":   return "bg-blue-100 text-blue-800";
+    case "assistant": return "bg-green-100 text-green-800";
+  }
+}

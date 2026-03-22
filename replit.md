@@ -18,24 +18,49 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Gurukul Admin Portal
 
-Accessible at `/admin`. Credentials: `gurukuluser01` / `gurukuladmin`.
+Accessible at `/admin`. Three roles with role-based access control.
 
-Pages: Dashboard, Teachers, Students & Payments, Inventory, Announcements, Calendar, Courses.
+**Demo credentials:**
+- `admin@gurukul.org` / `Admin@123` → Gurukul Admin (full access)
+- `teacher@gurukul.org` / `Teacher@123` → Teacher (Courses, Documents, Attendance, Notifications)
+- `assistant@gurukul.org` / `Asst@123` → Assistant (same as Teacher)
+- `gurukuluser01` / `gurukuladmin` → backward-compatible legacy admin login
 
-Auth is localStorage-based (demo). **All admin data is live from PostgreSQL** via API endpoints at `/api/admin/*`. Frontend utility: `artifacts/gurukul/src/lib/adminApi.ts`. Routes are protected — unauthenticated access redirects to `/admin`. Admin pages use their own sidebar layout (no public Navbar/Footer).
+Auth is localStorage-based (demo, structured for AWS Cognito integration). **All admin data is live from PostgreSQL.** Frontend utility: `artifacts/gurukul/src/lib/adminApi.ts`.
+
+### RBAC Files
+- `artifacts/gurukul/src/admin/rbac.ts` — role permissions model (admin/teacher/assistant)
+- `artifacts/gurukul/src/admin/AuthContext.tsx` — React auth context (wraps AdminApp)
+- `artifacts/gurukul/src/admin/auth.ts` — multi-user login + localStorage
+- `artifacts/gurukul/src/admin/AdminApp.tsx` — ProtectedRoute with permission checks
+- `artifacts/gurukul/src/admin/AdminLayout.tsx` — role-filtered sidebar + user badge in header
+- `artifacts/gurukul/src/admin/components/AccessDenied.tsx` — shown for unauthorized routes
+
+### Admin Pages
+- Dashboard, Announcements, Calendar, Courses & Classes, Teacher Assignment, Students & Payments, Inventory, Settings — **Admin only**
+- Course Documents, Attendance, Parent Notifications — **Admin + Teacher + Assistant**
+- Role Management — **Admin only**
 
 ### Admin API Routes (`/api/admin/`)
 - `GET/POST /teachers` — teacher list with course assignments; `PUT/DELETE /teachers/:id`
-- `GET /students` — students joined with enrollments, courses, payments
+- `GET /students` — students joined with enrollments, courses, payments (1 row per enrollment)
 - `GET/POST /inventory` — inventory items; `PUT/DELETE /inventory/:id`; `PATCH /inventory/:id/replenish`
-- `GET/POST /announcements` — announcements; `PUT/DELETE /announcements/:id`; `PATCH /announcements/:id/toggle`
-- `GET/POST /events` — calendar events; `PUT/DELETE /events/:id`
-- `GET /courses` — courses with levels and enrollment counts; `PUT /courses/levels/:id`
+- `GET/POST /announcements` — `PUT/DELETE /announcements/:id`; `PATCH /announcements/:id/toggle`
+- `GET/POST /events` — `PUT/DELETE /events/:id`
+- `GET /courses` — courses with levels and live enrollment counts; `PUT /courses/levels/:id`
+- `GET /courses/levels/:id/students` — enrolled students for a level
+- `GET /attendance/levels` — all course levels with course names (for Attendance dropdown)
+- `GET /attendance?levelId&date` — records for one level+date
+- `GET /attendance/history?levelId` — full history for a level
+- `POST /attendance` — upsert attendance records (delete+insert for levelId+date)
+- `GET/POST /notifications` — parent notifications
+- `PATCH /notifications/:id/status` — update notification status
 
 ### DB Schema (`lib/db/src/schema/gurukul.ts`)
-Tables: courses, course_levels, teachers, teacher_assignments, students, enrollments, payments, inventory, announcements, events, contact_submissions. Enums: payment_status, payment_method, enrollment_status, event_category.
+Tables: courses, course_levels, teachers, teacher_assignments, students, enrollments, payments, inventory, announcements, events, contacts, attendance_records, parent_notifications.
+Enums: teacher_status, course_level_status, enrollment_status, payment_status, attendance_status, notification_status, notification_priority.
 
-Seed runs on API server startup. Push schema: `cd lib/db && pnpm run push-force`.
+Push schema: `cd lib/db && pnpm run push-force`.
 
 ## Structure
 

@@ -1,31 +1,40 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { adminLogin } from "./auth";
+import { useAuth } from "./AuthContext";
+import { DEMO_CREDENTIALS } from "./auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Lock, User, BookOpen } from "lucide-react";
+import { AlertCircle, Lock, Mail, BookOpen, ChevronDown } from "lucide-react";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
-  const [username, setUsername] = useState("");
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showHint, setShowHint] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     setTimeout(() => {
-      const ok = adminLogin(username.trim(), password);
-      if (ok) {
+      const user = login(email.trim(), password);
+      if (user) {
         setLocation("/admin/dashboard");
       } else {
-        setError("Invalid username or password. Please try again.");
+        setError("Invalid credentials. Please try again.");
       }
       setLoading(false);
-    }, 600);
+    }, 500);
+  }
+
+  function fillCredential(cred: typeof DEMO_CREDENTIALS[number]) {
+    setEmail(cred.email);
+    setPassword(cred.password);
+    setShowHint(false);
   }
 
   return (
@@ -57,18 +66,18 @@ export default function AdminLogin() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-secondary font-medium">Username</Label>
+                <Label htmlFor="email" className="text-secondary font-medium">Email / Username</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="username"
+                    id="email"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder="email@gurukul.org"
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                     required
-                    autoComplete="username"
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -99,8 +108,39 @@ export default function AdminLogin() {
               </Button>
             </form>
 
-            <p className="text-center text-xs text-muted-foreground mt-6">
-              Authorized administrators only. All activity is monitored.
+            <div className="mt-6 border border-dashed border-gray-200 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowHint(!showHint)}
+                className="flex items-center justify-between w-full px-4 py-3 text-xs text-muted-foreground hover:bg-gray-50 transition-colors"
+              >
+                <span className="font-medium">Demo credentials (click to expand)</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showHint ? "rotate-180" : ""}`} />
+              </button>
+              {showHint && (
+                <div className="border-t border-dashed border-gray-200 divide-y divide-dashed divide-gray-100">
+                  {DEMO_CREDENTIALS.map((cred) => (
+                    <button
+                      key={cred.email}
+                      type="button"
+                      onClick={() => fillCredential(cred)}
+                      className="w-full px-4 py-2.5 text-left hover:bg-amber-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-secondary">{cred.role}</p>
+                          <p className="text-xs text-muted-foreground">{cred.email}</p>
+                        </div>
+                        <span className="text-xs text-primary font-medium">Use →</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground mt-4">
+              Authorized staff only. All activity is monitored.
             </p>
           </div>
         </div>

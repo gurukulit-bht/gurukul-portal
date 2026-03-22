@@ -5,6 +5,8 @@ import inventoryRouter from "./inventory";
 import announcementsRouter from "./announcements";
 import eventsRouter from "./events";
 import coursesRouter from "./courses";
+import attendanceRouter from "./attendance";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use("/inventory", inventoryRouter);
 router.use("/announcements", announcementsRouter);
 router.use("/events", eventsRouter);
 router.use("/courses", coursesRouter);
+router.use("/attendance", attendanceRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

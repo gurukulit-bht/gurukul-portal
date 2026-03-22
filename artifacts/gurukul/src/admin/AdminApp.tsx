@@ -1,7 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
-import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { isAdminAuthenticated } from "./auth";
+import { AuthProvider, useAuth } from "./AuthContext";
+import { canAccess, type Permission } from "./rbac";
 import AdminLogin from "./AdminLogin";
 import AdminLayout from "./AdminLayout";
 import Dashboard from "./pages/Dashboard";
@@ -12,47 +12,101 @@ import Teachers from "./pages/Teachers";
 import Students from "./pages/Students";
 import Inventory from "./pages/Inventory";
 import Settings from "./pages/Settings";
+import CourseDocuments from "./pages/CourseDocuments";
+import Attendance from "./pages/Attendance";
+import ParentNotifications from "./pages/ParentNotifications";
+import RoleManagement from "./pages/RoleManagement";
+import AccessDenied from "./components/AccessDenied";
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({
+  children,
+  permission,
+}: {
+  children: React.ReactNode;
+  permission?: Permission;
+}) {
   const [, setLocation] = useLocation();
-  useEffect(() => {
-    if (!isAdminAuthenticated()) setLocation("/admin/login");
-  }, []);
-  if (!isAdminAuthenticated()) return null;
+  const { user } = useAuth();
+
+  if (!user) {
+    setLocation("/admin/login");
+    return null;
+  }
+
+  if (permission && !canAccess(user.role, permission)) {
+    return (
+      <AdminLayout>
+        <AccessDenied />
+      </AdminLayout>
+    );
+  }
+
   return <AdminLayout>{children}</AdminLayout>;
+}
+
+function AdminRoutes() {
+  const { user } = useAuth();
+
+  return (
+    <Switch>
+      <Route path="/admin/login" component={AdminLogin} />
+
+      <Route path="/admin/dashboard">
+        <ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/announcements">
+        <ProtectedRoute permission="announcements"><AdminAnnouncements /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/calendar">
+        <ProtectedRoute permission="calendar"><CalendarAdmin /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/courses">
+        <ProtectedRoute permission="courses"><CoursesAdmin /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/teachers">
+        <ProtectedRoute permission="teachers"><Teachers /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/students">
+        <ProtectedRoute permission="students"><Students /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/inventory">
+        <ProtectedRoute permission="inventory"><Inventory /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/settings">
+        <ProtectedRoute permission="settings"><Settings /></ProtectedRoute>
+      </Route>
+
+      {/* New shared pages */}
+      <Route path="/admin/documents">
+        <ProtectedRoute permission="documents"><CourseDocuments /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/attendance">
+        <ProtectedRoute permission="attendance"><Attendance /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/notifications">
+        <ProtectedRoute permission="notifications"><ParentNotifications /></ProtectedRoute>
+      </Route>
+
+      {/* Admin-only pages */}
+      <Route path="/admin/roles">
+        <ProtectedRoute permission="roles"><RoleManagement /></ProtectedRoute>
+      </Route>
+
+      <Route path="/admin">
+        {user ? <Redirect to="/admin/dashboard" /> : <Redirect to="/admin/login" />}
+      </Route>
+
+      <Route path="/admin/:rest*">
+        {user ? <Redirect to="/admin/dashboard" /> : <Redirect to="/admin/login" />}
+      </Route>
+    </Switch>
+  );
 }
 
 export default function AdminApp() {
   return (
-    <Switch>
-      <Route path="/admin/login" component={AdminLogin} />
-      <Route path="/admin/dashboard">
-        <ProtectedRoute><Dashboard /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/announcements">
-        <ProtectedRoute><AdminAnnouncements /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/calendar">
-        <ProtectedRoute><CalendarAdmin /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/courses">
-        <ProtectedRoute><CoursesAdmin /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/teachers">
-        <ProtectedRoute><Teachers /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/students">
-        <ProtectedRoute><Students /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/inventory">
-        <ProtectedRoute><Inventory /></ProtectedRoute>
-      </Route>
-      <Route path="/admin/settings">
-        <ProtectedRoute><Settings /></ProtectedRoute>
-      </Route>
-      <Route path="/admin">
-        {isAdminAuthenticated() ? <Redirect to="/admin/dashboard" /> : <Redirect to="/admin/login" />}
-      </Route>
-    </Switch>
+    <AuthProvider>
+      <AdminRoutes />
+    </AuthProvider>
   );
 }
