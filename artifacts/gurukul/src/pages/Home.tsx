@@ -1,14 +1,60 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Calendar, Bell, Users, BookOpen, ArrowRight, MapPin, Clock } from "lucide-react";
 import { useListAnnouncements, useListCourses, useListEvents } from "@workspace/api-client-react";
 import { format } from "date-fns";
+import { useState, useEffect } from "react";
+
+const shlokas = [
+  {
+    sanskrit: "विद्या ददाति विनयं विनयाद्याति पात्रताम् ।\nपात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम् ॥",
+    meaning: "Knowledge gives humility; humility brings worthiness; from worthiness comes wealth; from wealth, dharma; and from dharma, true happiness.",
+    source: "Hitopadesa",
+  },
+  {
+    sanskrit: "न चोरहार्यं न च राजहार्यं न भ्रातृभाज्यं न च भारकारि ।\nव्यये कृते वर्धत एव नित्यं विद्याधनं सर्वधनप्रधानम् ॥",
+    meaning: "Knowledge cannot be stolen by a thief, nor seized by a king, nor divided among brothers, nor is it a burden to carry. It only grows when spent — truly, knowledge is the greatest of all wealth.",
+    source: "Sanskrit Subhashita",
+  },
+  {
+    sanskrit: "रूपयौवनसम्पन्ना विशालकुलसम्भवाः ।\nविद्याहीना न शोभन्ते निर्गन्धा इव किंशुकाः ॥",
+    meaning: "Those endowed with beauty, youth, and noble lineage — without knowledge they do not shine, just as the Kimshuka flower that blooms bright yet has no fragrance.",
+    source: "Sanskrit Subhashita",
+  },
+  {
+    sanskrit: "ज्ञानं परमं ध्येयम्, ज्ञानं विद्या प्रदायिनी ।\nविनयं सा साधयति, ज्ञानवान् जनः पूज्यते ॥",
+    meaning: "Knowledge is the highest goal; knowledge is the bestower of learning. It cultivates humility, and a person of knowledge is revered by all.",
+    source: "Sanskrit Subhashita",
+  },
+];
 
 export default function Home() {
   const { data: courses = [], isLoading: loadingCourses } = useListCourses();
   const { data: announcements = [] } = useListAnnouncements();
   const { data: events = [], isLoading: loadingEvents } = useListEvents();
+
+  const [shlokaIndex, setShlokaIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setShlokaIndex(i => (i + 1) % shlokas.length);
+        setVisible(true);
+      }, 400);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function goToShloka(i: number) {
+    if (i === shlokaIndex) return;
+    setVisible(false);
+    setTimeout(() => { setShlokaIndex(i); setVisible(true); }, 400);
+  }
+
+  const currentShloka = shlokas[shlokaIndex];
 
   const urgentAnnouncements = announcements.filter(a => a.isUrgent).slice(0, 1);
   const upcomingEvents = events.slice(0, 4);
@@ -90,21 +136,39 @@ export default function Home() {
                 />
               </div>
 
-              {/* Shloka card — compact, embedded next to hero */}
-              <div className="bg-secondary rounded-2xl px-5 py-4 relative overflow-hidden">
+              {/* Shloka carousel card */}
+              <div className="bg-secondary rounded-2xl px-5 py-4 relative overflow-hidden min-h-[160px]">
                 <div className="absolute inset-0 opacity-10 pointer-events-none">
                   <img src={`${import.meta.env.BASE_URL}images/hero-mandala.png`} alt="" className="w-full h-full object-cover" />
                 </div>
-                <div className="relative z-10 text-center">
-                  <p className="text-sm md:text-base font-display text-white/90 leading-relaxed mb-2" lang="sa">
-                    विद्या ददाति विनयं विनयाद्याति पात्रताम् ।<br />
-                    पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम् ॥
+                <div
+                  className="relative z-10 text-center transition-opacity duration-400"
+                  style={{ opacity: visible ? 1 : 0, transition: "opacity 0.4s ease" }}
+                >
+                  <p className="text-sm font-display text-white/90 leading-relaxed mb-2 whitespace-pre-line" lang="sa">
+                    {currentShloka.sanskrit}
                   </p>
                   <div className="w-10 h-px bg-accent mx-auto mb-2" />
                   <p className="text-white/60 text-xs italic leading-relaxed">
-                    "Knowledge gives humility; humility brings worthiness; from worthiness comes dharma and true happiness."
+                    "{currentShloka.meaning}"
                   </p>
-                  <p className="text-accent/70 text-xs mt-1 font-medium tracking-widest uppercase">— Hitopadesa</p>
+                  <p className="text-accent/70 text-xs mt-1 font-medium tracking-widest uppercase">— {currentShloka.source}</p>
+                </div>
+
+                {/* Dot indicators */}
+                <div className="relative z-10 flex justify-center gap-1.5 mt-3">
+                  {shlokas.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => goToShloka(i)}
+                      className={`rounded-full transition-all duration-300 ${
+                        i === shlokaIndex
+                          ? "bg-accent w-4 h-1.5"
+                          : "bg-white/30 hover:bg-white/50 w-1.5 h-1.5"
+                      }`}
+                      aria-label={`Shloka ${i + 1}`}
+                    />
+                  ))}
                 </div>
               </div>
             </motion.div>
