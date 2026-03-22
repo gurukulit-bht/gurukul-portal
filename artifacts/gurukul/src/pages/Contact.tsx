@@ -104,8 +104,7 @@ export default function Contact() {
                   <div>
                     <h4 className="font-bold text-lg mb-1">Email</h4>
                     <p className="text-white/80 leading-relaxed">
-                      gurukul@templewebsite.org<br />
-                      info@templewebsite.org
+                      gurukul@bhtohio.org
                     </p>
                   </div>
                 </div>
