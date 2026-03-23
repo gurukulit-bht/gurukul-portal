@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { adminApi } from "@/lib/adminApi";
+import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import { Button } from "@/components/ui/button";
 import {
   Mail, Send, Users, Filter, ChevronDown, ChevronUp,
@@ -43,10 +44,6 @@ type InboxMessage = {
 };
 
 const COURSES = ["All", "Hindi", "Dharma", "Telugu", "Tamil", "Sanskrit", "Gujarati"];
-const CURRICULUM_YEARS: string[] = Array.from({ length: 25 }, (_, i) => {
-  const s = 2027 + i;
-  return `${s}-${s + 1}`;
-});
 
 const STATUS_STYLE: Record<string, string> = {
   sent:    "bg-green-100 text-green-700",
@@ -68,7 +65,12 @@ export default function MessagingCenter() {
 
   // ── Filters ──
   const [filterCourse,     setFilterCourse]     = useState("All");
+  const { curriculumYearsLong, activeCurriculumYearLong } = usePortalSettings();
   const [filterCurricYear, setFilterCurricYear] = useState("2027-2028");
+
+  useEffect(() => {
+    if (activeCurriculumYearLong) setFilterCurricYear(activeCurriculumYearLong);
+  }, [activeCurriculumYearLong]);
   const [filterEmployer,   setFilterEmployer]   = useState("All");
   const [employers,        setEmployers]         = useState<string[]>([]);
   const [showFilters,      setShowFilters]       = useState(true);
@@ -307,7 +309,7 @@ export default function MessagingCenter() {
                       className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
                     >
                       <option value="All">All Years</option>
-                      {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                      {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
 

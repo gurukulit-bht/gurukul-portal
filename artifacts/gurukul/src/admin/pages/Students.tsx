@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { adminApi } from "@/lib/adminApi";
+import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import {
   Search, Download, ChevronUp, ChevronDown, Filter, Loader2,
   X, Plus, Trash2, UserPlus, BookOpen, GraduationCap, Users,
@@ -34,10 +35,6 @@ type EnrollmentDraft = {
 
 const GRADES = ["Kindergarten","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
 
-const CURRICULUM_YEARS: string[] = Array.from({ length: 25 }, (_, i) => {
-  const s = 2027 + i;
-  return `${s}-${s + 1}`;
-});
 const coursesList    = ["All","Hindi","Dharma","Telugu","Tamil","Sanskrit","Gujarati"];
 const paymentStatuses = ["All","Paid","Pending","Overdue"];
 const levels         = ["All","Level 1","Level 2","Level 3","Level 4","Level 5","Level 6","Level 7"];
@@ -66,6 +63,7 @@ function SectionLabel({ icon, title }: { icon: React.ReactNode; title: string })
 }
 
 function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; onRegistered: () => void }) {
+  const { curriculumYearsLong, activeCurriculumYearLong } = usePortalSettings();
   const [meta, setMeta]       = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
@@ -74,7 +72,7 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   const [lastName,   setLastName]   = useState("");
   const [dob,        setDob]        = useState("");
   const [grade,      setGrade]      = useState("");
-  const [curricYear, setCurricYear] = useState("2027-2028");
+  const [curricYear, setCurricYear] = useState(() => activeCurriculumYearLong || "2027-2028");
   const [isNew,      setIsNew]      = useState(true);
 
   const [motherName,  setMotherName]  = useState("");
@@ -204,7 +202,7 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
                   </Field>
                   <Field label="Curriculum Year" required>
                     <select value={curricYear} onChange={e => setCurricYear(e.target.value)} className={selectCls}>
-                      {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                      {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </Field>
                 </div>
@@ -390,7 +388,12 @@ export default function Students() {
   const [filterCourse, setFilterCourse] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterLevel,  setFilterLevel]  = useState("All");
+  const { curriculumYearsLong, activeCurriculumYearLong } = usePortalSettings();
   const [filterCurricYear, setFilterCurricYear] = useState("2027-2028");
+
+  useEffect(() => {
+    if (activeCurriculumYearLong) setFilterCurricYear(activeCurriculumYearLong);
+  }, [activeCurriculumYearLong]);
   const [sortKey, setSortKey]           = useState<SortKey>("id");
   const [sortAsc, setSortAsc]   = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -510,7 +513,7 @@ export default function Students() {
               className="text-sm border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary bg-white min-w-36"
             >
               <option value="All">All Years</option>
-              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
 

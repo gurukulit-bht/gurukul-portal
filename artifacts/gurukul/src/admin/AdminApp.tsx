@@ -1,6 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { PortalSettingsProvider } from "./contexts/PortalSettingsContext";
 import { canAccess, getDefaultRoute, type Permission } from "./rbac";
 import AdminLogin from "./AdminLogin";
 import AdminLayout from "./AdminLayout";
@@ -128,7 +129,9 @@ function AdminRoutes() {
 export default function AdminApp() {
   return (
     <AuthProvider>
-      <AdminRoutes />
+      <PortalSettingsProvider>
+        <AdminRoutes />
+      </PortalSettingsProvider>
     </AuthProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminApi } from "@/lib/adminApi";
+import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import {
   Edit2, Check, X, Users, BookOpen, Loader2,
   ChevronDown, ChevronRight, GraduationCap, Phone, Mail, CalendarDays,
@@ -8,10 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const CURRICULUM_YEARS = Array.from({ length: 24 }, (_, i) => {
-  const start = 2027 + i;
-  return `${start}-${String(start + 1).slice(-2)}`;
-});
 
 type LevelStudent = {
   enrollmentId: number;
@@ -257,12 +254,17 @@ function LevelRow({
 }
 
 export default function CoursesAdmin() {
+  const { curriculumYears, activeCurriculumYear } = usePortalSettings();
   const [courses, setCourses] = useState<AdminCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<number>(0);
   const [levelFilter, setLevelFilter] = useState<number | "all">("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (activeCurriculumYear) setYearFilter(activeCurriculumYear);
+  }, [activeCurriculumYear]);
   const [editingLevel, setEditingLevel] = useState<{ courseId: number; levelId: number } | null>(null);
   const [editForm, setEditForm] = useState<Partial<CourseLevel>>({});
 
@@ -334,7 +336,7 @@ export default function CoursesAdmin() {
             className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white text-secondary focus:outline-none focus:border-primary"
           >
             <option value="all">All Years</option>
-            {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            {curriculumYears.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import {
   Plus, Edit2, Trash2, Archive, ArchiveRestore, ChevronDown, ChevronRight,
   BookOpen, Users, Layers, Tag, GraduationCap, Phone, Mail, AlertCircle,
@@ -46,10 +47,6 @@ type FormData = {
   numLevels: number; numSectionsPerLevel: number; curriculumYear: string;
 };
 
-const CURRICULUM_YEARS = Array.from({ length: 24 }, (_, i) => {
-  const start = 2027 + i;
-  return `${start}-${String(start + 1).slice(-2)}`;
-});
 
 const ICONS = ["📚", "🕉️", "🌿", "☀️", "📝", "🎵", "🏛️", "🌺"];
 
@@ -485,6 +482,7 @@ function CourseFormPanel({
   onClose: () => void;
   loading: boolean;
 }) {
+  const { curriculumYears, activeCurriculumYear } = usePortalSettings();
   const [form, setForm] = useState<FormData>({
     name:                editing?.name           ?? "",
     description:         editing?.description    ?? "",
@@ -494,7 +492,7 @@ function CourseFormPanel({
     instructor:          "TBD",
     numLevels:           editing?.levels.length  ?? 6,
     numSectionsPerLevel: 1,
-    curriculumYear:      editing?.curriculumYear ?? "2027-28",
+    curriculumYear:      editing?.curriculumYear ?? activeCurriculumYear,
   });
 
   return (
@@ -552,7 +550,7 @@ function CourseFormPanel({
               className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary"
             >
               <option value="">— No year assigned —</option>
-              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              {curriculumYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
 
@@ -717,6 +715,7 @@ function ConfirmDialog({
 export default function CourseManagement() {
   const { user } = useAuth();
   const isAdmin = user ? canAccess(user.role, "dashboard") : false;
+  const { curriculumYears, activeCurriculumYear } = usePortalSettings();
 
   const [courses, setCourses]                   = useState<CourseRow[]>([]);
   const [loading, setLoading]                   = useState(true);
@@ -729,6 +728,11 @@ export default function CourseManagement() {
   const [confirm, setConfirm]                   = useState<{ type: "archive" | "delete"; course: CourseRow } | null>(null);
   const [addingLevelFor, setAddingLevelFor]     = useState<number | null>(null);
   const [newLevelName, setNewLevelName]         = useState("");
+
+  // Sync year filter with portal's active curriculum year on first load
+  useEffect(() => {
+    if (activeCurriculumYear) setYearFilter(activeCurriculumYear);
+  }, [activeCurriculumYear]);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -879,7 +883,7 @@ export default function CourseManagement() {
               className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-secondary h-7 focus:outline-none focus:border-primary"
             >
               <option value="all">All Years</option>
-              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              {curriculumYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
               <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="w-3 h-3" />

@@ -10,6 +10,7 @@ import attendanceRouter from "./attendance";
 import notificationsRouter from "./notifications";
 import testimonialsRouter from "./testimonials";
 import messagingRouter from "./messaging";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/attendance", attendanceRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/testimonials", testimonialsRouter);
 router.use("/messaging", messagingRouter);
+router.use("/settings", settingsRouter);
 
 export default router;

@@ -380,6 +380,18 @@ export const insertInventorySchema = createInsertSchema(inventoryTable).omit({ i
 export const insertAttendanceSchema       = createInsertSchema(attendanceRecordsTable).omit({ id: true, createdAt: true });
 export const insertParentNotificationSchema = createInsertSchema(parentNotificationsTable).omit({ id: true, createdAt: true, publishedAt: true });
 
+// ─── Portal Settings ─────────────────────────────────────────────────────────
+// Simple key-value store for admin-configurable portal settings.
+// Key examples: "active_curriculum_year" → "2027-28"
+
+export const portalSettingsTable = pgTable("portal_settings", {
+  key:       text("key").primaryKey(),
+  value:     text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PortalSetting = typeof portalSettingsTable.$inferSelect;
+
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 
 export const testimonialsTable = pgTable("testimonials", {

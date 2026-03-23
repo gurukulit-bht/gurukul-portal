@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { adminApi } from "@/lib/adminApi";
+import { CURRICULUM_YEARS_LONG as CURRICULUM_YEARS } from "@/admin/contexts/PortalSettingsContext";
 import {
   Loader2, Plus, Trash2, BookOpen, GraduationCap, Users,
   Search, UserCheck, UserPlus, ChevronRight, ShieldCheck,
@@ -16,11 +17,6 @@ const GRADES = [
   "Kindergarten","1st","2nd","3rd","4th","5th","6th",
   "7th","8th","9th","10th","11th","12th",
 ];
-
-const CURRICULUM_YEARS: string[] = Array.from({ length: 25 }, (_, i) => {
-  const s = 2027 + i;
-  return `${s}-${s + 1}`;
-});
 
 const EMPLOYERS_LIST = [
   "Accenture",
