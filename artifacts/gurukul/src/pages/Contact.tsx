@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { MapPin, Phone, Mail, Send, CheckCircle2, Loader2 } from "lucide-react";
+import { MapPin, Phone, Mail, Send, CheckCircle2, Loader2, ShieldCheck, RefreshCw } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -17,6 +17,94 @@ async function submitContactForm(data: {
   return json;
 }
 
+// ─── CAPTCHA ────────────────────────────────────────────────────────────────
+
+type CaptchaChallenge = { a: number; b: number; op: "+" | "-"; answer: number };
+
+function generateChallenge(): CaptchaChallenge {
+  const a = Math.floor(Math.random() * 9) + 2;
+  const b = Math.floor(Math.random() * 9) + 1;
+  const op = Math.random() > 0.45 ? "+" : "-";
+  const answer = op === "+" ? a + b : Math.abs(a - b);
+  return { a: op === "-" ? Math.max(a, b) : a, b: op === "-" ? Math.min(a, b) : b, op, answer };
+}
+
+function CaptchaWidget({ onVerified }: { onVerified: () => void }) {
+  const [challenge, setChallenge] = useState<CaptchaChallenge>(generateChallenge);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+  const [attempts, setAttempts] = useState(0);
+  const [shake, setShake] = useState(false);
+
+  const refresh = useCallback(() => {
+    setChallenge(generateChallenge());
+    setInput("");
+    setError("");
+    setAttempts(0);
+  }, []);
+
+  const verify = () => {
+    const val = parseInt(input.trim(), 10);
+    if (isNaN(val)) { setError("Please enter a number."); return; }
+    if (val === challenge.answer) {
+      onVerified();
+    } else {
+      const next = attempts + 1;
+      setAttempts(next);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      if (next >= 3) {
+        setError("Let\u2019s try a fresh question.");
+        refresh();
+      } else {
+        setError(`That\u2019s not quite right \u2014 ${3 - next} attempt${3 - next === 1 ? "" : "s"} left.`);
+        setInput("");
+      }
+    }
+  };
+
+  return (
+    <div className={`rounded-xl border border-border bg-gray-50 p-4 transition-all ${shake ? "animate-[shake_0.4s_ease]" : ""}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+        <span className="text-sm font-semibold text-secondary">Quick Verification</span>
+        <span className="text-xs text-muted-foreground ml-auto">Prove you\u2019re human</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-base font-mono font-bold text-secondary bg-white border border-border rounded-lg px-3 py-2 shrink-0 min-w-[90px] text-center">
+          {challenge.a} {challenge.op} {challenge.b} = ?
+        </span>
+        <input
+          type="number"
+          value={input}
+          onChange={e => { setInput(e.target.value); setError(""); }}
+          onKeyDown={e => e.key === "Enter" && (e.preventDefault(), verify())}
+          placeholder="Answer"
+          className="w-24 border border-border rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary bg-white"
+        />
+        <button
+          type="button"
+          onClick={verify}
+          className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition"
+        >
+          Verify
+        </button>
+        <button
+          type="button"
+          onClick={refresh}
+          title="New question"
+          className="p-2 text-muted-foreground hover:text-secondary transition rounded-lg hover:bg-white"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+    </div>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function Contact() {
   const [name,    setName]    = useState("");
   const [email,   setEmail]   = useState("");
@@ -25,6 +113,7 @@ export default function Contact() {
   const [errors,  setErrors]  = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [sent,    setSent]    = useState(false);
+  const [captchaOk, setCaptchaOk] = useState(false);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -37,6 +126,7 @@ export default function Contact() {
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
+    if (!captchaOk) { setErrors({ submit: "Please complete the verification first." }); return; }
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
     setErrors({});
@@ -44,7 +134,7 @@ export default function Contact() {
     try {
       await submitContactForm({ name: name.trim(), email: email.trim(), phone: phone.trim(), message: message.trim() });
       setSent(true);
-      setName(""); setEmail(""); setPhone(""); setMessage("");
+      setName(""); setEmail(""); setPhone(""); setMessage(""); setCaptchaOk(false);
     } catch (err) {
       setErrors({ submit: err instanceof Error ? err.message : "Something went wrong. Please try again." });
     } finally {
@@ -195,6 +285,16 @@ export default function Contact() {
                     {errors.message && <p className="text-xs text-red-600 mt-1">{errors.message}</p>}
                   </div>
 
+                  {/* CAPTCHA */}
+                  {captchaOk ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                      <span className="text-sm font-medium text-green-700">Verification complete</span>
+                    </div>
+                  ) : (
+                    <CaptchaWidget onVerified={() => setCaptchaOk(true)} />
+                  )}
+
                   {errors.submit && (
                     <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
                       {errors.submit}
@@ -203,8 +303,8 @@ export default function Contact() {
 
                   <button
                     type="submit"
-                    disabled={sending}
-                    className="flex items-center gap-2 bg-primary text-white font-semibold px-8 py-3 rounded-xl hover:bg-primary/90 transition disabled:opacity-60"
+                    disabled={sending || !captchaOk}
+                    className="flex items-center gap-2 bg-primary text-white font-semibold px-8 py-3 rounded-xl hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {sending
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
