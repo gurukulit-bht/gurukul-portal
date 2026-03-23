@@ -17,6 +17,11 @@ const GRADES = [
   "7th","8th","9th","10th","11th","12th",
 ];
 
+const CURRICULUM_YEARS: string[] = Array.from({ length: 25 }, (_, i) => {
+  const s = 2027 + i;
+  return `${s}-${s + 1}`;
+});
+
 const EMPLOYERS_LIST = [
   "Accenture",
   "Amazon",
@@ -78,7 +83,7 @@ function validateDob(v: string): string {
   const now = new Date();
   if (d >= now) return "Date of birth must be in the past.";
   const ageYears = (now.getTime() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
-  if (ageYears < 3)  return "Student must be at least 3 years old to register.";
+  if (ageYears < 6)  return "Student must be at least 6 years old to register.";
   if (ageYears > 22) return "Please check the date of birth — the student appears to be over 22 years old.";
   return "";
 }
@@ -136,14 +141,15 @@ function FieldError({ msg }: { msg?: string }) {
 }
 
 function Field({
-  label, required, error, children,
+  label, required, error, hint, children,
 }: {
-  label: string; required?: boolean; error?: string; children: React.ReactNode;
+  label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode;
 }) {
   return (
     <div>
       <label className="text-xs font-semibold text-secondary mb-1 block">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+        {hint && <span className="ml-1.5 font-normal text-muted-foreground">({hint})</span>}
       </label>
       {children}
       <FieldError msg={error} />
@@ -233,11 +239,12 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
   const [saving,  setSaving]  = useState(false);
   const [errors,  setErrors]  = useState<Errors>({});
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName,  setLastName]  = useState("");
-  const [dob,       setDob]       = useState("");
-  const [grade,     setGrade]     = useState("");
-  const [isNew,     setIsNew]     = useState(true);
+  const [firstName,   setFirstName]   = useState("");
+  const [lastName,    setLastName]    = useState("");
+  const [dob,         setDob]         = useState("");
+  const [grade,       setGrade]       = useState("");
+  const [curricYear,  setCurricYear]  = useState("2027-2028");
+  const [isNew,       setIsNew]       = useState(true);
 
   const [motherName,          setMotherName]          = useState("");
   const [motherPhone,         setMotherPhone]         = useState("");
@@ -302,6 +309,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
       case "lastName":          msg = validatePersonName(value, "Last name"); break;
       case "dob":               msg = validateDob(value); break;
       case "grade":             msg = value ? "" : "Please select a grade."; break;
+      case "curricYear":        msg = value ? "" : "Please select a curriculum year."; break;
       case "motherName":        msg = validatePersonName(value, "Mother's name"); break;
       case "motherPhone":       msg = validatePhone(value); break;
       case "motherEmail":       msg = validateEmail(value); break;
@@ -325,6 +333,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
       lastName:          validatePersonName(lastName, "Last name"),
       dob:               validateDob(dob),
       grade:             grade ? "" : "Please select a grade.",
+      curricYear:        curricYear ? "" : "Please select a curriculum year.",
       motherName:        validatePersonName(motherName, "Mother's name"),
       motherPhone:       validatePhone(motherPhone),
       motherEmail:       validateEmail(motherEmail),
@@ -441,6 +450,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
         lastName:       lastName.trim(),
         dob,
         grade,
+        curriculumYear: curricYear || undefined,
         isNewStudent:   isNew,
         memberId:       memberId ?? undefined,
         motherName:     motherName.trim(),
@@ -721,7 +731,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
               data-field-error={errors.lastName ? "true" : undefined}
             />
           </Field>
-          <Field label="Date of Birth" required error={errors.dob}>
+          <Field label="Date of Birth" required error={errors.dob} hint="Student must be 6+ years of age">
             <input
               type="date"
               value={dob}
@@ -731,7 +741,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
               data-field-error={errors.dob ? "true" : undefined}
             />
           </Field>
-          <Field label="School Grade (2026–27)" required error={errors.grade}>
+          <Field label="School Grade" required error={errors.grade}>
             <select
               value={grade}
               onChange={e => setGrade(e.target.value)}
@@ -741,6 +751,17 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
             >
               <option value="">— Select grade —</option>
               {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </Field>
+          <Field label="Curriculum Year" required error={errors.curricYear}>
+            <select
+              value={curricYear}
+              onChange={e => setCurricYear(e.target.value)}
+              onBlur={() => blurField("curricYear", curricYear)}
+              className={`${selectCls} ${inputErr("curricYear")}`}
+              data-field-error={errors.curricYear ? "true" : undefined}
+            >
+              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </Field>
         </div>

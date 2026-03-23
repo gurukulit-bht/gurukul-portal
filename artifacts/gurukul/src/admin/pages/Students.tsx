@@ -33,6 +33,11 @@ type EnrollmentDraft = {
 };
 
 const GRADES = ["Kindergarten","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
+
+const CURRICULUM_YEARS: string[] = Array.from({ length: 25 }, (_, i) => {
+  const s = 2027 + i;
+  return `${s}-${s + 1}`;
+});
 const coursesList    = ["All","Hindi","Dharma","Telugu","Tamil","Sanskrit","Gujarati"];
 const paymentStatuses = ["All","Paid","Pending","Overdue"];
 const levels         = ["All","Level 1","Level 2","Level 3","Level 4","Level 5","Level 6","Level 7"];
@@ -65,11 +70,12 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
 
-  const [firstName, setFirstName]     = useState("");
-  const [lastName,  setLastName]      = useState("");
-  const [dob,       setDob]           = useState("");
-  const [grade,     setGrade]         = useState("");
-  const [isNew,     setIsNew]         = useState(true);
+  const [firstName,  setFirstName]  = useState("");
+  const [lastName,   setLastName]   = useState("");
+  const [dob,        setDob]        = useState("");
+  const [grade,      setGrade]      = useState("");
+  const [curricYear, setCurricYear] = useState("2027-2028");
+  const [isNew,      setIsNew]      = useState(true);
 
   const [motherName,  setMotherName]  = useState("");
   const [motherPhone, setMotherPhone] = useState("");
@@ -115,11 +121,12 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
     setSaving(true);
     try {
       await adminApi.students.register({
-        firstName: firstName.trim(),
-        lastName:  lastName.trim(),
-        dob:       dob || undefined,
-        grade:     grade || undefined,
-        isNewStudent: isNew,
+        firstName:      firstName.trim(),
+        lastName:       lastName.trim(),
+        dob:            dob || undefined,
+        grade:          grade || undefined,
+        curriculumYear: curricYear || undefined,
+        isNewStudent:   isNew,
         motherName:  motherName.trim() || undefined,
         motherPhone: motherPhone.trim() || undefined,
         motherEmail: motherEmail.trim() || undefined,
@@ -189,10 +196,15 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
                   <Field label="Date of Birth">
                     <input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} />
                   </Field>
-                  <Field label="School Grade (2026-27)">
+                  <Field label="School Grade">
                     <select value={grade} onChange={e => setGrade(e.target.value)} className={selectCls}>
                       <option value="">— Select grade —</option>
                       {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Curriculum Year" required>
+                    <select value={curricYear} onChange={e => setCurricYear(e.target.value)} className={selectCls}>
+                      {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </Field>
                 </div>

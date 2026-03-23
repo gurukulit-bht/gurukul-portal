@@ -128,6 +128,7 @@ router.post("/", async (req, res) => {
   try {
     const {
       studentCode, firstName, lastName, dob, grade, isNewStudent,
+      curriculumYear,
       memberId,
       motherName, motherPhone, motherEmail, motherEmployer,
       fatherName, fatherPhone, fatherEmail, fatherEmployer,
@@ -138,6 +139,7 @@ router.post("/", async (req, res) => {
       studentCode?: string;
       firstName: string; lastName: string;
       dob?: string; grade?: string; isNewStudent?: boolean;
+      curriculumYear?: string;
       memberId?: number;
       motherName?: string; motherPhone?: string; motherEmail?: string; motherEmployer?: string;
       fatherName?: string; fatherPhone?: string; fatherEmail?: string; fatherEmployer?: string;
@@ -169,6 +171,7 @@ router.post("/", async (req, res) => {
       dob:            dob || null,
       grade:          grade || null,
       isNewStudent:   isNewStudent ?? true,
+      curriculumYear: curriculumYear?.trim() || null,
       memberId:       memberId ?? null,
       motherName:     motherName?.trim() || null,
       motherPhone:    motherPhone?.trim() || null,
