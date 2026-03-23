@@ -21,20 +21,21 @@ const router: IRouter = Router();
 async function buildStudentList() {
   const rows = await db
     .select({
-      studentCode:   studentsTable.studentCode,
-      studentName:   studentsTable.name,
-      enrollmentId:  enrollmentsTable.id,
-      enrollDate:    enrollmentsTable.enrollDate,
-      enrollStatus:  enrollmentsTable.status,
-      levelNumber:   courseLevelsTable.levelNumber,
-      schedule:      courseLevelsTable.schedule,
-      courseName:    coursesTable.name,
-      sectionName:   courseSectionsTable.sectionName,
-      paymentStatus: paymentsTable.paymentStatus,
-      amountDue:     paymentsTable.amountDue,
-      amountPaid:    paymentsTable.amountPaid,
-      paymentMethod: paymentsTable.paymentMethod,
-      receiptId:     paymentsTable.receiptId,
+      studentCode:    studentsTable.studentCode,
+      studentName:    studentsTable.name,
+      curriculumYear: studentsTable.curriculumYear,
+      enrollmentId:   enrollmentsTable.id,
+      enrollDate:     enrollmentsTable.enrollDate,
+      enrollStatus:   enrollmentsTable.status,
+      levelNumber:    courseLevelsTable.levelNumber,
+      schedule:       courseLevelsTable.schedule,
+      courseName:     coursesTable.name,
+      sectionName:    courseSectionsTable.sectionName,
+      paymentStatus:  paymentsTable.paymentStatus,
+      amountDue:      paymentsTable.amountDue,
+      amountPaid:     paymentsTable.amountPaid,
+      paymentMethod:  paymentsTable.paymentMethod,
+      receiptId:      paymentsTable.receiptId,
     })
     .from(studentsTable)
     .leftJoin(enrollmentsTable, eq(enrollmentsTable.studentId, studentsTable.id))
@@ -45,18 +46,19 @@ async function buildStudentList() {
     .orderBy(asc(studentsTable.studentCode), asc(enrollmentsTable.id));
 
   return rows.map((r) => ({
-    id:            r.studentCode,
-    name:          r.studentName,
-    course:        r.courseName ?? "",
-    level:         r.levelNumber != null ? `Level ${r.levelNumber}` : "",
-    section:       r.sectionName ?? "",
-    timing:        r.schedule ?? "",
-    enrollDate:    r.enrollDate ?? "",
-    paymentStatus: (r.paymentStatus ?? "Pending") as "Paid" | "Pending" | "Overdue",
-    amountDue:     parseFloat(r.amountDue ?? "150"),
-    amountPaid:    parseFloat(r.amountPaid ?? "0"),
-    paymentMethod: r.paymentMethod ?? "-",
-    receiptId:     r.receiptId ?? "-",
+    id:             r.studentCode,
+    name:           r.studentName,
+    curriculumYear: r.curriculumYear ?? "",
+    course:         r.courseName ?? "",
+    level:          r.levelNumber != null ? `Level ${r.levelNumber}` : "",
+    section:        r.sectionName ?? "",
+    timing:         r.schedule ?? "",
+    enrollDate:     r.enrollDate ?? "",
+    paymentStatus:  (r.paymentStatus ?? "Pending") as "Paid" | "Pending" | "Overdue",
+    amountDue:      parseFloat(r.amountDue ?? "150"),
+    amountPaid:     parseFloat(r.amountPaid ?? "0"),
+    paymentMethod:  r.paymentMethod ?? "-",
+    receiptId:      r.receiptId ?? "-",
   }));
 }
 

@@ -13,7 +13,7 @@ import { canAccess } from "../rbac";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Student = {
-  id: string; name: string; course: string; level: string;
+  id: string; name: string; curriculumYear: string; course: string; level: string;
   section: string; timing: string; enrollDate: string;
   paymentStatus: "Paid" | "Pending" | "Overdue";
   amountDue: number; amountPaid: number; paymentMethod: string; receiptId: string;
@@ -386,11 +386,12 @@ export default function Students() {
 
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState("");
+  const [search, setSearch]             = useState("");
   const [filterCourse, setFilterCourse] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterLevel,  setFilterLevel]  = useState("All");
-  const [sortKey, setSortKey]   = useState<SortKey>("id");
+  const [filterCurricYear, setFilterCurricYear] = useState("2027-2028");
+  const [sortKey, setSortKey]           = useState<SortKey>("id");
   const [sortAsc, setSortAsc]   = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
@@ -407,6 +408,7 @@ export default function Students() {
       (filterCourse === "All" || s.course === filterCourse) &&
       (filterStatus === "All" || s.paymentStatus === filterStatus) &&
       (filterLevel === "All" || s.level === filterLevel) &&
+      (filterCurricYear === "All" || s.curriculumYear === filterCurricYear) &&
       (s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.id.toLowerCase().includes(search.toLowerCase()))
     );
@@ -417,7 +419,7 @@ export default function Students() {
       return 0;
     });
     return data;
-  }, [students, search, filterCourse, filterStatus, filterLevel, sortKey, sortAsc]);
+  }, [students, search, filterCourse, filterStatus, filterLevel, filterCurricYear, sortKey, sortAsc]);
 
   const totalPaid    = filtered.filter((s) => s.paymentStatus === "Paid").reduce((a, s) => a + s.amountPaid, 0);
   const totalPending = filtered.filter((s) => s.paymentStatus !== "Paid").reduce((a, s) => a + (s.amountDue - s.amountPaid), 0);
@@ -434,8 +436,8 @@ export default function Students() {
   }
 
   function exportCSV() {
-    const headers = ["Student ID","Name","Course","Level","Section","Timing","Enroll Date","Payment Status","Amount Due","Amount Paid","Method","Receipt ID"];
-    const rows = filtered.map((s) => [s.id,s.name,s.course,s.level,s.section,s.timing,s.enrollDate,s.paymentStatus,s.amountDue,s.amountPaid,s.paymentMethod,s.receiptId]);
+    const headers = ["Student ID","Name","Curriculum Year","Course","Level","Section","Timing","Enroll Date","Payment Status","Amount Due","Amount Paid","Method","Receipt ID"];
+    const rows = filtered.map((s) => [s.id,s.name,s.curriculumYear,s.course,s.level,s.section,s.timing,s.enrollDate,s.paymentStatus,s.amountDue,s.amountPaid,s.paymentMethod,s.receiptId]);
     const csv = [headers,...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gurukul-students.csv"; a.click();
@@ -498,7 +500,21 @@ export default function Students() {
       </div>
 
       {showFilters && (
-        <div className="bg-white rounded-2xl border border-border p-4 flex flex-wrap gap-4">
+        <div className="bg-white rounded-2xl border border-border p-4 flex flex-wrap gap-x-6 gap-y-4">
+          {/* Curriculum Year — select dropdown (25 years) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Curriculum Year</label>
+            <select
+              value={filterCurricYear}
+              onChange={e => setFilterCurricYear(e.target.value)}
+              className="text-sm border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary bg-white min-w-36"
+            >
+              <option value="All">All Years</option>
+              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          {/* Course */}
           <div className="space-y-1.5 min-w-32">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</label>
             <div className="flex flex-wrap gap-1">
@@ -507,6 +523,8 @@ export default function Students() {
               ))}
             </div>
           </div>
+
+          {/* Payment Status */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Payment Status</label>
             <div className="flex flex-wrap gap-1">
@@ -515,6 +533,8 @@ export default function Students() {
               ))}
             </div>
           </div>
+
+          {/* Level */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Level</label>
             <div className="flex flex-wrap gap-1">
