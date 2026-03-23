@@ -115,13 +115,17 @@ export default function Teachers() {
 
   function openEdit(t: Teacher) {
     setEditing(t);
+    const course       = dbCourses.find((c) => c.name === t.assignedCourse);
+    const sortedLevels = course?.levels.slice().sort((a, b) => a.levelNumber - b.levelNumber) ?? [];
+    const levelValid   = sortedLevels.some((l) => l.className === t.assignedLevel);
+    const normalizedLevel = levelValid ? t.assignedLevel : (sortedLevels[0]?.className ?? "");
     setForm({
       name:               t.name,
       email:              t.email,
       phone:              t.phone,
       category:           t.category || "Senior Teacher",
       assignedCourse:     t.assignedCourse,
-      assignedLevel:      t.assignedLevel,
+      assignedLevel:      normalizedLevel,
       sectionId:          t.sectionId,
       assistantTeacherId: t.assistantTeacherId,
     });
@@ -194,8 +198,8 @@ export default function Teachers() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-secondary">Teacher Assignment</h2>
-          <p className="text-sm text-muted-foreground">{teachers.filter((t) => t.status === "Active").length} active teachers</p>
+          <h2 className="text-xl font-bold text-secondary">Staff Management</h2>
+          <p className="text-sm text-muted-foreground">{teachers.filter((t) => t.status === "Active").length} active staff</p>
         </div>
         <Button onClick={openAdd} className="gap-2 rounded-xl shrink-0">
           <Plus className="w-4 h-4" /> Add Teacher
@@ -206,7 +210,7 @@ export default function Teachers() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search teachers..." className="pl-9 rounded-xl" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder="Search staff..." className="pl-9 rounded-xl" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className="flex flex-wrap gap-2">
           {["All", ...courseNames].map((c) => (
@@ -303,9 +307,9 @@ export default function Teachers() {
         </div>
       </div>
 
-      {/* Teacher–Course Mapping */}
+      {/* Staff–Course Mapping */}
       <div className="bg-white rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-secondary mb-4">Teacher–Course Mapping</h3>
+        <h3 className="font-bold text-secondary mb-4">Staff–Course Mapping</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {dbCourses.map((course) => {
             const assigned = teachers.filter((t) => t.assignedCourse === course.name && t.status === "Active");

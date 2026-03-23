@@ -206,7 +206,7 @@ export default function RoleManagement() {
                 ["Announcements",         true,  false, false],
                 ["Calendar",              true,  false, false],
                 ["Courses & Classes",     true,  true,  true ],
-                ["Teacher Assignment",    true,  false, false],
+                ["Staff Management",      true,  false, false],
                 ["Students & Payments",   true,  false, false],
                 ["Inventory",             true,  false, false],
                 ["Course Documents",      true,  true,  true ],

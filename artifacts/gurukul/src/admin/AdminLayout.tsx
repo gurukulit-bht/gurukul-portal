@@ -23,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Announcements",       icon: Megaphone,       path: "/admin/announcements",      permission: "announcements",    section: "main" },
   { label: "Calendar",            icon: Calendar,        path: "/admin/calendar",            permission: "calendar",         section: "main" },
   { label: "Course Management",   icon: Layers,          path: "/admin/course-management",  permission: "courseManagement", section: "main" },
-  { label: "Teacher Assignment",  icon: GraduationCap,   path: "/admin/teachers",           permission: "teachers",         section: "main" },
+  { label: "Staff Management",     icon: GraduationCap,   path: "/admin/teachers",           permission: "teachers",         section: "main" },
   { label: "Students & Payments", icon: Users,           path: "/admin/students",           permission: "students",         section: "main" },
   { label: "Student Registration",icon: UserPlus,        path: "/admin/register",           permission: "registration",     section: "main" },
   { label: "Inventory",           icon: Package,         path: "/admin/inventory",          permission: "inventory",        section: "main" },
