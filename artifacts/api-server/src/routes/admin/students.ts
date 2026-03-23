@@ -22,7 +22,6 @@ async function buildStudentList() {
     .select({
       studentCode:   studentsTable.studentCode,
       studentName:   studentsTable.name,
-      phone:         studentsTable.phone,
       enrollmentId:  enrollmentsTable.id,
       enrollDate:    enrollmentsTable.enrollDate,
       enrollStatus:  enrollmentsTable.status,
@@ -159,12 +158,9 @@ router.post("/", async (req, res) => {
       code = `GK-${String(num).padStart(3, "0")}`;
     }
 
-    const phone = motherPhone?.trim() || fatherPhone?.trim() || undefined;
-
     const [student] = await db.insert(studentsTable).values({
       studentCode:  code,
       name:         `${firstName.trim()} ${lastName.trim()}`,
-      phone:        phone || null,
       dob:          dob || null,
       grade:        grade || null,
       isNewStudent: isNewStudent ?? true,
