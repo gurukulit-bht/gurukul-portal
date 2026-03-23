@@ -643,7 +643,7 @@ export default function CourseManagement() {
   const [courses, setCourses]                   = useState<CourseRow[]>([]);
   const [loading, setLoading]                   = useState(true);
   const [showArchived, setShowArchived]         = useState(false);
-  const [yearFilter, setYearFilter]             = useState<string>("all");
+  const [yearFilter, setYearFilter]             = useState<string>("2027-28");
   const [selectedId, setSelectedId]             = useState<number | null>(null);
   const [showForm, setShowForm]                 = useState(false);
   const [editingCourse, setEditingCourse]       = useState<CourseRow | null>(null);
