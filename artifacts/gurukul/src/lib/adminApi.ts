@@ -48,7 +48,7 @@ export const adminApi = {
       request("PATCH", `/students/enrollments/${enrollmentId}/section`, { sectionId }),
   },
   members: {
-    lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null }>("POST", "/members/lookup", { emailOrPhone }),
+    lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null }>("POST", "/members/lookup", { emailOrPhone }),
     create: (data: unknown) => request<{ id: number }>("POST", "/members", data),
     update: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
   },

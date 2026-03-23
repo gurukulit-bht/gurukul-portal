@@ -65,15 +65,20 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PATCH /api/admin/members/:id — update policyAgreed
+// PATCH /api/admin/members/:id — update policyAgreed and/or membershipYear
 router.patch("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { policyAgreed } = req.body as { policyAgreed?: boolean };
+    const { policyAgreed, membershipYear } = req.body as { policyAgreed?: boolean; membershipYear?: number };
+
+    const updateData: Record<string, unknown> = {};
+    if (policyAgreed !== undefined)  updateData.policyAgreed  = policyAgreed;
+    if (membershipYear !== undefined) updateData.membershipYear = membershipYear;
+    if (Object.keys(updateData).length === 0) updateData.policyAgreed = true;
 
     const [member] = await db
       .update(membersTable)
-      .set({ policyAgreed: policyAgreed ?? true })
+      .set(updateData)
       .where(eq(membersTable.id, id))
       .returning();
 

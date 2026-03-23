@@ -136,6 +136,7 @@ export const membersTable = pgTable("members", {
   phone:            text("phone"),
   isExistingMember: boolean("is_existing_member").default(false),
   policyAgreed:     boolean("policy_agreed").default(false),
+  membershipYear:   integer("membership_year"), // Year membership was last renewed/confirmed
   createdAt:        timestamp("created_at").defaultNow(),
 });
 
