@@ -38,6 +38,7 @@ export async function seedIfEmpty() {
       .values([
         {
           name: "Hindi",
+          curriculumYear: "2027-28",
           description:
             "Hindi classes focus on building foundational language skills while connecting students to Indian culture, stories, and traditions.",
           ageGroup: "5+ years",
@@ -61,6 +62,7 @@ export async function seedIfEmpty() {
         },
         {
           name: "Dharma",
+          curriculumYear: "2027-28",
           description:
             "Dharma classes focus on teaching Hindu values, ethics, traditions, and spiritual knowledge in an engaging and age-appropriate way.",
           ageGroup: "5+ years",
@@ -85,6 +87,7 @@ export async function seedIfEmpty() {
         },
         {
           name: "Telugu",
+          curriculumYear: "2027-28",
           description:
             "Telugu classes aim to help students learn reading, writing, and conversational Telugu while preserving linguistic heritage.",
           ageGroup: "5+ years",
@@ -108,6 +111,7 @@ export async function seedIfEmpty() {
         },
         {
           name: "Tamil",
+          curriculumYear: "2027-28",
           description:
             "Tamil classes introduce students to one of the oldest classical languages, focusing on literacy and cultural richness.",
           ageGroup: "5+ years",
@@ -131,6 +135,7 @@ export async function seedIfEmpty() {
         },
         {
           name: "Sanskrit",
+          curriculumYear: "2027-28",
           description:
             "Sanskrit classes provide an introduction to the ancient language of scriptures, focusing on pronunciation, vocabulary, and basic grammar.",
           ageGroup: "7+ years (recommended)",
@@ -154,6 +159,7 @@ export async function seedIfEmpty() {
         },
         {
           name: "Gujarati",
+          curriculumYear: "2027-28",
           description:
             "Gujarati classes help students learn reading, writing, and speaking skills while staying connected to Gujarati culture and traditions.",
           ageGroup: "5+ years",
@@ -694,6 +700,16 @@ const EXTRA_STUDENTS = [
 
 async function patchStudentData() {
   try {
+    // 0. Set curriculum_year = '2027-28' for all courses where it's missing
+    const courseYearResult = await db
+      .update(coursesTable)
+      .set({ curriculumYear: "2027-28" })
+      .where(or(isNull(coursesTable.curriculumYear), sql`${coursesTable.curriculumYear} = ''`));
+    if ((courseYearResult as unknown as { rowCount: number }).rowCount > 0) {
+      logger.info({ updated: (courseYearResult as unknown as { rowCount: number }).rowCount },
+        "Patched curriculum_year for existing courses.");
+    }
+
     // 1. Set curriculum_year = '2027-2028' for all students where it's missing
     const yearResult = await db
       .update(studentsTable)

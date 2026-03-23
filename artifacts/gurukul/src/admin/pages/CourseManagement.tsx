@@ -657,12 +657,15 @@ export default function CourseManagement() {
     try {
       const data = await adminApi.courses.list(showArchived) as CourseRow[];
       setCourses(data);
-      if (data.length > 0 && !selectedId) setSelectedId(data[0].id);
+      setSelectedId(prev => {
+        if (prev && data.some(c => c.id === prev)) return prev;
+        return data.length > 0 ? data[0].id : null;
+      });
     } catch { setCourses([]); }
     finally { setLoading(false); }
-  }, [showArchived, selectedId]);
+  }, [showArchived]);
 
-  useEffect(() => { loadCourses(); }, [showArchived]);
+  useEffect(() => { loadCourses(); }, [loadCourses]);
 
   const selectedCourse = courses.find(c => c.id === selectedId) ?? null;
 
@@ -814,9 +817,11 @@ export default function CourseManagement() {
 
         {loading ? (
           <div className="text-sm text-muted-foreground py-2 text-center">Loading…</div>
-        ) : courses.length === 0 ? (
+        ) : filteredCourses.length === 0 ? (
           <div className="text-sm text-muted-foreground py-2 text-center">
-            {isAdmin ? "No courses yet. Create one!" : "No courses assigned."}
+            {courses.length === 0
+              ? (isAdmin ? "No courses yet. Create one!" : "No courses assigned.")
+              : "No courses for this year."}
           </div>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
