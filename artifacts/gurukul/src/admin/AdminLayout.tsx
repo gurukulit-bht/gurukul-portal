@@ -5,7 +5,7 @@ import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./r
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
   Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
-  Bell, ShieldCheck, UserPlus,
+  Bell, ShieldCheck, UserPlus, Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,21 +19,22 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   // Admin section
-  { label: "Dashboard",           icon: LayoutDashboard, path: "/admin/dashboard",       permission: "dashboard",      section: "main" },
-  { label: "Announcements",       icon: Megaphone,       path: "/admin/announcements",   permission: "announcements",  section: "main" },
-  { label: "Calendar",            icon: Calendar,        path: "/admin/calendar",         permission: "calendar",       section: "main" },
-  { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",          permission: "courses",        section: "main" },
-  { label: "Teacher Assignment",  icon: GraduationCap,   path: "/admin/teachers",         permission: "teachers",       section: "main" },
-  { label: "Students & Payments", icon: Users,           path: "/admin/students",         permission: "students",       section: "main" },
-  { label: "Student Registration",icon: UserPlus,        path: "/admin/register",         permission: "registration",   section: "main" },
-  { label: "Inventory",           icon: Package,         path: "/admin/inventory",        permission: "inventory",      section: "main" },
+  { label: "Dashboard",           icon: LayoutDashboard, path: "/admin/dashboard",          permission: "dashboard",        section: "main" },
+  { label: "Announcements",       icon: Megaphone,       path: "/admin/announcements",      permission: "announcements",    section: "main" },
+  { label: "Calendar",            icon: Calendar,        path: "/admin/calendar",            permission: "calendar",         section: "main" },
+  { label: "Course Management",   icon: Layers,          path: "/admin/course-management",  permission: "courseManagement", section: "main" },
+  { label: "Teacher Assignment",  icon: GraduationCap,   path: "/admin/teachers",           permission: "teachers",         section: "main" },
+  { label: "Students & Payments", icon: Users,           path: "/admin/students",           permission: "students",         section: "main" },
+  { label: "Student Registration",icon: UserPlus,        path: "/admin/register",           permission: "registration",     section: "main" },
+  { label: "Inventory",           icon: Package,         path: "/admin/inventory",          permission: "inventory",        section: "main" },
   // Shared (teacher/assistant/admin)
-  { label: "Course Documents",    icon: FileText,        path: "/admin/documents",        permission: "documents",      section: "teacher" },
-  { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",       permission: "attendance",     section: "teacher" },
-  { label: "Parent Notifications",icon: Bell,            path: "/admin/notifications",    permission: "notifications",  section: "teacher" },
+  { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",            permission: "courses",          section: "teacher" },
+  { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
+  { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
+  { label: "Parent Notifications",icon: Bell,            path: "/admin/notifications",      permission: "notifications",    section: "teacher" },
   // Admin-only management
-  { label: "Role Management",     icon: ShieldCheck,     path: "/admin/roles",            permission: "roles",          section: "admin-only" },
-  { label: "Settings",            icon: Settings,        path: "/admin/settings",         permission: "settings",       section: "admin-only" },
+  { label: "Role Management",     icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
+  { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

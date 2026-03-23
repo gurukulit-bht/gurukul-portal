@@ -7,7 +7,8 @@ import AdminLayout from "./AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import AdminAnnouncements from "./pages/Announcements";
 import CalendarAdmin from "./pages/CalendarAdmin";
-import CoursesAdmin from "./pages/CourseManagement";
+import CourseManagement from "./pages/CourseManagement";
+import CoursesAdmin from "./pages/CoursesAdmin";
 import Teachers from "./pages/Teachers";
 import Students from "./pages/Students";
 import Inventory from "./pages/Inventory";
@@ -61,9 +62,17 @@ function AdminRoutes() {
       <Route path="/admin/calendar">
         <ProtectedRoute permission="calendar"><CalendarAdmin /></ProtectedRoute>
       </Route>
+
+      {/* Courses & Classes — teacher-friendly view, scoped by role on the API */}
       <Route path="/admin/courses">
         <ProtectedRoute permission="courses"><CoursesAdmin /></ProtectedRoute>
       </Route>
+
+      {/* Course Management — admin-only full CRUD */}
+      <Route path="/admin/course-management">
+        <ProtectedRoute permission="courseManagement"><CourseManagement /></ProtectedRoute>
+      </Route>
+
       <Route path="/admin/teachers">
         <ProtectedRoute permission="teachers"><Teachers /></ProtectedRoute>
       </Route>
@@ -77,7 +86,6 @@ function AdminRoutes() {
         <ProtectedRoute permission="settings"><Settings /></ProtectedRoute>
       </Route>
 
-      {/* New shared pages */}
       <Route path="/admin/documents">
         <ProtectedRoute permission="documents"><CourseDocuments /></ProtectedRoute>
       </Route>
@@ -92,7 +100,6 @@ function AdminRoutes() {
         <ProtectedRoute permission="registration"><StudentRegistration /></ProtectedRoute>
       </Route>
 
-      {/* Admin-only pages */}
       <Route path="/admin/roles">
         <ProtectedRoute permission="roles"><RoleManagement /></ProtectedRoute>
       </Route>
