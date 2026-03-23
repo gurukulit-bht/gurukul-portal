@@ -1,5 +1,6 @@
 import { db } from "@workspace/db";
-import { coursesTable, courseLevelsTable } from "@workspace/db/schema";
+import { coursesTable, courseLevelsTable, courseSectionsTable } from "@workspace/db/schema";
+import { eq, sql, lte } from "drizzle-orm";
 import { logger } from "./logger";
 
 /**
@@ -195,5 +196,62 @@ export async function seedIfEmpty() {
     logger.info("Course levels seeded (all enrolled = 0).");
   } catch (err) {
     logger.error({ err }, "Seed failed");
+  }
+
+  // Always run section seeding independently — it's idempotent
+  await seedSectionsIfEmpty();
+}
+
+/**
+ * Seeds standard sections (Morning Batch / Afternoon Batch for L1–L2,
+ * Saturday/Sunday sections for L3) for every course level that currently
+ * has no sections assigned.  Safe to call on every startup.
+ */
+async function seedSectionsIfEmpty() {
+  try {
+    const existing = await db
+      .select({ count: sql<string>`count(*)` })
+      .from(courseSectionsTable);
+
+    if (parseInt(existing[0].count) > 0) {
+      logger.info({ count: existing[0].count }, "Sections already seeded — skipping.");
+      return;
+    }
+
+    logger.info("Seeding sections for all course levels 1–3…");
+
+    const levels = await db
+      .select({
+        levelId:     courseLevelsTable.id,
+        levelNumber: courseLevelsTable.levelNumber,
+        courseName:  coursesTable.name,
+      })
+      .from(courseLevelsTable)
+      .innerJoin(coursesTable, eq(coursesTable.id, courseLevelsTable.courseId))
+      .where(lte(courseLevelsTable.levelNumber, 3));
+
+    type NewSection = typeof courseSectionsTable.$inferInsert;
+    const sections: NewSection[] = [];
+
+    for (const level of levels) {
+      if (level.levelNumber === 1 || level.levelNumber === 2) {
+        sections.push(
+          { courseLevelId: level.levelId, sectionName: "Morning Batch",   schedule: "9:00 AM – 10:00 AM",   capacity: 20, status: "Active" },
+          { courseLevelId: level.levelId, sectionName: "Afternoon Batch", schedule: "10:15 AM – 11:15 AM", capacity: 20, status: "Active" },
+        );
+      } else if (level.levelNumber === 3) {
+        sections.push(
+          { courseLevelId: level.levelId, sectionName: "Saturday Section", schedule: "Saturdays 9:00 AM", capacity: 25, status: "Active" },
+          { courseLevelId: level.levelId, sectionName: "Sunday Section",   schedule: "Sundays 9:00 AM",   capacity: 25, status: "Active" },
+        );
+      }
+    }
+
+    if (sections.length > 0) {
+      await db.insert(courseSectionsTable).values(sections);
+      logger.info({ count: sections.length, levels: levels.length }, "Sections seeded.");
+    }
+  } catch (err) {
+    logger.error({ err }, "Section seed failed");
   }
 }
