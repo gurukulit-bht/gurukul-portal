@@ -118,5 +118,7 @@ export const adminApi = {
     employers: () => request<string[]>("GET", "/messaging/employers"),
     send:      (data: unknown) => request("POST", "/messaging/send", data),
     logs:      () => request<unknown[]>("GET", "/messaging/logs"),
+    inbox:     () => request<unknown[]>("GET", "/messaging/inbox"),
+    markRead:  (id: number) => request("PATCH", `/messaging/inbox/${id}/read`, {}),
   },
 };

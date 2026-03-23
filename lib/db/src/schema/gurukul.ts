@@ -73,8 +73,13 @@ export const contactsTable = pgTable("contacts", {
   fatherEmail:    text("father_email"),
   childName:      text("child_name"),
   childAge:       integer("child_age"),
-  courseInterest: text("course_interest").notNull(),
+  courseInterest: text("course_interest"),
   message:        text("message"),
+  // Simplified contact form fields
+  senderName:     text("sender_name"),
+  senderEmail:    text("sender_email"),
+  senderPhone:    text("sender_phone"),
+  isRead:         boolean("is_read").notNull().default(false),
   createdAt:      timestamp("created_at").defaultNow(),
 });
 

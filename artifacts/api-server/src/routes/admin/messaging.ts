@@ -6,8 +6,9 @@ import {
   courseLevelsTable,
   coursesTable,
   emailLogsTable,
+  contactsTable,
 } from "@workspace/db/schema";
-import { eq, asc, and, isNotNull, or, sql } from "drizzle-orm";
+import { eq, asc, isNotNull, sql, desc } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
 const router: IRouter = Router();
@@ -252,6 +253,45 @@ router.get("/logs", async (_req, res) => {
     return res.json(logs);
   } catch (err) {
     return res.status(500).json({ error: "Failed to fetch logs" });
+  }
+});
+
+// ─── GET /api/admin/messaging/inbox ──────────────────────────────────────────
+// Returns contact-form submissions from the public Contact Us page
+
+router.get("/inbox", async (_req, res) => {
+  try {
+    const messages = await db
+      .select({
+        id:          contactsTable.id,
+        senderName:  contactsTable.senderName,
+        senderEmail: contactsTable.senderEmail,
+        senderPhone: contactsTable.senderPhone,
+        message:     contactsTable.message,
+        isRead:      contactsTable.isRead,
+        createdAt:   contactsTable.createdAt,
+      })
+      .from(contactsTable)
+      .where(isNotNull(contactsTable.senderName))
+      .orderBy(desc(contactsTable.createdAt))
+      .limit(200);
+    return res.json(messages);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch inbox" });
+  }
+});
+
+// ─── PATCH /api/admin/messaging/inbox/:id/read ───────────────────────────────
+// Mark a contact message as read
+
+router.patch("/inbox/:id/read", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  try {
+    await db.update(contactsTable).set({ isRead: true }).where(eq(contactsTable.id, id));
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to mark as read" });
   }
 });
 

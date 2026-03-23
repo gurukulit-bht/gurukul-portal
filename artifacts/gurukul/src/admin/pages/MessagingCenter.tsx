@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Mail, Send, Users, Filter, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Clock, RefreshCw, Eye, EyeOff,
-  X, Loader2, Info,
+  X, Loader2, Info, Inbox, Phone, MailOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,16 @@ type EmailLog = {
   sentAt: string;
 };
 
+type InboxMessage = {
+  id: number;
+  senderName: string | null;
+  senderEmail: string | null;
+  senderPhone: string | null;
+  message: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 const COURSES = ["All", "Hindi", "Dharma", "Telugu", "Tamil", "Sanskrit", "Gujarati"];
 const CURRICULUM_YEARS: string[] = Array.from({ length: 25 }, (_, i) => {
   const s = 2027 + i;
@@ -54,7 +64,7 @@ function formatDate(iso: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MessagingCenter() {
-  const [tab, setTab] = useState<"compose" | "history">("compose");
+  const [tab, setTab] = useState<"compose" | "history" | "inbox">("compose");
 
   // ── Filters ──
   const [filterCourse,     setFilterCourse]     = useState("All");
@@ -81,10 +91,17 @@ export default function MessagingCenter() {
   const [logs,        setLogs]        = useState<EmailLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
-  // Load employers on mount
+  // ── Inbox ──
+  const [inboxMessages,  setInboxMessages]  = useState<InboxMessage[]>([]);
+  const [inboxLoading,   setInboxLoading]   = useState(false);
+
+  // Load employers and inbox count on mount
   useEffect(() => {
     adminApi.messaging.employers()
       .then(list => setEmployers(list as string[]))
+      .catch(() => {});
+    adminApi.messaging.inbox()
+      .then(data => setInboxMessages(data as InboxMessage[]))
       .catch(() => {});
   }, []);
 
@@ -173,9 +190,29 @@ export default function MessagingCenter() {
     }
   }
 
+  async function loadInbox() {
+    setInboxLoading(true);
+    try {
+      const data = await adminApi.messaging.inbox();
+      setInboxMessages(data as InboxMessage[]);
+    } catch {
+      setInboxMessages([]);
+    } finally {
+      setInboxLoading(false);
+    }
+  }
+
+  async function markAsRead(id: number) {
+    await adminApi.messaging.markRead(id);
+    setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: true } : m));
+  }
+
   useEffect(() => {
     if (tab === "history") loadLogs();
+    if (tab === "inbox")   loadInbox();
   }, [tab]);
+
+  const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
   const selectedCount = recipients.filter(r => selectedEmails.has(r.email)).length;
 
@@ -195,6 +232,18 @@ export default function MessagingCenter() {
               tab === "compose" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
           >
             <Mail className="w-4 h-4 inline mr-1.5" /> Compose
+          </button>
+          <button
+            onClick={() => setTab("inbox")}
+            className={cn("px-4 py-2 rounded-xl text-sm font-semibold transition-colors relative",
+              tab === "inbox" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
+          >
+            <Inbox className="w-4 h-4 inline mr-1.5" /> Inbox
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setTab("history")}
@@ -414,6 +463,39 @@ export default function MessagingCenter() {
         </div>
       )}
 
+      {/* ── INBOX TAB ───────────────────────────────────────────────────────── */}
+      {tab === "inbox" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {inboxMessages.length} message{inboxMessages.length !== 1 ? "s" : ""} received
+              {unreadCount > 0 && <span className="ml-2 text-red-600 font-semibold">· {unreadCount} unread</span>}
+            </p>
+            <Button variant="outline" size="sm" className="gap-2" onClick={loadInbox} disabled={inboxLoading}>
+              <RefreshCw className={cn("w-4 h-4", inboxLoading && "animate-spin")} /> Refresh
+            </Button>
+          </div>
+
+          {inboxLoading ? (
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : inboxMessages.length === 0 ? (
+            <div className="text-center py-20 border-2 border-dashed border-border rounded-2xl">
+              <Inbox className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No messages yet.</p>
+              <p className="text-sm text-muted-foreground mt-1">Messages from the public Contact Us page will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {inboxMessages.map(msg => (
+                <InboxCard key={msg.id} message={msg} onMarkRead={() => markAsRead(msg.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── HISTORY TAB ─────────────────────────────────────────────────────── */}
       {tab === "history" && (
         <div className="space-y-4">
@@ -498,6 +580,82 @@ function LogCard({ log }: { log: EmailLog }) {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Recipients</p>
               <p className="text-xs text-muted-foreground leading-relaxed">{log.recipientEmails}</p>
             </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Inbox Card ───────────────────────────────────────────────────────────────
+
+function InboxCard({ message, onMarkRead }: { message: InboxMessage; onMarkRead: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+
+  function handleExpand() {
+    setExpanded(e => !e);
+    if (!message.isRead && !expanded) onMarkRead();
+  }
+
+  return (
+    <div className={cn(
+      "bg-white border rounded-2xl shadow-sm p-5 transition-colors",
+      message.isRead ? "border-border" : "border-primary/40 bg-primary/5"
+    )}>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div className="min-w-0 flex items-start gap-3">
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+            message.isRead ? "bg-gray-100" : "bg-primary/20"
+          )}>
+            {message.isRead
+              ? <MailOpen className="w-4 h-4 text-muted-foreground" />
+              : <Mail className="w-4 h-4 text-primary" />
+            }
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-secondary text-sm">{message.senderName ?? "Unknown"}</p>
+              {!message.isRead && (
+                <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">New</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+              {message.senderEmail && (
+                <a href={`mailto:${message.senderEmail}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                  <Mail className="w-3 h-3" /> {message.senderEmail}
+                </a>
+              )}
+              {message.senderPhone && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Phone className="w-3 h-3" /> {message.senderPhone}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(message.createdAt)}</p>
+          </div>
+        </div>
+        <button
+          onClick={handleExpand}
+          className="text-xs text-muted-foreground hover:text-secondary shrink-0 flex items-center gap-1"
+        >
+          {expanded ? <><X className="w-3 h-3" /> Collapse</> : <><Eye className="w-3 h-3" /> View</>}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Message</p>
+          <pre className="text-sm text-secondary whitespace-pre-wrap bg-gray-50 rounded-xl p-4 font-sans leading-relaxed">
+            {message.message ?? "(no message)"}
+          </pre>
+          {message.senderEmail && (
+            <a
+              href={`mailto:${message.senderEmail}`}
+              className="inline-flex items-center gap-1.5 mt-3 text-sm text-primary hover:underline font-medium"
+            >
+              <Send className="w-3.5 h-3.5" /> Reply via email
+            </a>
           )}
         </div>
       )}
