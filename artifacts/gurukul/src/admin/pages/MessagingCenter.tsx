@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Mail, Send, Users, Filter, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Clock, RefreshCw, Eye, EyeOff,
-  X, Loader2, Info, Inbox, Phone, MailOpen,
+  X, Loader2, Info, Inbox, Phone, MailOpen, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -205,6 +205,15 @@ export default function MessagingCenter() {
   async function markAsRead(id: number) {
     await adminApi.messaging.markRead(id);
     setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: true } : m));
+  }
+
+  async function deleteMessage(id: number) {
+    try {
+      await adminApi.messaging.deleteMessage(id);
+      setInboxMessages(prev => prev.filter(m => m.id !== id));
+    } catch {
+      alert("Failed to delete message. Please try again.");
+    }
   }
 
   useEffect(() => {
@@ -489,7 +498,12 @@ export default function MessagingCenter() {
           ) : (
             <div className="space-y-3">
               {inboxMessages.map(msg => (
-                <InboxCard key={msg.id} message={msg} onMarkRead={() => markAsRead(msg.id)} />
+                <InboxCard
+                  key={msg.id}
+                  message={msg}
+                  onMarkRead={() => markAsRead(msg.id)}
+                  onDelete={() => deleteMessage(msg.id)}
+                />
               ))}
             </div>
           )}
@@ -589,12 +603,26 @@ function LogCard({ log }: { log: EmailLog }) {
 
 // ─── Inbox Card ───────────────────────────────────────────────────────────────
 
-function InboxCard({ message, onMarkRead }: { message: InboxMessage; onMarkRead: () => void }) {
+function InboxCard({
+  message,
+  onMarkRead,
+  onDelete,
+}: {
+  message: InboxMessage;
+  onMarkRead: () => void;
+  onDelete: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function handleExpand() {
     setExpanded(e => !e);
     if (!message.isRead && !expanded) onMarkRead();
+  }
+
+  function handleDeleteClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setConfirmDelete(true);
   }
 
   return (
@@ -635,13 +663,42 @@ function InboxCard({ message, onMarkRead }: { message: InboxMessage; onMarkRead:
             <p className="text-xs text-muted-foreground mt-0.5">{formatDate(message.createdAt)}</p>
           </div>
         </div>
-        <button
-          onClick={handleExpand}
-          className="text-xs text-muted-foreground hover:text-secondary shrink-0 flex items-center gap-1"
-        >
-          {expanded ? <><X className="w-3 h-3" /> Collapse</> : <><Eye className="w-3 h-3" /> View</>}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleExpand}
+            className="text-xs text-muted-foreground hover:text-secondary flex items-center gap-1"
+          >
+            {expanded ? <><X className="w-3 h-3" /> Collapse</> : <><Eye className="w-3 h-3" /> View</>}
+          </button>
+          <button
+            onClick={handleDeleteClick}
+            title="Delete message"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
+
+      {confirmDelete && (
+        <div className="mt-3 pt-3 border-t border-red-100 flex items-center justify-between gap-3 bg-red-50 rounded-xl px-4 py-3">
+          <p className="text-sm text-red-700 font-medium">Delete this message permanently?</p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-white text-secondary hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onDelete}
+              className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition font-semibold"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
 
       {expanded && (
         <div className="mt-4 pt-4 border-t border-border">

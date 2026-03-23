@@ -295,4 +295,18 @@ router.patch("/inbox/:id/read", async (req, res) => {
   }
 });
 
+// ─── DELETE /api/admin/messaging/inbox/:id ────────────────────────────────────
+// Permanently delete a contact message from the inbox
+
+router.delete("/inbox/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  try {
+    await db.delete(contactsTable).where(eq(contactsTable.id, id));
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to delete message" });
+  }
+});
+
 export default router;
