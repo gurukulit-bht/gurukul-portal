@@ -47,6 +47,11 @@ export const adminApi = {
     assignSection: (enrollmentId: number, sectionId: number | null) =>
       request("PATCH", `/students/enrollments/${enrollmentId}/section`, { sectionId }),
   },
+  members: {
+    lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null }>("POST", "/members/lookup", { emailOrPhone }),
+    create: (data: unknown) => request<{ id: number }>("POST", "/members", data),
+    update: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
+  },
   inventory: {
     list:       () => request<unknown[]>("GET", "/inventory"),
     create:     (data: unknown) => request("POST", "/inventory", data),

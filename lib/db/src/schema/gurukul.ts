@@ -126,6 +126,19 @@ export const courseLevelsTable = pgTable("course_levels", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Temple Members ───────────────────────────────────────────────────────────
+// A temple member (parent/guardian) who has registered or been looked up.
+
+export const membersTable = pgTable("members", {
+  id: serial("id").primaryKey(),
+  name:             text("name"),
+  email:            text("email"),
+  phone:            text("phone"),
+  isExistingMember: boolean("is_existing_member").default(false),
+  policyAgreed:     boolean("policy_agreed").default(false),
+  createdAt:        timestamp("created_at").defaultNow(),
+});
+
 // ─── Students ─────────────────────────────────────────────────────────────────
 // One row per student (child). Parent info lives here too.
 
@@ -137,14 +150,21 @@ export const studentsTable = pgTable("students", {
   dob: text("dob"),                        // Date of birth e.g. "2015-06-10"
   grade: text("grade"),                    // School grade e.g. "4th"
   isNewStudent: boolean("is_new_student").default(true),
+  // Member linkage
+  memberId: integer("member_id").references(() => membersTable.id),
   // Separate parent contacts
-  motherName:  text("mother_name"),
-  motherPhone: text("mother_phone"),
-  motherEmail: text("mother_email"),
-  fatherName:  text("father_name"),
-  fatherPhone: text("father_phone"),
-  fatherEmail: text("father_email"),
+  motherName:     text("mother_name"),
+  motherPhone:    text("mother_phone"),
+  motherEmail:    text("mother_email"),
+  motherEmployer: text("mother_employer"),
+  fatherName:     text("father_name"),
+  fatherPhone:    text("father_phone"),
+  fatherEmail:    text("father_email"),
+  fatherEmployer: text("father_employer"),
   address: text("address"),
+  // Volunteer info
+  volunteerParent: boolean("volunteer_parent").default(false),
+  volunteerArea:   text("volunteer_area"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

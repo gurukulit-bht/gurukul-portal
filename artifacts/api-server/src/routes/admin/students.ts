@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
   studentsTable,
+  membersTable,
   enrollmentsTable,
   courseLevelsTable,
   coursesTable,
@@ -127,17 +128,21 @@ router.post("/", async (req, res) => {
   try {
     const {
       studentCode, firstName, lastName, dob, grade, isNewStudent,
-      motherName, motherPhone, motherEmail,
-      fatherName, fatherPhone, fatherEmail,
+      memberId,
+      motherName, motherPhone, motherEmail, motherEmployer,
+      fatherName, fatherPhone, fatherEmail, fatherEmployer,
       address,
+      volunteerParent, volunteerArea,
       enrollments = [],
     } = req.body as {
       studentCode?: string;
       firstName: string; lastName: string;
       dob?: string; grade?: string; isNewStudent?: boolean;
-      motherName?: string; motherPhone?: string; motherEmail?: string;
-      fatherName?: string; fatherPhone?: string; fatherEmail?: string;
+      memberId?: number;
+      motherName?: string; motherPhone?: string; motherEmail?: string; motherEmployer?: string;
+      fatherName?: string; fatherPhone?: string; fatherEmail?: string; fatherEmployer?: string;
       address?: string;
+      volunteerParent?: boolean; volunteerArea?: string;
       enrollments: { courseLevelId: number; sectionId?: number | null; enrollDate?: string; amountDue?: string }[];
     };
 
@@ -159,18 +164,23 @@ router.post("/", async (req, res) => {
     }
 
     const [student] = await db.insert(studentsTable).values({
-      studentCode:  code,
-      name:         `${firstName.trim()} ${lastName.trim()}`,
-      dob:          dob || null,
-      grade:        grade || null,
-      isNewStudent: isNewStudent ?? true,
-      motherName:   motherName?.trim() || null,
-      motherPhone:  motherPhone?.trim() || null,
-      motherEmail:  motherEmail?.trim() || null,
-      fatherName:   fatherName?.trim() || null,
-      fatherPhone:  fatherPhone?.trim() || null,
-      fatherEmail:  fatherEmail?.trim() || null,
-      address:      address?.trim() || null,
+      studentCode:    code,
+      name:           `${firstName.trim()} ${lastName.trim()}`,
+      dob:            dob || null,
+      grade:          grade || null,
+      isNewStudent:   isNewStudent ?? true,
+      memberId:       memberId ?? null,
+      motherName:     motherName?.trim() || null,
+      motherPhone:    motherPhone?.trim() || null,
+      motherEmail:    motherEmail?.trim() || null,
+      motherEmployer: motherEmployer?.trim() || null,
+      fatherName:     fatherName?.trim() || null,
+      fatherPhone:    fatherPhone?.trim() || null,
+      fatherEmail:    fatherEmail?.trim() || null,
+      fatherEmployer: fatherEmployer?.trim() || null,
+      address:        address?.trim() || null,
+      volunteerParent: volunteerParent ?? false,
+      volunteerArea:   volunteerArea?.trim() || null,
     }).returning({ id: studentsTable.id, studentCode: studentsTable.studentCode });
 
     // Insert enrollments + payments
