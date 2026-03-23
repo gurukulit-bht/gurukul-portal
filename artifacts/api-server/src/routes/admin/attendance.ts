@@ -1,24 +1,56 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { attendanceRecordsTable, courseLevelsTable, coursesTable, studentsTable } from "@workspace/db/schema";
-import { and, eq } from "drizzle-orm";
+import {
+  attendanceRecordsTable, courseLevelsTable, coursesTable,
+  studentsTable, teachersTable, teacherAssignmentsTable,
+} from "@workspace/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 const router = Router();
 
+/** Returns course IDs assigned to the given teacher email, or null if not found. */
+async function getTeacherCourseIds(email: string): Promise<number[] | null> {
+  const [teacher] = await db
+    .select({ id: teachersTable.id })
+    .from(teachersTable)
+    .where(eq(teachersTable.email, email));
+  if (!teacher) return null;
+  const rows = await db
+    .select({ courseId: teacherAssignmentsTable.courseId })
+    .from(teacherAssignmentsTable)
+    .where(eq(teacherAssignmentsTable.teacherId, teacher.id));
+  return rows.map((r) => r.courseId);
+}
+
 // GET /api/admin/attendance/levels — course levels with course names (for dropdown)
-router.get("/levels", async (_req, res) => {
-  const levels = await db
+router.get("/levels", async (req, res) => {
+  const role  = req.headers["x-user-role"]  as string | undefined;
+  const email = req.headers["x-user-email"] as string | undefined;
+
+  let courseIds: number[] | undefined;
+  if ((role === "teacher" || role === "assistant") && email) {
+    const ids = await getTeacherCourseIds(email);
+    if (ids !== null) courseIds = ids;
+  }
+
+  const query = db
     .select({
       id:         courseLevelsTable.id,
       className:  courseLevelsTable.className,
       schedule:   courseLevelsTable.schedule,
       courseName: coursesTable.name,
+      courseId:   coursesTable.id,
     })
     .from(courseLevelsTable)
-    .innerJoin(coursesTable, eq(courseLevelsTable.courseId, coursesTable.id))
-    .orderBy(coursesTable.name, courseLevelsTable.levelNumber);
+    .innerJoin(coursesTable, eq(courseLevelsTable.courseId, coursesTable.id));
 
-  return res.json(levels);
+  const levels = await query.orderBy(coursesTable.name, courseLevelsTable.levelNumber);
+
+  const filtered = courseIds !== undefined
+    ? levels.filter((l) => courseIds!.includes(l.courseId))
+    : levels;
+
+  return res.json(filtered.map(({ courseId: _c, ...rest }) => rest));
 });
 
 // GET /api/admin/attendance/history?levelId=X

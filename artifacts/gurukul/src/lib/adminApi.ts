@@ -1,9 +1,28 @@
 const BASE = "/api/admin";
+const AUTH_KEY = "gurukul_admin_auth_v2";
+
+function getAuthHeaders(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return {};
+    const user = JSON.parse(raw) as { email?: string; role?: string };
+    const headers: Record<string, string> = {};
+    if (user.email) headers["X-User-Email"] = user.email;
+    if (user.role)  headers["X-User-Role"]  = user.role;
+    return headers;
+  } catch {
+    return {};
+  }
+}
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const authHeaders = getAuthHeaders();
+  const headers: Record<string, string> = { ...authHeaders };
+  if (body) headers["Content-Type"] = "application/json";
+
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : {},
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {

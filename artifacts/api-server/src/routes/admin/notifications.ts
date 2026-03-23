@@ -1,15 +1,46 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { parentNotificationsTable } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { parentNotificationsTable, teachersTable, teacherAssignmentsTable } from "@workspace/db/schema";
+import { eq, desc, isNull, or, inArray } from "drizzle-orm";
 
 const router = Router();
 
+/** Returns course IDs assigned to the given teacher email, or null if not found. */
+async function getTeacherCourseIds(email: string): Promise<number[] | null> {
+  const [teacher] = await db
+    .select({ id: teachersTable.id })
+    .from(teachersTable)
+    .where(eq(teachersTable.email, email));
+  if (!teacher) return null;
+  const rows = await db
+    .select({ courseId: teacherAssignmentsTable.courseId })
+    .from(teacherAssignmentsTable)
+    .where(eq(teacherAssignmentsTable.teacherId, teacher.id));
+  return rows.map((r) => r.courseId);
+}
+
 // GET /api/admin/notifications
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
+  const role  = req.headers["x-user-role"]  as string | undefined;
+  const email = req.headers["x-user-email"] as string | undefined;
+
+  let courseIds: number[] | undefined;
+  if ((role === "teacher" || role === "assistant") && email) {
+    const ids = await getTeacherCourseIds(email);
+    if (ids !== null) courseIds = ids;
+  }
+
+  // Teachers see: "All Students" notifications (courseId IS NULL) + their own course notifications
+  const whereClause = courseIds !== undefined
+    ? courseIds.length > 0
+      ? or(isNull(parentNotificationsTable.courseId), inArray(parentNotificationsTable.courseId, courseIds))
+      : isNull(parentNotificationsTable.courseId)
+    : undefined;
+
   const rows = await db
     .select()
     .from(parentNotificationsTable)
+    .where(whereClause)
     .orderBy(desc(parentNotificationsTable.createdAt));
   return res.json(rows);
 });

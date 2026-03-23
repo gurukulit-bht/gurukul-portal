@@ -11,18 +11,42 @@ import {
   studentsTable,
   paymentsTable,
 } from "@workspace/db/schema";
-import { eq, sql, isNull, and } from "drizzle-orm";
+import { eq, sql, isNull, and, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+// ─── Teacher-scoping helper ───────────────────────────────────────────────────
+
+/**
+ * Returns the course IDs assigned to the teacher with the given email,
+ * or null if the email doesn't match any teacher in the DB (fallback: show all).
+ */
+async function getTeacherCourseIds(email: string): Promise<number[] | null> {
+  const [teacher] = await db
+    .select({ id: teachersTable.id })
+    .from(teachersTable)
+    .where(eq(teachersTable.email, email));
+  if (!teacher) return null;
+  const rows = await db
+    .select({ courseId: teacherAssignmentsTable.courseId })
+    .from(teacherAssignmentsTable)
+    .where(eq(teacherAssignmentsTable.teacherId, teacher.id));
+  return rows.map((r) => r.courseId);
+}
+
 // ─── Build helpers ────────────────────────────────────────────────────────────
 
-async function buildAdminCourses(includeArchived = false) {
-  const courseRows = await db
+async function buildAdminCourses(includeArchived = false, teacherCourseIds?: number[]) {
+  let courseRows = await db
     .select()
     .from(coursesTable)
     .where(includeArchived ? undefined : isNull(coursesTable.archivedAt))
     .orderBy(coursesTable.id);
+
+  // Scope to teacher's assigned courses when filter is provided
+  if (teacherCourseIds !== undefined) {
+    courseRows = courseRows.filter((c) => teacherCourseIds.includes(c.id));
+  }
 
   const levels = await db.select().from(courseLevelsTable).orderBy(courseLevelsTable.levelNumber);
   const sections = await db.select().from(courseSectionsTable).orderBy(courseSectionsTable.id);
@@ -108,7 +132,17 @@ async function buildAdminCourses(includeArchived = false) {
 router.get("/", async (req, res) => {
   try {
     const includeArchived = req.query.includeArchived === "true";
-    res.json(await buildAdminCourses(includeArchived));
+    const role  = req.headers["x-user-role"]  as string | undefined;
+    const email = req.headers["x-user-email"] as string | undefined;
+
+    let teacherCourseIds: number[] | undefined;
+    if ((role === "teacher" || role === "assistant") && email) {
+      const ids = await getTeacherCourseIds(email);
+      // If teacher found in DB, restrict to their courses; if not found, show all (graceful fallback)
+      if (ids !== null) teacherCourseIds = ids;
+    }
+
+    res.json(await buildAdminCourses(includeArchived, teacherCourseIds));
   } catch (err) {
     req.log.error({ err }, "Failed to fetch admin courses");
     res.status(500).json({ error: "Failed to fetch admin courses" });
