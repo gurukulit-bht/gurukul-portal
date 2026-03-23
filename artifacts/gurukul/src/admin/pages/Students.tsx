@@ -13,7 +13,7 @@ import { canAccess } from "../rbac";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Student = {
-  id: string; name: string; parentName: string; course: string; level: string;
+  id: string; name: string; course: string; level: string;
   section: string; timing: string; enrollDate: string;
   paymentStatus: "Paid" | "Pending" | "Overdue";
   amountDue: number; amountPaid: number; paymentMethod: string; receiptId: string;
@@ -396,7 +396,6 @@ export default function Students() {
       (filterStatus === "All" || s.paymentStatus === filterStatus) &&
       (filterLevel === "All" || s.level === filterLevel) &&
       (s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.parentName.toLowerCase().includes(search.toLowerCase()) ||
         s.id.toLowerCase().includes(search.toLowerCase()))
     );
     data = [...data].sort((a, b) => {
@@ -423,8 +422,8 @@ export default function Students() {
   }
 
   function exportCSV() {
-    const headers = ["Student ID","Name","Parent Name","Course","Level","Section","Timing","Enroll Date","Payment Status","Amount Due","Amount Paid","Method","Receipt ID"];
-    const rows = filtered.map((s) => [s.id,s.name,s.parentName,s.course,s.level,s.section,s.timing,s.enrollDate,s.paymentStatus,s.amountDue,s.amountPaid,s.paymentMethod,s.receiptId]);
+    const headers = ["Student ID","Name","Course","Level","Section","Timing","Enroll Date","Payment Status","Amount Due","Amount Paid","Method","Receipt ID"];
+    const rows = filtered.map((s) => [s.id,s.name,s.course,s.level,s.section,s.timing,s.enrollDate,s.paymentStatus,s.amountDue,s.amountPaid,s.paymentMethod,s.receiptId]);
     const csv = [headers,...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gurukul-students.csv"; a.click();
@@ -523,7 +522,6 @@ export default function Students() {
                 {[
                   { label: "Student ID", key: "id" as SortKey },
                   { label: "Student Name", key: "name" as SortKey },
-                  { label: "Parent Name", key: "parentName" as SortKey },
                   { label: "Course", key: "course" as SortKey },
                   { label: "Level", key: "level" as SortKey },
                   { label: "Section", key: "section" as SortKey },
@@ -544,7 +542,7 @@ export default function Students() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={13} className="text-center py-12 text-muted-foreground">
+                <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">
                   No students found.{isAdmin && <> <button onClick={() => setShowRegister(true)} className="text-primary hover:underline ml-1">Register one?</button></>}
                 </td></tr>
               )}
@@ -552,7 +550,6 @@ export default function Students() {
                 <tr key={`${s.id}-${s.course}`} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.id}</td>
                   <td className="px-4 py-3 font-medium text-secondary whitespace-nowrap">{s.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{s.parentName}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-xs font-medium">{s.course}</span></td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.level}</td>
                   <td className="px-4 py-3 text-xs whitespace-nowrap">

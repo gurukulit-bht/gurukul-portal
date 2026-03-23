@@ -15,7 +15,6 @@ type LevelStudent = {
   studentId: number;
   studentCode: string;
   studentName: string;
-  parentName: string;
   email: string | null;
   phone: string | null;
   motherName: string | null;
@@ -233,7 +232,7 @@ function LevelRow({
                                   </div>
                                 )}
                                 {!s.motherName && !s.motherPhone && !s.motherEmail && !s.fatherName && !s.fatherPhone && !s.fatherEmail && (
-                                  <span className="text-xs text-muted-foreground">{s.parentName}</span>
+                                  <span className="text-xs text-muted-foreground">—</span>
                                 )}
                               </div>
                             </td>

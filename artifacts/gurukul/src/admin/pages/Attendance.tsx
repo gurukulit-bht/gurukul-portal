@@ -16,7 +16,7 @@ type SectionOption = {
 };
 
 type StudentRow = {
-  studentId: number; studentCode: string; name: string; parentName: string; status: AttStatus;
+  studentId: number; studentCode: string; name: string; status: AttStatus;
 };
 
 type HistoryRow = {
@@ -86,9 +86,9 @@ export default function Attendance() {
     setLoadingStudents(true);
     try {
       const data = await adminApi.courses.levelStudents(levelId, sectionId) as {
-        studentId: number; studentCode: string; studentName: string; parentName: string;
+        studentId: number; studentCode: string; studentName: string;
       }[];
-      setStudents(data.map(s => ({ studentId: s.studentId, studentCode: s.studentCode, name: s.studentName, parentName: s.parentName, status: "Present" as AttStatus })));
+      setStudents(data.map(s => ({ studentId: s.studentId, studentCode: s.studentCode, name: s.studentName, status: "Present" as AttStatus })));
     } catch {
       setStudents([]);
     } finally {
@@ -308,7 +308,7 @@ export default function Attendance() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-secondary">{s.name}</p>
-                            <p className="text-xs text-muted-foreground">{s.studentCode} · Parent: {s.parentName}</p>
+                            <p className="text-xs text-muted-foreground">{s.studentCode}</p>
                           </div>
                           <div className="flex gap-1.5">
                             {STATUS_OPTS.map(opt => {

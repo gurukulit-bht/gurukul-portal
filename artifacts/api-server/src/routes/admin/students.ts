@@ -22,8 +22,6 @@ async function buildStudentList() {
     .select({
       studentCode:   studentsTable.studentCode,
       studentName:   studentsTable.name,
-      parentName:    studentsTable.parentName,
-      email:         studentsTable.email,
       phone:         studentsTable.phone,
       enrollmentId:  enrollmentsTable.id,
       enrollDate:    enrollmentsTable.enrollDate,
@@ -49,7 +47,6 @@ async function buildStudentList() {
   return rows.map((r) => ({
     id:            r.studentCode,
     name:          r.studentName,
-    parentName:    r.parentName,
     course:        r.courseName ?? "",
     level:         r.levelNumber != null ? `Level ${r.levelNumber}` : "",
     section:       r.sectionName ?? "",
@@ -162,16 +159,11 @@ router.post("/", async (req, res) => {
       code = `GK-${String(num).padStart(3, "0")}`;
     }
 
-    // Derive parentName / email / phone from mother/father fields
-    const parentName = motherName?.trim() || fatherName?.trim() || `${firstName} ${lastName} (Parent)`;
-    const email      = motherEmail?.trim() || fatherEmail?.trim() || undefined;
-    const phone      = motherPhone?.trim() || fatherPhone?.trim() || undefined;
+    const phone = motherPhone?.trim() || fatherPhone?.trim() || undefined;
 
     const [student] = await db.insert(studentsTable).values({
       studentCode:  code,
       name:         `${firstName.trim()} ${lastName.trim()}`,
-      parentName,
-      email:        email || null,
       phone:        phone || null,
       dob:          dob || null,
       grade:        grade || null,

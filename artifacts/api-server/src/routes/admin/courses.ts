@@ -510,8 +510,6 @@ router.get("/levels/:id/students", async (req, res) => {
         studentId:     studentsTable.id,
         studentCode:   studentsTable.studentCode,
         studentName:   studentsTable.name,
-        parentName:    studentsTable.parentName,
-        email:         studentsTable.email,
         phone:         studentsTable.phone,
         motherName:    studentsTable.motherName,
         motherPhone:   studentsTable.motherPhone,

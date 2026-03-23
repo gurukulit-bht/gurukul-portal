@@ -34,7 +34,7 @@ type CourseRow = {
 
 type LevelStudent = {
   studentId: number; enrollmentId: number; studentCode: string; studentName: string;
-  parentName: string; paymentStatus: string | null;
+  paymentStatus: string | null;
   sectionId: number | null; sectionName: string | null;
   motherName: string | null; motherPhone: string | null; motherEmail: string | null;
   fatherName: string | null; fatherPhone: string | null; fatherEmail: string | null;
@@ -439,7 +439,7 @@ function LevelAccordion({
                                   </div>
                                 )}
                                 {!s.motherName && !s.motherPhone && !s.motherEmail && !s.fatherName && !s.fatherPhone && !s.fatherEmail && (
-                                  <span className="text-muted-foreground">{s.parentName}</span>
+                                  <span className="text-muted-foreground">—</span>
                                 )}
                               </div>
                             </td>

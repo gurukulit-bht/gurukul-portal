@@ -130,8 +130,6 @@ export const studentsTable = pgTable("students", {
   id: serial("id").primaryKey(),
   studentCode: text("student_code").notNull().unique(), // e.g., GK-001
   name: text("name").notNull(),
-  parentName: text("parent_name").notNull(),
-  email: text("email"),
   phone: text("phone"),
   // Extended student fields
   dob: text("dob"),                        // Date of birth e.g. "2015-06-10"
