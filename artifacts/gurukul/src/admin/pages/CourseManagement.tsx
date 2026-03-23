@@ -789,16 +789,14 @@ export default function CourseManagement() {
           <BookOpen className="w-4 h-4 text-secondary shrink-0" />
           <span className="text-xs font-bold text-secondary uppercase tracking-wide">Courses</span>
           <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-            {availableYears.length > 0 && (
-              <select
-                value={yearFilter}
-                onChange={e => { setYearFilter(e.target.value); setSelectedId(null); }}
-                className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-secondary h-7 focus:outline-none focus:border-primary"
-              >
-                <option value="all">All Years</option>
-                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            )}
+            <select
+              value={yearFilter}
+              onChange={e => { setYearFilter(e.target.value); setSelectedId(null); }}
+              className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-secondary h-7 focus:outline-none focus:border-primary"
+            >
+              <option value="all">All Years</option>
+              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
             <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
               <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="w-3 h-3" />
               Show archived

@@ -1,12 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminApi } from "@/lib/adminApi";
 import {
   Edit2, Check, X, Users, BookOpen, Loader2,
-  ChevronDown, ChevronRight, GraduationCap, Phone, Mail,
+  ChevronDown, ChevronRight, GraduationCap, Phone, Mail, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const CURRICULUM_YEARS = Array.from({ length: 24 }, (_, i) => {
+  const start = 2027 + i;
+  return `${start}-${String(start + 1).slice(-2)}`;
+});
 
 type LevelStudent = {
   enrollmentId: number;
@@ -257,6 +262,7 @@ export default function CoursesAdmin() {
   const [saving, setSaving] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<number>(0);
   const [levelFilter, setLevelFilter] = useState<number | "all">("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
   const [editingLevel, setEditingLevel] = useState<{ courseId: number; levelId: number } | null>(null);
   const [editForm, setEditForm] = useState<Partial<CourseLevel>>({});
 
@@ -264,7 +270,18 @@ export default function CoursesAdmin() {
     adminApi.courses.list().then((d) => setCourses(d as AdminCourse[])).finally(() => setLoading(false));
   }, []);
 
-  const course = courses[selectedCourse];
+  const filteredCourses = useMemo(() =>
+    yearFilter === "all" ? courses : courses.filter(c => c.curriculumYear === yearFilter),
+  [courses, yearFilter]);
+
+  const course = filteredCourses[selectedCourse] ?? filteredCourses[0];
+
+  function handleYearFilter(y: string) {
+    setYearFilter(y);
+    setSelectedCourse(0);
+    setEditingLevel(null);
+    setLevelFilter("all");
+  }
   const visibleLevels = course
     ? (levelFilter === "all" ? course.levels : course.levels.filter(l => l.level === levelFilter))
     : [];
@@ -295,8 +312,8 @@ export default function CoursesAdmin() {
     finally { setSaving(false); }
   }
 
-  const totalEnrolled = courses.reduce((a, c) => a + c.levels.reduce((b, l) => b + l.enrolled, 0), 0);
-  const totalCapacity = courses.reduce((a, c) => a + c.levels.reduce((b, l) => b + l.capacity, 0), 0);
+  const totalEnrolled = filteredCourses.reduce((a, c) => a + c.levels.reduce((b, l) => b + l.enrolled, 0), 0);
+  const totalCapacity = filteredCourses.reduce((a, c) => a + c.levels.reduce((b, l) => b + l.capacity, 0), 0);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -304,13 +321,26 @@ export default function CoursesAdmin() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-secondary">Courses & Classes</h2>
-        <p className="text-sm text-muted-foreground">{courses.length} courses • {totalEnrolled} enrolled of {totalCapacity} capacity</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold text-secondary">Courses & Classes</h2>
+          <p className="text-sm text-muted-foreground">{filteredCourses.length} course{filteredCourses.length !== 1 ? "s" : ""} • {totalEnrolled} enrolled of {totalCapacity} capacity</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+          <select
+            value={yearFilter}
+            onChange={e => handleYearFilter(e.target.value)}
+            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white text-secondary focus:outline-none focus:border-primary"
+          >
+            <option value="all">All Years</option>
+            {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {courses.map((c, i) => {
+        {filteredCourses.map((c, i) => {
           const enrolled = c.levels.reduce((a, l) => a + l.enrolled, 0);
           const cap = c.levels.reduce((a, l) => a + l.capacity, 0);
           return (
@@ -322,6 +352,11 @@ export default function CoursesAdmin() {
             </button>
           );
         })}
+        {filteredCourses.length === 0 && !loading && (
+          <div className="col-span-full py-8 text-center text-sm text-muted-foreground">
+            No courses found for the selected year.
+          </div>
+        )}
       </div>
 
       {course && (
