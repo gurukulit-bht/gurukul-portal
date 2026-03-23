@@ -43,7 +43,7 @@ type LevelStudent = {
 type FormData = {
   name: string; description: string; icon: string;
   ageGroup: string; schedule: string; instructor: string;
-  numLevels: number; curriculumYear: string;
+  numLevels: number; numSectionsPerLevel: number; curriculumYear: string;
 };
 
 const CURRICULUM_YEARS = Array.from({ length: 24 }, (_, i) => {
@@ -486,14 +486,15 @@ function CourseFormPanel({
   loading: boolean;
 }) {
   const [form, setForm] = useState<FormData>({
-    name:           editing?.name           ?? "",
-    description:    editing?.description    ?? "",
-    icon:           editing?.icon           ?? "📚",
-    ageGroup:       editing?.ageGroup       ?? "Ages 5–18",
-    schedule:       editing?.schedule       ?? "Sundays 9 AM–1 PM",
-    instructor:     "TBD",
-    numLevels:      editing?.levels.length  ?? 7,
-    curriculumYear: editing?.curriculumYear ?? "2027-28",
+    name:                editing?.name           ?? "",
+    description:         editing?.description    ?? "",
+    icon:                editing?.icon           ?? "📚",
+    ageGroup:            editing?.ageGroup       ?? "Ages 5–18",
+    schedule:            editing?.schedule       ?? "Sundays 9 AM–1 PM",
+    instructor:          "TBD",
+    numLevels:           editing?.levels.length  ?? 6,
+    numSectionsPerLevel: 1,
+    curriculumYear:      editing?.curriculumYear ?? "2027-28",
   });
 
   return (
@@ -567,21 +568,43 @@ function CourseFormPanel({
           </div>
 
           {!editing && (
-            <div>
-              <label className="text-xs font-semibold text-secondary mb-1 block">Number of Levels (1–7)</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, numLevels: n }))}
-                    className={`w-9 h-9 rounded-lg text-sm font-semibold border-2 transition-colors ${form.numLevels === n ? "border-primary bg-primary text-white" : "border-border text-secondary hover:border-primary/50"}`}
-                  >
-                    {n}
-                  </button>
-                ))}
+            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-border">
+              <p className="text-xs font-bold text-secondary uppercase tracking-wide">Initial Structure</p>
+
+              <div>
+                <label className="text-xs font-semibold text-secondary mb-2 block">Number of Levels <span className="text-muted-foreground font-normal">(1–7, default 6)</span></label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, numLevels: n }))}
+                      className={`w-9 h-9 rounded-lg text-sm font-semibold border-2 transition-colors ${form.numLevels === n ? "border-primary bg-primary text-white" : "border-border text-secondary hover:border-primary/50"}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">You can add/remove levels and sections after creating the course.</p>
+
+              <div>
+                <label className="text-xs font-semibold text-secondary mb-2 block">Sections per Level <span className="text-muted-foreground font-normal">(1–4, default 1)</span></label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, numSectionsPerLevel: n }))}
+                      className={`w-9 h-9 rounded-lg text-sm font-semibold border-2 transition-colors ${form.numSectionsPerLevel === n ? "border-primary bg-primary text-white" : "border-border text-secondary hover:border-primary/50"}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Creates {form.numLevels} level{form.numLevels !== 1 ? "s" : ""} × {form.numSectionsPerLevel} section{form.numSectionsPerLevel !== 1 ? "s" : ""} = <strong>{form.numLevels * form.numSectionsPerLevel}</strong> sections total. You can modify these after creation.
+                </p>
+              </div>
             </div>
           )}
         </div>

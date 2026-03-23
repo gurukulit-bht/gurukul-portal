@@ -164,12 +164,16 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/admin/courses — create a new course with initial levels
+// POST /api/admin/courses — create a new course with initial levels and sections
 router.post("/", async (req, res) => {
   try {
-    const { name, description, icon, ageGroup, schedule, instructor, numLevels, curriculumYear } = req.body as {
+    const {
+      name, description, icon, ageGroup, schedule, instructor,
+      numLevels, numSectionsPerLevel, curriculumYear,
+    } = req.body as {
       name: string; description: string; icon: string; ageGroup: string;
-      schedule: string; instructor: string; numLevels: number; curriculumYear?: string;
+      schedule: string; instructor: string; numLevels: number;
+      numSectionsPerLevel?: number; curriculumYear?: string;
     };
 
     if (!name?.trim()) return res.status(400).json({ error: "Course name is required" });
@@ -191,17 +195,28 @@ router.post("/", async (req, res) => {
       })
       .returning();
 
-    // Create levels
-    const levelCount = Math.min(Math.max(1, numLevels ?? 7), 7);
+    const sectionLabels = ["A", "B", "C", "D"];
+    const levelCount    = Math.min(Math.max(1, numLevels ?? 6), 7);
+    const sectionCount  = Math.min(Math.max(1, numSectionsPerLevel ?? 1), 4);
+
     for (let i = 1; i <= levelCount; i++) {
-      await db.insert(courseLevelsTable).values({
+      const [level] = await db.insert(courseLevelsTable).values({
         courseId:    course.id,
         levelNumber: i,
         className:   `Level ${i}`,
         schedule:    schedule ?? "",
         capacity:    20,
         enrolled:    0,
-      });
+      }).returning();
+
+      for (let s = 0; s < sectionCount; s++) {
+        await db.insert(courseSectionsTable).values({
+          courseLevelId: level.id,
+          sectionName:   sectionCount === 1 ? `Level ${i} – Section A` : `Level ${i} – Section ${sectionLabels[s]}`,
+          schedule:      schedule ?? "",
+          capacity:      20,
+        });
+      }
     }
 
     res.status(201).json((await buildAdminCourses(true)).find((c) => c.id === course.id));
