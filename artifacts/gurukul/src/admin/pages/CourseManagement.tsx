@@ -495,6 +495,100 @@ function CourseFormPanel({
     curriculumYear:      editing?.curriculumYear ?? activeCurriculumYear,
   });
 
+  // ── Editable structure state (edit mode only) ──
+  const [localLevels, setLocalLevels] = useState<LevelRow[]>(
+    () => (editing?.levels ?? []).slice().sort((a, b) => a.level - b.level)
+  );
+  const [busy, setBusy]             = useState<string | null>(null); // e.g. "lvl:5", "sec:3"
+  const [editLvlId, setEditLvlId]   = useState<number | null>(null);
+  const [editLvlName, setEditLvlName] = useState("");
+  const [editSecId, setEditSecId]   = useState<number | null>(null);
+  const [editSecName, setEditSecName] = useState("");
+  const [addSecFor, setAddSecFor]   = useState<number | null>(null); // levelId
+  const [newSecName, setNewSecName] = useState("");
+  const [addingLevel, setAddingLevel] = useState(false);
+  const [newLvlName, setNewLvlName] = useState("");
+
+  // ── Helpers ──
+  async function saveLevelName(lvlId: number) {
+    const trimmed = editLvlName.trim();
+    if (!trimmed) { setEditLvlId(null); return; }
+    setBusy(`lvl:${lvlId}`);
+    try {
+      await adminApi.courses.updateLevel(lvlId, { className: trimmed });
+      setLocalLevels(prev => prev.map(l => l.id === lvlId ? { ...l, className: trimmed } : l));
+    } catch { toast.error("Failed to rename level"); }
+    finally { setBusy(null); setEditLvlId(null); }
+  }
+
+  async function deleteLevel(lvl: LevelRow) {
+    if (!confirm(`Delete "${lvl.className}"? This also deletes its sections. Students must be unenrolled first.`)) return;
+    setBusy(`delLvl:${lvl.id}`);
+    try {
+      await adminApi.courses.deleteLevel(lvl.id);
+      setLocalLevels(prev => prev.filter(l => l.id !== lvl.id));
+      toast.success(`${lvl.className} deleted`);
+    } catch (e: unknown) {
+      const msg = (e instanceof Error ? e.message : "") || "Cannot delete level — students may be enrolled";
+      toast.error(msg);
+    }
+    finally { setBusy(null); }
+  }
+
+  async function saveSectionName(secId: number, lvlId: number) {
+    const trimmed = editSecName.trim();
+    if (!trimmed) { setEditSecId(null); return; }
+    setBusy(`sec:${secId}`);
+    try {
+      await adminApi.courses.updateSection(secId, { sectionName: trimmed });
+      setLocalLevels(prev => prev.map(l =>
+        l.id !== lvlId ? l : { ...l, sections: l.sections.map(s => s.id === secId ? { ...s, sectionName: trimmed } : s) }
+      ));
+    } catch { toast.error("Failed to rename section"); }
+    finally { setBusy(null); setEditSecId(null); }
+  }
+
+  async function deleteSection(secId: number, lvlId: number) {
+    setBusy(`delSec:${secId}`);
+    try {
+      await adminApi.courses.deleteSection(secId);
+      setLocalLevels(prev => prev.map(l =>
+        l.id !== lvlId ? l : { ...l, sections: l.sections.filter(s => s.id !== secId) }
+      ));
+    } catch { toast.error("Failed to delete section"); }
+    finally { setBusy(null); }
+  }
+
+  async function addSection(lvlId: number) {
+    const trimmed = newSecName.trim();
+    if (!trimmed) return;
+    setBusy(`addSec:${lvlId}`);
+    try {
+      const sec = await adminApi.courses.addSection(lvlId, { sectionName: trimmed }) as SectionRow;
+      setLocalLevels(prev => prev.map(l =>
+        l.id !== lvlId ? l : { ...l, sections: [...l.sections, sec] }
+      ));
+      setAddSecFor(null);
+      setNewSecName("");
+    } catch { toast.error("Failed to add section"); }
+    finally { setBusy(null); }
+  }
+
+  async function addLevel() {
+    if (!editing) return;
+    const trimmed = newLvlName.trim();
+    if (!trimmed) return;
+    const nextNum = localLevels.length > 0 ? Math.max(...localLevels.map(l => l.level)) + 1 : 1;
+    setBusy("addLvl");
+    try {
+      const lvl = await adminApi.courses.addLevel(editing.id, { levelNumber: nextNum, className: trimmed }) as LevelRow;
+      setLocalLevels(prev => [...prev, { ...lvl, sections: [] }]);
+      setAddingLevel(false);
+      setNewLvlName("");
+    } catch { toast.error("Failed to add level"); }
+    finally { setBusy(null); }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -566,58 +660,174 @@ function CourseFormPanel({
           </div>
 
           {editing ? (
-            /* ── Edit: show existing levels & sections read-only ── */
+            /* ── Edit: editable levels & sections ── */
             <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-border">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-secondary uppercase tracking-wide">Current Structure</p>
-                <span className="text-xs text-muted-foreground">{editing.levels.length} level{editing.levels.length !== 1 ? "s" : ""}</span>
+                <span className="text-xs text-muted-foreground">{localLevels.length} level{localLevels.length !== 1 ? "s" : ""}</span>
               </div>
 
-              {editing.levels.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No levels defined yet. Close and use the level controls on the main page.</p>
-              ) : (
-                <div className="space-y-2">
-                  {editing.levels
-                    .slice()
-                    .sort((a, b) => a.level - b.level)
-                    .map(lvl => (
-                      <div key={lvl.id} className="rounded-lg border border-border bg-white overflow-hidden">
-                        {/* Level header */}
-                        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border-b border-border">
-                          <GraduationCap className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span className="text-xs font-semibold text-secondary">{lvl.className}</span>
-                          {lvl.schedule && (
-                            <span className="ml-auto text-[10px] text-muted-foreground truncate max-w-[140px]">{lvl.schedule}</span>
+              <div className="space-y-2">
+                {localLevels.map(lvl => (
+                  <div key={lvl.id} className="rounded-lg border border-border bg-white overflow-hidden">
+                    {/* Level header */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border-b border-border">
+                      <GraduationCap className="w-3.5 h-3.5 text-primary shrink-0" />
+
+                      {editLvlId === lvl.id ? (
+                        <input
+                          autoFocus
+                          className="flex-1 text-xs font-semibold text-secondary border border-primary rounded px-1.5 py-0.5 focus:outline-none min-w-0"
+                          value={editLvlName}
+                          onChange={e => setEditLvlName(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") saveLevelName(lvl.id); if (e.key === "Escape") setEditLvlId(null); }}
+                          onBlur={() => saveLevelName(lvl.id)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="flex-1 text-xs font-semibold text-secondary text-left hover:text-primary transition-colors truncate"
+                          title="Click to rename"
+                          onClick={() => { setEditLvlId(lvl.id); setEditLvlName(lvl.className); }}
+                        >
+                          {lvl.className}
+                        </button>
+                      )}
+
+                      <span className="shrink-0 text-[10px] text-muted-foreground ml-1">
+                        {lvl.sections.length}sec
+                      </span>
+
+                      {/* Add section button */}
+                      <button
+                        type="button"
+                        title="Add section"
+                        onClick={() => { setAddSecFor(lvl.id); setNewSecName(""); }}
+                        className="p-0.5 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete level button */}
+                      <button
+                        type="button"
+                        title="Delete level"
+                        disabled={busy === `delLvl:${lvl.id}`}
+                        onClick={() => deleteLevel(lvl)}
+                        className="p-0.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors shrink-0 disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Sections */}
+                    <ul className="divide-y divide-border/50">
+                      {lvl.sections.map(sec => (
+                        <li key={sec.id} className="flex items-center gap-2 px-3 py-1.5">
+                          <Tag className="w-3 h-3 text-blue-500 shrink-0" />
+
+                          {editSecId === sec.id ? (
+                            <input
+                              autoFocus
+                              className="flex-1 text-xs font-medium text-secondary border border-primary rounded px-1.5 py-0.5 focus:outline-none min-w-0"
+                              value={editSecName}
+                              onChange={e => setEditSecName(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") saveSectionName(sec.id, lvl.id); if (e.key === "Escape") setEditSecId(null); }}
+                              onBlur={() => saveSectionName(sec.id, lvl.id)}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="flex-1 text-xs font-medium text-secondary text-left hover:text-primary transition-colors truncate"
+                              title="Click to rename"
+                              onClick={() => { setEditSecId(sec.id); setEditSecName(sec.sectionName); }}
+                            >
+                              {sec.sectionName}
+                            </button>
                           )}
-                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                            {lvl.sections.length} section{lvl.sections.length !== 1 ? "s" : ""}
-                          </span>
-                        </div>
 
-                        {/* Sections */}
-                        {lvl.sections.length > 0 ? (
-                          <ul className="divide-y divide-border/50">
-                            {lvl.sections.map(sec => (
-                              <li key={sec.id} className="flex items-center gap-2 px-3 py-1.5">
-                                <Tag className="w-3 h-3 text-blue-500 shrink-0" />
-                                <span className="text-xs text-secondary font-medium">{sec.sectionName}</span>
-                                {sec.schedule && (
-                                  <span className="ml-auto text-[10px] text-muted-foreground truncate max-w-[160px]">{sec.schedule}</span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="px-3 py-1.5 text-[10px] text-muted-foreground italic">No sections</p>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )}
+                          <button
+                            type="button"
+                            title="Delete section"
+                            disabled={busy === `delSec:${sec.id}`}
+                            onClick={() => deleteSection(sec.id, lvl.id)}
+                            className="p-0.5 rounded hover:bg-red-50 text-red-300 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </li>
+                      ))}
 
-              <p className="text-[10px] text-muted-foreground">
-                To add, rename, or remove levels and sections, use the controls on the course detail view.
-              </p>
+                      {/* Add section inline form */}
+                      {addSecFor === lvl.id && (
+                        <li className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/60">
+                          <Plus className="w-3 h-3 text-blue-400 shrink-0" />
+                          <input
+                            autoFocus
+                            className="flex-1 text-xs border border-primary rounded px-1.5 py-0.5 focus:outline-none min-w-0"
+                            placeholder="Section name…"
+                            value={newSecName}
+                            onChange={e => setNewSecName(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") addSection(lvl.id); if (e.key === "Escape") setAddSecFor(null); }}
+                          />
+                          <button
+                            type="button"
+                            disabled={busy === `addSec:${lvl.id}` || !newSecName.trim()}
+                            onClick={() => addSection(lvl.id)}
+                            className="text-[10px] font-semibold text-white bg-primary px-2 py-0.5 rounded disabled:opacity-50"
+                          >
+                            {busy === `addSec:${lvl.id}` ? "…" : "Add"}
+                          </button>
+                          <button type="button" onClick={() => setAddSecFor(null)} className="text-muted-foreground hover:text-secondary">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </li>
+                      )}
+
+                      {lvl.sections.length === 0 && addSecFor !== lvl.id && (
+                        <li className="px-3 py-1.5 text-[10px] text-muted-foreground italic">No sections — click + to add one</li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+
+                {/* Add level inline form */}
+                {addingLevel ? (
+                  <div className="flex items-center gap-2 p-2 rounded-lg border border-dashed border-primary bg-primary/5">
+                    <GraduationCap className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <input
+                      autoFocus
+                      className="flex-1 text-xs border border-primary rounded px-2 py-1 focus:outline-none min-w-0"
+                      placeholder="New level name…"
+                      value={newLvlName}
+                      onChange={e => setNewLvlName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addLevel(); if (e.key === "Escape") setAddingLevel(false); }}
+                    />
+                    <button
+                      type="button"
+                      disabled={busy === "addLvl" || !newLvlName.trim()}
+                      onClick={addLevel}
+                      className="text-[10px] font-semibold text-white bg-primary px-2 py-1 rounded disabled:opacity-50"
+                    >
+                      {busy === "addLvl" ? "…" : "Add"}
+                    </button>
+                    <button type="button" onClick={() => setAddingLevel(false)} className="text-muted-foreground hover:text-secondary">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setAddingLevel(true); setNewLvlName(""); }}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Level
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[10px] text-muted-foreground">Click any level or section name to rename it. Use the trash icon to delete.</p>
             </div>
           ) : (
             /* ── Create: show level & section pickers ── */
@@ -1070,7 +1280,7 @@ export default function CourseManagement() {
         <CourseFormPanel
           editing={editingCourse}
           onSave={handleFormSave}
-          onClose={() => { setShowForm(false); setEditingCourse(null); }}
+          onClose={() => { setShowForm(false); setEditingCourse(null); loadCourses(); }}
           loading={formLoading}
         />
       )}
