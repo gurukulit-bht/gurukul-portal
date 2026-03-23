@@ -53,27 +53,128 @@ const PAYMENT_COLORS: Record<string, string> = {
 // ─── Section Chip ─────────────────────────────────────────────────────────────
 
 function SectionChip({
-  section, isAdmin, onDelete, onEdit,
+  section, isAdmin, allTeachers, onDelete, onEdit, onSectionUpdated,
 }: {
   section: SectionRow; isAdmin: boolean;
+  allTeachers: { id: number; name: string }[];
   onDelete: (id: number) => void; onEdit: (s: SectionRow) => void;
+  onSectionUpdated: (s: SectionRow) => void;
 }) {
+  const [assigning, setAssigning]           = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [savingTeacher, setSavingTeacher]   = useState(false);
+
+  const assignedIds      = new Set((section.teachers ?? []).map(t => t.id));
+  const availableTeachers = allTeachers.filter(t => !assignedIds.has(t.id));
+
+  async function handleAssignTeacher() {
+    if (!selectedTeacherId) return;
+    setSavingTeacher(true);
+    try {
+      await adminApi.courses.assignSection(section.id, { teacherId: Number(selectedTeacherId), role: "Teacher" });
+      const teacher = allTeachers.find(t => t.id === Number(selectedTeacherId));
+      onSectionUpdated({
+        ...section,
+        teachers: [...(section.teachers ?? []), { id: Number(selectedTeacherId), name: teacher?.name ?? "", role: "Teacher" }],
+      });
+      setSelectedTeacherId("");
+      setAssigning(false);
+      toast.success(`${teacher?.name} assigned to ${section.sectionName}`);
+    } catch {
+      toast.error("Failed to assign teacher");
+    } finally {
+      setSavingTeacher(false);
+    }
+  }
+
+  async function handleRemoveTeacher(teacherId: number, teacherName: string) {
+    try {
+      await adminApi.courses.unassignSection(section.id, teacherId);
+      onSectionUpdated({
+        ...section,
+        teachers: (section.teachers ?? []).filter(t => t.id !== teacherId),
+      });
+      toast.success(`${teacherName} removed from ${section.sectionName}`);
+    } catch {
+      toast.error("Failed to remove teacher");
+    }
+  }
+
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200">
-      <Tag className="w-3 h-3" />
-      {section.sectionName}
-      {section.schedule && <span className="text-blue-500">· {section.schedule}</span>}
-      {isAdmin && (
-        <>
-          <button onClick={() => onEdit(section)} className="ml-1 text-blue-400 hover:text-blue-700">
-            <Edit2 className="w-3 h-3" />
+    <div className="flex flex-col gap-1.5 px-2.5 py-2 rounded-xl bg-blue-50 border border-blue-200 text-xs min-w-0">
+      {/* Header row */}
+      <div className="flex items-center gap-1.5">
+        <Tag className="w-3 h-3 text-blue-600 shrink-0" />
+        <span className="font-semibold text-blue-800">{section.sectionName}</span>
+        {section.schedule && <span className="text-blue-400 text-[10px]">· {section.schedule}</span>}
+        {isAdmin && (
+          <div className="ml-auto flex items-center gap-1">
+            <button onClick={() => { onEdit(section); }} className="text-blue-400 hover:text-blue-700" title="Edit section">
+              <Edit2 className="w-3 h-3" />
+            </button>
+            <button onClick={() => onDelete(section.id)} className="text-red-400 hover:text-red-600" title="Delete section">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Teachers row */}
+      <div className="flex items-center gap-1 flex-wrap pl-4">
+        {(section.teachers ?? []).map(t => (
+          <span key={t.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-medium">
+            <GraduationCap className="w-2.5 h-2.5 shrink-0" />
+            {t.name}
+            <span className="text-purple-400 text-[9px]">{t.role === "Assistant" ? "· Asst" : ""}</span>
+            {isAdmin && (
+              <button onClick={() => handleRemoveTeacher(t.id, t.name)} className="text-purple-300 hover:text-red-500 ml-0.5">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </span>
+        ))}
+
+        {/* Assign teacher button */}
+        {isAdmin && !assigning && availableTeachers.length > 0 && (
+          <button
+            onClick={() => setAssigning(true)}
+            className="inline-flex items-center gap-0.5 text-[10px] text-blue-500 hover:text-blue-700 font-medium"
+          >
+            <PlusCircle className="w-3 h-3" /> Assign Teacher
           </button>
-          <button onClick={() => onDelete(section.id)} className="text-red-400 hover:text-red-600">
-            <X className="w-3 h-3" />
-          </button>
-        </>
-      )}
-    </span>
+        )}
+
+        {/* Assign teacher inline picker */}
+        {assigning && (
+          <div className="flex items-center gap-1">
+            <select
+              value={selectedTeacherId}
+              onChange={e => setSelectedTeacherId(e.target.value)}
+              className="text-[11px] border border-blue-200 rounded px-1 py-0.5 bg-white focus:outline-none"
+            >
+              <option value="">Select teacher…</option>
+              {availableTeachers.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={handleAssignTeacher}
+              disabled={!selectedTeacherId || savingTeacher}
+              className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px] disabled:opacity-50"
+            >
+              {savingTeacher ? "…" : "Assign"}
+            </button>
+            <button onClick={() => { setAssigning(false); setSelectedTeacherId(""); }} className="text-muted-foreground hover:text-secondary">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
+        {(section.teachers ?? []).length === 0 && !assigning && (
+          <span className="text-[10px] text-blue-300 italic">No teacher assigned</span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -135,6 +236,7 @@ function LevelAccordion({
   const [addingSection, setAddingSection]   = useState(false);
   const [editingSection, setEditingSection] = useState<SectionRow | null>(null);
   const [saving, setSaving]                 = useState<Set<number>>(new Set());
+  const [allTeachers, setAllTeachers]       = useState<{ id: number; name: string }[]>([]);
 
   async function handleSectionChange(s: LevelStudent, newSectionId: number | null) {
     setSaving(prev => new Set(prev).add(s.enrollmentId));
@@ -158,8 +260,12 @@ function LevelAccordion({
     if (!expanded) {
       setLoadingStudents(true);
       try {
-        const data = await adminApi.courses.levelStudents(level.id) as LevelStudent[];
-        setStudents(data);
+        const [studentData, teacherData] = await Promise.all([
+          adminApi.courses.levelStudents(level.id) as Promise<LevelStudent[]>,
+          adminApi.teachers.list() as Promise<{ id: number; name: string }[]>,
+        ]);
+        setStudents(studentData);
+        setAllTeachers(teacherData.map(t => ({ id: t.id, name: t.name })));
       } catch { setStudents([]); }
       finally { setLoadingStudents(false); }
     }
@@ -243,8 +349,12 @@ function LevelAccordion({
                   key={s.id}
                   section={s}
                   isAdmin={isAdmin}
+                  allTeachers={allTeachers}
                   onDelete={deleteSection}
                   onEdit={sec => { setEditingSection(sec); setAddingSection(false); }}
+                  onSectionUpdated={updated =>
+                    onSectionsChange(level.id, level.sections.map(sec => sec.id === updated.id ? updated : sec))
+                  }
                 />
               )
             ))

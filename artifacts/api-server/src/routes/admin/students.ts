@@ -8,7 +8,7 @@ import {
   courseSectionsTable,
   paymentsTable,
 } from "@workspace/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -83,6 +83,30 @@ router.patch("/enrollments/:id/section", async (req, res) => {
 
     if (isNaN(enrollmentId)) {
       return res.status(400).json({ error: "Invalid enrollment ID" });
+    }
+
+    // Load the enrollment to get its courseLevelId
+    const [enrollment] = await db
+      .select({ courseLevelId: enrollmentsTable.courseLevelId })
+      .from(enrollmentsTable)
+      .where(eq(enrollmentsTable.id, enrollmentId));
+
+    if (!enrollment) {
+      return res.status(404).json({ error: "Enrollment not found" });
+    }
+
+    // If assigning to a section, validate the section belongs to the same level
+    if (sectionId != null) {
+      const [section] = await db
+        .select({ courseLevelId: courseSectionsTable.courseLevelId })
+        .from(courseSectionsTable)
+        .where(eq(courseSectionsTable.id, sectionId));
+
+      if (!section) return res.status(404).json({ error: "Section not found" });
+
+      if (section.courseLevelId !== enrollment.courseLevelId) {
+        return res.status(400).json({ error: "Section does not belong to this enrollment's level" });
+      }
     }
 
     await db

@@ -7,6 +7,7 @@ import {
   integer,
   numeric,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -152,7 +153,10 @@ export const enrollmentsTable = pgTable("enrollments", {
   enrollDate: text("enroll_date").notNull(),
   status: enrollmentStatusEnum("status").notNull().default("Enrolled"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  // A student can only be enrolled in one section per course level at a time
+  unique("enrollment_student_level_uniq").on(t.studentId, t.courseLevelId),
+]);
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
 // One payment record per enrollment (1-to-1, but kept separate for audit trail).

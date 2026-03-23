@@ -51,6 +51,17 @@ async function buildAdminCourses(includeArchived = false, teacherCourseIds?: num
   const levels = await db.select().from(courseLevelsTable).orderBy(courseLevelsTable.levelNumber);
   const sections = await db.select().from(courseSectionsTable).orderBy(courseSectionsTable.id);
 
+  // Teacher → section assignments (granular)
+  const sectionTeachers = await db
+    .select({
+      sectionId:   sectionAssignmentsTable.sectionId,
+      teacherId:   teachersTable.id,
+      teacherName: teachersTable.name,
+      role:        sectionAssignmentsTable.role,
+    })
+    .from(sectionAssignmentsTable)
+    .leftJoin(teachersTable, eq(sectionAssignmentsTable.teacherId, teachersTable.id));
+
   const assignments = await db
     .select({
       courseId: teacherAssignmentsTable.courseId,
@@ -97,6 +108,9 @@ async function buildAdminCourses(includeArchived = false, teacherCourseIds?: num
             schedule:    s.schedule ?? "",
             capacity:    s.capacity,
             status:      s.status,
+            teachers:    sectionTeachers
+              .filter((t) => t.sectionId === s.id && t.teacherId != null)
+              .map((t) => ({ id: t.teacherId!, name: t.teacherName!, role: t.role })),
           }));
 
         return {
