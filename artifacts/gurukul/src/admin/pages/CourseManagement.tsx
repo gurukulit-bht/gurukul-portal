@@ -736,16 +736,21 @@ export default function CourseManagement() {
   const archived = courses.filter(c => c.archivedAt);
   const totalLevels   = active.reduce((s, c) => s + c.levels.length, 0);
   const totalSections = active.reduce((s, c) => s + c.levels.reduce((ls, l) => ls + l.sections.length, 0), 0);
+  const totalEnrolled = active.reduce((s, c) => s + c.levels.reduce((ls, l) => ls + l.enrolled, 0), 0);
+  const uniqueTeachers = new Set<string>();
+  active.forEach(c => c.levels.forEach(l => {
+    if (l.teacher && l.teacher !== "TBD") l.teacher.split(" / ").forEach(t => uniqueTeachers.add(t.trim()));
+  }));
 
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Active Courses",   value: active.length,    color: "text-secondary" },
-          { label: "Archived Courses", value: archived.length,  color: "text-muted-foreground" },
-          { label: "Total Levels",     value: totalLevels,      color: "text-blue-600" },
-          { label: "Total Sections",   value: totalSections,    color: "text-purple-600" },
+          { label: "Active Courses",    value: active.length,          color: "text-secondary" },
+          { label: "Students Enrolled", value: totalEnrolled,          color: "text-green-600" },
+          { label: "Total Teachers",    value: uniqueTeachers.size,    color: "text-blue-600" },
+          { label: "Total Sections",    value: totalSections,          color: "text-purple-600" },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl p-4 shadow-sm border border-border">
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
