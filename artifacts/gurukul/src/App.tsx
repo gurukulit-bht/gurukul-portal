@@ -14,6 +14,7 @@ import Announcements from "@/pages/Announcements";
 import Calendar from "@/pages/Calendar";
 import ParentsPortal from "@/pages/ParentsPortal";
 import Contact from "@/pages/Contact";
+import Register from "@/pages/Register";
 import NotFound from "@/pages/not-found";
 import AdminApp from "@/admin/AdminApp";
 
@@ -53,6 +54,7 @@ function Router() {
             <Route path="/announcements" component={Announcements} />
             <Route path="/calendar" component={Calendar} />
             <Route path="/parents" component={ParentsPortal} />
+            <Route path="/register" component={Register} />
             <Route path="/contact" component={Contact} />
             <Route component={NotFound} />
           </Switch>

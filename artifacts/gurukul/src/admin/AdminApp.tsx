@@ -16,6 +16,7 @@ import CourseDocuments from "./pages/CourseDocuments";
 import Attendance from "./pages/Attendance";
 import ParentNotifications from "./pages/ParentNotifications";
 import RoleManagement from "./pages/RoleManagement";
+import StudentRegistration from "./pages/StudentRegistration";
 import AccessDenied from "./components/AccessDenied";
 
 function ProtectedRoute({
@@ -85,6 +86,10 @@ function AdminRoutes() {
       </Route>
       <Route path="/admin/notifications">
         <ProtectedRoute permission="notifications"><ParentNotifications /></ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/register">
+        <ProtectedRoute permission="registration"><StudentRegistration /></ProtectedRoute>
       </Route>
 
       {/* Admin-only pages */}

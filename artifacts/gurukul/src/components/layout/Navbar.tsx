@@ -14,6 +14,8 @@ const navLinks = [
   { href: "/contact", label: "Contact Us" },
 ];
 
+const REGISTER_HREF = "/register";
+
 export function Navbar() {
   const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -75,6 +77,17 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href={REGISTER_HREF}
+                className={cn(
+                  "ml-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm",
+                  location === REGISTER_HREF
+                    ? "bg-primary text-white"
+                    : "bg-primary text-white hover:bg-primary/90 hover:shadow-md"
+                )}
+              >
+                Register Now
+              </Link>
             </nav>
 
             {/* Mobile Menu Toggle */}
@@ -110,6 +123,12 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href={REGISTER_HREF}
+                className="mt-2 px-8 py-3 bg-primary text-white rounded-full text-xl font-display font-bold shadow-md hover:bg-primary/90 transition-colors"
+              >
+                Register Now
+              </Link>
             </nav>
             <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-20 pointer-events-none">
                <img src={`${import.meta.env.BASE_URL}images/lotus-motif.png`} alt="" className="w-48 h-48 opacity-20" />
