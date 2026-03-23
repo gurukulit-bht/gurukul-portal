@@ -1,7 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "./AuthContext";
-import { canAccess, type Permission } from "./rbac";
+import { canAccess, getDefaultRoute, type Permission } from "./rbac";
 import AdminLogin from "./AdminLogin";
 import AdminLayout from "./AdminLayout";
 import Dashboard from "./pages/Dashboard";
@@ -93,11 +93,11 @@ function AdminRoutes() {
       </Route>
 
       <Route path="/admin">
-        {user ? <Redirect to="/admin/dashboard" /> : <Redirect to="/admin/login" />}
+        {user ? <Redirect to={getDefaultRoute(user.role)} /> : <Redirect to="/admin/login" />}
       </Route>
 
       <Route path="/admin/:rest*">
-        {user ? <Redirect to="/admin/dashboard" /> : <Redirect to="/admin/login" />}
+        {user ? <Redirect to={getDefaultRoute(user.role)} /> : <Redirect to="/admin/login" />}
       </Route>
     </Switch>
   );

@@ -43,3 +43,11 @@ export function getRoleBadgeColor(role: UserRole): string {
     case "assistant": return "bg-green-100 text-green-800";
   }
 }
+
+export function getDefaultRoute(role: UserRole): string {
+  switch (role) {
+    case "admin":     return "/admin/dashboard";
+    case "teacher":
+    case "assistant": return "/admin/courses";
+  }
+}

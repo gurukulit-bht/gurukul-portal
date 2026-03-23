@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "./AuthContext";
 import { DEMO_CREDENTIALS } from "./auth";
+import { getDefaultRoute } from "./rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +24,7 @@ export default function AdminLogin() {
     setTimeout(() => {
       const user = login(email.trim(), password);
       if (user) {
-        setLocation("/admin/dashboard");
+        setLocation(getDefaultRoute(user.role));
       } else {
         setError("Invalid credentials. Please try again.");
       }
