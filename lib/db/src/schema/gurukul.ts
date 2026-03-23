@@ -65,14 +65,17 @@ export const coursesTable = pgTable("courses", {
 
 export const contactsTable = pgTable("contacts", {
   id: serial("id").primaryKey(),
-  parentName: text("parent_name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone"),
-  childName: text("child_name").notNull(),
-  childAge: integer("child_age"),
+  motherName:     text("mother_name"),
+  motherPhone:    text("mother_phone"),
+  motherEmail:    text("mother_email"),
+  fatherName:     text("father_name"),
+  fatherPhone:    text("father_phone"),
+  fatherEmail:    text("father_email"),
+  childName:      text("child_name"),
+  childAge:       integer("child_age"),
   courseInterest: text("course_interest").notNull(),
-  message: text("message"),
-  createdAt: timestamp("created_at").defaultNow(),
+  message:        text("message"),
+  createdAt:      timestamp("created_at").defaultNow(),
 });
 
 // ─── Teachers ─────────────────────────────────────────────────────────────────

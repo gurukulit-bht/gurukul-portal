@@ -7,13 +7,16 @@ const router: IRouter = Router();
 router.post("/", async (req, res) => {
   try {
     const parsed = insertContactSchema.safeParse({
-      parentName: req.body.parentName,
-      email: req.body.email,
-      phone: req.body.phone || null,
-      childName: req.body.childName,
-      childAge: req.body.childAge || null,
+      motherName:     req.body.motherName     || null,
+      motherPhone:    req.body.motherPhone    || null,
+      motherEmail:    req.body.motherEmail    || null,
+      fatherName:     req.body.fatherName     || null,
+      fatherPhone:    req.body.fatherPhone    || null,
+      fatherEmail:    req.body.fatherEmail    || null,
+      childName:      req.body.childName      || null,
+      childAge:       req.body.childAge       || null,
       courseInterest: req.body.courseInterest,
-      message: req.body.message || null,
+      message:        req.body.message        || null,
     });
 
     if (!parsed.success) {

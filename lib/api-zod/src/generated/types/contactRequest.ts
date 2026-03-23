@@ -7,10 +7,13 @@
  */
 
 export interface ContactRequest {
-  parentName: string;
-  email: string;
-  phone?: string;
-  childName: string;
+  motherName?: string;
+  motherPhone?: string;
+  motherEmail?: string;
+  fatherName?: string;
+  fatherPhone?: string;
+  fatherEmail?: string;
+  childName?: string;
   childAge?: number;
   courseInterest: string;
   message?: string;

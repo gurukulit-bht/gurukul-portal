@@ -14,13 +14,19 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 const formSchema = z.object({
-  parentName: z.string().min(2, "Parent name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
-  childName: z.string().min(2, "Child name is required"),
-  childAge: z.coerce.number().min(3, "Child must be at least 3").max(18, "Age limit is 18").optional(),
+  motherName:     z.string().optional(),
+  motherPhone:    z.string().optional(),
+  motherEmail:    z.string().email("Invalid email").optional().or(z.literal("")),
+  fatherName:     z.string().optional(),
+  fatherPhone:    z.string().optional(),
+  fatherEmail:    z.string().email("Invalid email").optional().or(z.literal("")),
+  childName:      z.string().min(2, "Child name is required"),
+  childAge:       z.coerce.number().min(3, "Child must be at least 3").max(18, "Age limit is 18").optional(),
   courseInterest: z.string().min(1, "Please select a course"),
-  message: z.string().optional(),
+  message:        z.string().optional(),
+}).refine(d => d.motherName?.trim() || d.fatherName?.trim(), {
+  message: "Please provide at least one parent's name",
+  path: ["motherName"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -91,26 +97,48 @@ export default function ParentsPortal() {
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="parentName">Parent/Guardian Name *</Label>
-                    <Input id="parentName" {...register("parentName")} className={errors.parentName ? "border-destructive" : ""} />
-                    {errors.parentName && <p className="text-sm text-destructive">{errors.parentName.message}</p>}
+                {/* Mother */}
+                <div>
+                  <p className="text-sm font-semibold text-pink-600 mb-3">Mother's Information</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="motherName">Mother's Name *</Label>
+                      <Input id="motherName" {...register("motherName")} className={errors.motherName ? "border-destructive" : ""} />
+                      {errors.motherName && <p className="text-sm text-destructive">{errors.motherName.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="motherPhone">Mother's Phone</Label>
+                      <Input id="motherPhone" type="tel" {...register("motherPhone")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="motherEmail">Mother's Email</Label>
+                      <Input id="motherEmail" type="email" {...register("motherEmail")} className={errors.motherEmail ? "border-destructive" : ""} />
+                      {errors.motherEmail && <p className="text-sm text-destructive">{errors.motherEmail.message}</p>}
+                    </div>
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input id="email" type="email" {...register("email")} className={errors.email ? "border-destructive" : ""} />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                {/* Father */}
+                <div>
+                  <p className="text-sm font-semibold text-blue-600 mb-3">Father's Information</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fatherName">Father's Name</Label>
+                      <Input id="fatherName" {...register("fatherName")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fatherPhone">Father's Phone</Label>
+                      <Input id="fatherPhone" type="tel" {...register("fatherPhone")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fatherEmail">Father's Email</Label>
+                      <Input id="fatherEmail" type="email" {...register("fatherEmail")} className={errors.fatherEmail ? "border-destructive" : ""} />
+                      {errors.fatherEmail && <p className="text-sm text-destructive">{errors.fatherEmail.message}</p>}
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" type="tel" {...register("phone")} />
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="childName">Child's Name *</Label>
                     <Input id="childName" {...register("childName")} className={errors.childName ? "border-destructive" : ""} />
