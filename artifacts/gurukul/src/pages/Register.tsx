@@ -283,15 +283,6 @@ export default function Register() {
                 ))}
               </div>
 
-              {/* Fee note */}
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-start gap-3">
-                <span className="text-2xl">💛</span>
-                <div className="text-sm text-amber-800">
-                  <strong>Fee:</strong> $35 per subject per child · $55 for SAT/HDC Accelerated.
-                  A $11 school bag is available for new students. Payment accepted via Zelle, Check, or Cash.
-                </div>
-              </div>
-
               {/* Verified badge */}
               <div className="flex items-center justify-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                 <ShieldCheck className="w-4 h-4 shrink-0" />

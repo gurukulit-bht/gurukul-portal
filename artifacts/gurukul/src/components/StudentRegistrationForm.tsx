@@ -205,9 +205,10 @@ type Props = {
   onSuccess: (studentCode: string, studentName: string) => void;
   onBack?:   () => void;
   submitLabel?: string;
+  adminMode?: boolean;
 };
 
-export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Register Student" }: Props) {
+export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Register Student", adminMode = false }: Props) {
   // ── Course meta ──
   const [meta, setMeta]       = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1017,16 +1018,18 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                   </Field>
                 )}
 
-                <Field label="Registration Fee ($)">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={enr.amountDue}
-                    onChange={e => updateEnrollment(enr.key, { amountDue: e.target.value })}
-                    className={`${inputCls} max-w-[120px]`}
-                  />
-                </Field>
+                {adminMode && (
+                  <Field label="Registration Fee ($)">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={enr.amountDue}
+                      onChange={e => updateEnrollment(enr.key, { amountDue: e.target.value })}
+                      className={`${inputCls} max-w-[120px]`}
+                    />
+                  </Field>
+                )}
               </div>
             );
           })}

@@ -61,6 +61,7 @@ export default function StudentRegistration() {
           onSuccess={handleSuccess}
           onBack={() => setLocation("/admin/students")}
           submitLabel="Register Student"
+          adminMode={true}
         />
       </div>
     </div>
