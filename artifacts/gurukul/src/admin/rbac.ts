@@ -21,7 +21,7 @@ export type Permission =
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // Admin manages courses/teachers/students strategically — classroom operations are for teachers
   admin: [
-    "dashboard", "announcements", "calendar", "courses", "courseManagement",
+    "dashboard", "announcements", "calendar", "courseManagement",
     "teachers", "students", "inventory", "roles", "settings", "registration",
     "testimonials", "messaging",
   ],
