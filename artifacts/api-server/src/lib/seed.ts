@@ -10,6 +10,9 @@ import { logger } from "./logger";
  * entered through the admin portal.
  */
 export async function seedIfEmpty() {
+  // Section seeding always runs independently (idempotent check inside)
+  await seedSectionsIfEmpty();
+
   try {
     const existingCourses = await db.select().from(coursesTable);
     const needsReseed =
@@ -197,9 +200,6 @@ export async function seedIfEmpty() {
   } catch (err) {
     logger.error({ err }, "Seed failed");
   }
-
-  // Always run section seeding independently — it's idempotent
-  await seedSectionsIfEmpty();
 }
 
 /**
