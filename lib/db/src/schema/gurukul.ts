@@ -151,6 +151,7 @@ export const studentsTable = pgTable("students", {
   dob: text("dob"),                        // Date of birth e.g. "2015-06-10"
   grade: text("grade"),                    // School grade e.g. "4th"
   isNewStudent: boolean("is_new_student").default(true),
+  curriculumYear: text("curriculum_year"),  // e.g. "2027-2028"
   // Member linkage
   memberId: integer("member_id").references(() => membersTable.id),
   // Separate parent contacts
@@ -385,6 +386,24 @@ export const testimonialsTable = pgTable("testimonials", {
 export const insertTestimonialSchema = createInsertSchema(testimonialsTable).omit({ id: true, createdAt: true });
 export type Testimonial = typeof testimonialsTable.$inferSelect;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+
+// ─── Email Log ────────────────────────────────────────────────────────────────
+
+export const emailLogsTable = pgTable("email_logs", {
+  id:           serial("id").primaryKey(),
+  subject:      text("subject").notNull(),
+  body:         text("body").notNull(),
+  recipientCount: integer("recipient_count").notNull().default(0),
+  recipientEmails: text("recipient_emails").notNull().default(""),
+  filterCourse:      text("filter_course"),
+  filterCurricYear:  text("filter_curric_year"),
+  filterEmployer:    text("filter_employer"),
+  sentBy:       text("sent_by"),
+  status:       text("status").notNull().default("sent"),
+  sentAt:       timestamp("sent_at").defaultNow(),
+});
+
+export type EmailLog = typeof emailLogsTable.$inferSelect;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

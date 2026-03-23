@@ -15,14 +15,15 @@ export type Permission =
   | "notifications"
   | "roles"
   | "registration"
-  | "testimonials";
+  | "testimonials"
+  | "messaging";
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // Admin manages courses/teachers/students strategically — classroom operations are for teachers
   admin: [
     "dashboard", "announcements", "calendar", "courses", "courseManagement",
     "teachers", "students", "inventory", "roles", "settings", "registration",
-    "testimonials",
+    "testimonials", "messaging",
   ],
   // Teachers and Assistants handle classroom operations
   teacher:   ["courses", "documents", "attendance", "notifications"],

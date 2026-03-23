@@ -107,4 +107,16 @@ export const adminApi = {
     create:       (data: unknown) => request("POST", "/notifications", data),
     updateStatus: (id: number, status: string) => request("PATCH", `/notifications/${id}/status`, { status }),
   },
+  messaging: {
+    recipients: (params: { course?: string; curricYear?: string; employer?: string }) => {
+      const qs = new URLSearchParams();
+      if (params.course)     qs.set("course",     params.course);
+      if (params.curricYear) qs.set("curricYear",  params.curricYear);
+      if (params.employer)   qs.set("employer",    params.employer);
+      return request<unknown[]>("GET", `/messaging/recipients?${qs}`);
+    },
+    employers: () => request<string[]>("GET", "/messaging/employers"),
+    send:      (data: unknown) => request("POST", "/messaging/send", data),
+    logs:      () => request<unknown[]>("GET", "/messaging/logs"),
+  },
 };

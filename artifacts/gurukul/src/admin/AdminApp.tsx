@@ -19,6 +19,7 @@ import ParentNotifications from "./pages/ParentNotifications";
 import RoleManagement from "./pages/RoleManagement";
 import StudentRegistration from "./pages/StudentRegistration";
 import Testimonials from "./pages/Testimonials";
+import MessagingCenter from "./pages/MessagingCenter";
 import AccessDenied from "./components/AccessDenied";
 
 function ProtectedRoute({
@@ -103,6 +104,10 @@ function AdminRoutes() {
 
       <Route path="/admin/testimonials">
         <ProtectedRoute permission="testimonials"><Testimonials /></ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/messaging">
+        <ProtectedRoute permission="messaging"><MessagingCenter /></ProtectedRoute>
       </Route>
 
       <Route path="/admin/roles">

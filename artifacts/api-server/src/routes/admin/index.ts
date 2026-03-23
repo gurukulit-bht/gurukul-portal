@@ -9,6 +9,7 @@ import coursesRouter from "./courses";
 import attendanceRouter from "./attendance";
 import notificationsRouter from "./notifications";
 import testimonialsRouter from "./testimonials";
+import messagingRouter from "./messaging";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/courses", coursesRouter);
 router.use("/attendance", attendanceRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/testimonials", testimonialsRouter);
+router.use("/messaging", messagingRouter);
 
 export default router;
