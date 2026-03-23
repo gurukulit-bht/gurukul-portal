@@ -21,10 +21,10 @@ const fadeUp = {
 };
 
 const STATS = [
-  { value: "200+", label: "Enrolled Students" },
-  { value: "6",    label: "Languages Taught" },
-  { value: "15+",  label: "Years of Service" },
-  { value: "50+",  label: "Volunteer Families" },
+  { value: "800+",         label: "Students Enrolled" },
+  { value: "15+",          label: "Years of Service" },
+  { value: "Every Sunday", label: "Weekly Classes" },
+  { value: "All Ages",     label: "Ages 3–18 Welcome" },
 ];
 
 const BENEFITS = [
@@ -93,25 +93,46 @@ const PILLARS = [
 
 const TESTIMONIALS = [
   {
-    quote: "Our daughter came home after her first class humming a shloka. Three years later she is writing full stories in Hindi. The Gurukul truly changed her relationship with our culture.",
+    quote: "Our daughter started coming home reciting small shlokas she had learned. We did not expect it to catch on so quickly. The teachers are very patient and encouraging.",
     name: "Priya Iyer",
-    detail: "Parent of a 4th-year student",
+    detail: "Parent of a Hindi student",
     initials: "PI",
     color: "bg-orange-500",
   },
   {
-    quote: "I was worried my son wouldn't connect with Telugu since we rarely speak it at home. The teachers here made it joyful and relevant. He now calls his grandparents in Telugu every week.",
+    quote: "My son was shy at first, but within a few weeks he had made friends and looked forward to Sundays. Seeing him engaged with his language and culture has been really rewarding.",
     name: "Suresh Reddy",
-    detail: "Parent of a 2nd-year student",
+    detail: "Parent of a Telugu student",
     initials: "SR",
     color: "bg-violet-600",
   },
   {
-    quote: "The Gurukul is more than a language class — it is a community. The festivals, the seva activities, the values the children learn here stay with them for life.",
+    quote: "What I appreciate most is the sense of community. The children celebrate festivals together and learn that their traditions are something to be proud of.",
     name: "Meera Patel",
     detail: "Parent of two enrolled children",
     initials: "MP",
     color: "bg-rose-600",
+  },
+  {
+    quote: "We were hesitant because our schedule is busy, but Sunday classes fit perfectly. The Gurukul has become an important part of our week for the whole family.",
+    name: "Anita Sharma",
+    detail: "Parent of a Sanskrit student",
+    initials: "AS",
+    color: "bg-amber-600",
+  },
+  {
+    quote: "My daughter's Hindi teacher noticed she was struggling and took extra time to help her. That personal attention made a real difference. We are very grateful.",
+    name: "Kavitha Nair",
+    detail: "Parent of a 2nd-year student",
+    initials: "KN",
+    color: "bg-teal-600",
+  },
+  {
+    quote: "Learning Sanskrit has helped my son with his school vocabulary more than we expected. The Gurukul programs have practical benefits that go beyond cultural connection.",
+    name: "Rajesh Menon",
+    detail: "Parent of a Dharma & Sanskrit student",
+    initials: "RM",
+    color: "bg-sky-600",
   },
 ];
 
