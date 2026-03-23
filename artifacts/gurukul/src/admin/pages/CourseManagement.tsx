@@ -32,7 +32,7 @@ type CourseRow = {
 };
 
 type LevelStudent = {
-  studentId: number; studentCode: string; studentName: string;
+  studentId: number; enrollmentId: number; studentCode: string; studentName: string;
   parentName: string; paymentStatus: string | null;
   sectionId: number | null; sectionName: string | null;
 };
@@ -134,6 +134,25 @@ function LevelAccordion({
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [addingSection, setAddingSection]   = useState(false);
   const [editingSection, setEditingSection] = useState<SectionRow | null>(null);
+  const [saving, setSaving]                 = useState<Set<number>>(new Set());
+
+  async function handleSectionChange(s: LevelStudent, newSectionId: number | null) {
+    setSaving(prev => new Set(prev).add(s.enrollmentId));
+    try {
+      await adminApi.students.assignSection(s.enrollmentId, newSectionId);
+      const sec = newSectionId ? level.sections.find(sec => sec.id === newSectionId) : null;
+      setStudents(prev => prev.map(st =>
+        st.enrollmentId === s.enrollmentId
+          ? { ...st, sectionId: newSectionId, sectionName: sec?.sectionName ?? null }
+          : st
+      ));
+      toast.success(`${s.studentName} moved to ${sec?.sectionName ?? "Unassigned"}`);
+    } catch {
+      toast.error("Failed to update section");
+    } finally {
+      setSaving(prev => { const n = new Set(prev); n.delete(s.enrollmentId); return n; });
+    }
+  }
 
   async function toggleStudents() {
     if (!expanded) {
@@ -278,7 +297,7 @@ function LevelAccordion({
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
-                          {["Code", "Name", "Parent", "Payment"].map(h => (
+                          {["Code", "Name", "Parent", "Payment", "Section"].map(h => (
                             <th key={h} className="px-3 py-2 text-left font-semibold text-muted-foreground">{h}</th>
                           ))}
                         </tr>
@@ -294,6 +313,23 @@ function LevelAccordion({
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${PAYMENT_COLORS[s.paymentStatus] ?? "bg-gray-100 text-gray-600"}`}>
                                   {s.paymentStatus}
                                 </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              {isAdmin ? (
+                                <select
+                                  value={s.sectionId ?? ""}
+                                  disabled={saving.has(s.enrollmentId)}
+                                  onChange={e => handleSectionChange(s, e.target.value ? Number(e.target.value) : null)}
+                                  className="text-[11px] border border-border rounded px-1.5 py-0.5 bg-white disabled:opacity-50 disabled:cursor-wait focus:outline-none focus:ring-1 focus:ring-primary"
+                                >
+                                  <option value="">— Unassigned —</option>
+                                  {level.sections.map(sec => (
+                                    <option key={sec.id} value={sec.id}>{sec.sectionName}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-muted-foreground">{s.sectionName ?? "—"}</span>
                               )}
                             </td>
                           </tr>

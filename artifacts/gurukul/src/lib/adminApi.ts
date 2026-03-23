@@ -40,7 +40,9 @@ export const adminApi = {
     remove: (id: number) => request("DELETE", `/teachers/${id}`),
   },
   students: {
-    list: () => request<unknown[]>("GET", "/students"),
+    list:          () => request<unknown[]>("GET", "/students"),
+    assignSection: (enrollmentId: number, sectionId: number | null) =>
+      request("PATCH", `/students/enrollments/${enrollmentId}/section`, { sectionId }),
   },
   inventory: {
     list:       () => request<unknown[]>("GET", "/inventory"),

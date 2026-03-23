@@ -73,4 +73,28 @@ router.get("/", async (req, res) => {
   }
 });
 
+// PATCH /api/admin/students/enrollments/:id/section
+// Assigns (or unassigns) a student enrollment to a specific section.
+// Body: { sectionId: number | null }
+router.patch("/enrollments/:id/section", async (req, res) => {
+  try {
+    const enrollmentId = parseInt(req.params.id);
+    const { sectionId } = req.body as { sectionId: number | null };
+
+    if (isNaN(enrollmentId)) {
+      return res.status(400).json({ error: "Invalid enrollment ID" });
+    }
+
+    await db
+      .update(enrollmentsTable)
+      .set({ sectionId: sectionId ?? null })
+      .where(eq(enrollmentsTable.id, enrollmentId));
+
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update enrollment section");
+    res.status(500).json({ error: "Failed to update enrollment section" });
+  }
+});
+
 export default router;
