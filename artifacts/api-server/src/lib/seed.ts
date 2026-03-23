@@ -267,18 +267,23 @@ async function seedSectionsIfEmpty() {
  * if there are currently no enrollments in the database.
  * Safe to call on every startup — skips if any enrollment exists.
  */
+const EXPECTED_STUDENTS = 30;
+
 async function seedStudentsIfEmpty() {
   try {
-    const [{ count }] = await db
-      .select({ count: sql<string>`count(*)` })
-      .from(enrollmentsTable);
+    const [{ studentCount }] = await db
+      .select({ studentCount: sql<string>`count(*)` })
+      .from(studentsTable);
 
-    if (parseInt(count) > 0) {
-      logger.info({ count }, "Student enrollments already exist — skipping demo seed.");
+    if (parseInt(studentCount) >= EXPECTED_STUDENTS) {
+      const [{ enrollCount }] = await db
+        .select({ enrollCount: sql<string>`count(*)` })
+        .from(enrollmentsTable);
+      logger.info({ studentCount, enrollCount }, "Student records already seeded — skipping demo seed.");
       return;
     }
 
-    logger.info("No enrollments found — seeding demo students, enrollments and payments…");
+    logger.info({ studentCount }, "Student count below expected — wiping and re-seeding demo students…");
 
     // Build lookup helpers: find a level ID by (courseName prefix, levelNumber)
     const allLevels = await db
