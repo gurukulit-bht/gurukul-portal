@@ -5,6 +5,7 @@ import {
   enrollmentsTable,
   courseLevelsTable,
   coursesTable,
+  courseSectionsTable,
   paymentsTable,
 } from "@workspace/db/schema";
 import { eq, asc } from "drizzle-orm";
@@ -30,6 +31,7 @@ async function buildStudentList() {
       levelNumber:   courseLevelsTable.levelNumber,
       schedule:      courseLevelsTable.schedule,
       courseName:    coursesTable.name,
+      sectionName:   courseSectionsTable.sectionName,
       paymentStatus: paymentsTable.paymentStatus,
       amountDue:     paymentsTable.amountDue,
       amountPaid:    paymentsTable.amountPaid,
@@ -40,6 +42,7 @@ async function buildStudentList() {
     .leftJoin(enrollmentsTable, eq(enrollmentsTable.studentId, studentsTable.id))
     .leftJoin(courseLevelsTable, eq(courseLevelsTable.id, enrollmentsTable.courseLevelId))
     .leftJoin(coursesTable, eq(coursesTable.id, courseLevelsTable.courseId))
+    .leftJoin(courseSectionsTable, eq(courseSectionsTable.id, enrollmentsTable.sectionId))
     .leftJoin(paymentsTable, eq(paymentsTable.enrollmentId, enrollmentsTable.id))
     .orderBy(asc(studentsTable.studentCode), asc(enrollmentsTable.id));
 
@@ -49,6 +52,7 @@ async function buildStudentList() {
     parentName:    r.parentName,
     course:        r.courseName ?? "",
     level:         r.levelNumber != null ? `Level ${r.levelNumber}` : "",
+    section:       r.sectionName ?? "",
     timing:        r.schedule ?? "",
     enrollDate:    r.enrollDate ?? "",
     paymentStatus: (r.paymentStatus ?? "Pending") as "Paid" | "Pending" | "Overdue",

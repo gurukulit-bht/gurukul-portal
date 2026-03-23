@@ -136,6 +136,8 @@ export const studentsTable = pgTable("students", {
 
 // ─── Enrollments ──────────────────────────────────────────────────────────────
 // A student may be enrolled in multiple course levels (one row each).
+// sectionId is nullable — a student enrolled in a level can be assigned to a
+// specific section within that level. null = unassigned / whole level.
 
 export const enrollmentsTable = pgTable("enrollments", {
   id: serial("id").primaryKey(),
@@ -145,6 +147,8 @@ export const enrollmentsTable = pgTable("enrollments", {
   courseLevelId: integer("course_level_id")
     .notNull()
     .references(() => courseLevelsTable.id, { onDelete: "restrict" }),
+  sectionId: integer("section_id")
+    .references(() => courseSectionsTable.id, { onDelete: "set null" }),
   enrollDate: text("enroll_date").notNull(),
   status: enrollmentStatusEnum("status").notNull().default("Enrolled"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -293,6 +297,10 @@ export const enrollmentsRelations = relations(enrollmentsTable, ({ one }) => ({
   courseLevel: one(courseLevelsTable, {
     fields: [enrollmentsTable.courseLevelId],
     references: [courseLevelsTable.id],
+  }),
+  section: one(courseSectionsTable, {
+    fields: [enrollmentsTable.sectionId],
+    references: [courseSectionsTable.id],
   }),
   payment: one(paymentsTable, {
     fields: [enrollmentsTable.id],

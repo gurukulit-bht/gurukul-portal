@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 
 type Student = {
   id: string; name: string; parentName: string; course: string; level: string;
-  timing: string; enrollDate: string; paymentStatus: "Paid" | "Pending" | "Overdue";
+  section: string; timing: string; enrollDate: string;
+  paymentStatus: "Paid" | "Pending" | "Overdue";
   amountDue: number; amountPaid: number; paymentMethod: string; receiptId: string;
 };
 
@@ -64,8 +65,8 @@ export default function Students() {
   }
 
   function exportCSV() {
-    const headers = ["Student ID", "Name", "Parent Name", "Course", "Level", "Timing", "Enroll Date", "Payment Status", "Amount Due", "Amount Paid", "Method", "Receipt ID"];
-    const rows = filtered.map((s) => [s.id, s.name, s.parentName, s.course, s.level, s.timing, s.enrollDate, s.paymentStatus, s.amountDue, s.amountPaid, s.paymentMethod, s.receiptId]);
+    const headers = ["Student ID", "Name", "Parent Name", "Course", "Level", "Section", "Timing", "Enroll Date", "Payment Status", "Amount Due", "Amount Paid", "Method", "Receipt ID"];
+    const rows = filtered.map((s) => [s.id, s.name, s.parentName, s.course, s.level, s.section, s.timing, s.enrollDate, s.paymentStatus, s.amountDue, s.amountPaid, s.paymentMethod, s.receiptId]);
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gurukul-students.csv"; a.click();
@@ -160,6 +161,7 @@ export default function Students() {
                   { label: "Parent Name", key: "parentName" as SortKey },
                   { label: "Course", key: "course" as SortKey },
                   { label: "Level", key: "level" as SortKey },
+                  { label: "Section", key: "section" as SortKey },
                   { label: "Timing", key: "timing" as SortKey },
                   { label: "Enroll Date", key: "enrollDate" as SortKey },
                   { label: "Status", key: "paymentStatus" as SortKey },
@@ -176,7 +178,7 @@ export default function Students() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">No students found.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={13} className="text-center py-12 text-muted-foreground">No students found.</td></tr>}
               {filtered.map((s) => (
                 <tr key={s.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.id}</td>
@@ -184,6 +186,12 @@ export default function Students() {
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{s.parentName}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-xs font-medium">{s.course}</span></td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.level}</td>
+                  <td className="px-4 py-3 text-xs whitespace-nowrap">
+                    {s.section
+                      ? <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] font-medium border border-blue-100">{s.section}</span>
+                      : <span className="text-muted-foreground">—</span>
+                    }
+                  </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.timing}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.enrollDate}</td>
                   <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge[s.paymentStatus]}`}>{s.paymentStatus}</span></td>

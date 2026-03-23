@@ -478,28 +478,37 @@ router.delete("/sections/:sectionId/unassign/:teacherId", async (req, res) => {
 
 router.get("/levels/:id/students", async (req, res) => {
   try {
-    const levelId = parseInt(req.params.id);
+    const levelId  = parseInt(req.params.id);
+    const sectionId = req.query.sectionId ? parseInt(req.query.sectionId as string) : null;
+
+    const whereClause = sectionId
+      ? and(eq(enrollmentsTable.courseLevelId, levelId), eq(enrollmentsTable.sectionId, sectionId))
+      : eq(enrollmentsTable.courseLevelId, levelId);
+
     const rows = await db
       .select({
-        enrollmentId: enrollmentsTable.id,
-        enrollDate:   enrollmentsTable.enrollDate,
-        enrollStatus: enrollmentsTable.status,
-        studentId:    studentsTable.id,
-        studentCode:  studentsTable.studentCode,
-        studentName:  studentsTable.name,
-        parentName:   studentsTable.parentName,
-        email:        studentsTable.email,
-        phone:        studentsTable.phone,
+        enrollmentId:  enrollmentsTable.id,
+        enrollDate:    enrollmentsTable.enrollDate,
+        enrollStatus:  enrollmentsTable.status,
+        studentId:     studentsTable.id,
+        studentCode:   studentsTable.studentCode,
+        studentName:   studentsTable.name,
+        parentName:    studentsTable.parentName,
+        email:         studentsTable.email,
+        phone:         studentsTable.phone,
+        sectionId:     enrollmentsTable.sectionId,
+        sectionName:   courseSectionsTable.sectionName,
         paymentStatus: paymentsTable.paymentStatus,
-        amountDue:    paymentsTable.amountDue,
-        amountPaid:   paymentsTable.amountPaid,
-        paymentDate:  paymentsTable.paymentDate,
+        amountDue:     paymentsTable.amountDue,
+        amountPaid:    paymentsTable.amountPaid,
+        paymentDate:   paymentsTable.paymentDate,
       })
       .from(enrollmentsTable)
       .innerJoin(studentsTable, eq(enrollmentsTable.studentId, studentsTable.id))
+      .leftJoin(courseSectionsTable, eq(courseSectionsTable.id, enrollmentsTable.sectionId))
       .leftJoin(paymentsTable, eq(paymentsTable.enrollmentId, enrollmentsTable.id))
-      .where(eq(enrollmentsTable.courseLevelId, levelId))
-      .orderBy(studentsTable.name);
+      .where(whereClause)
+      .orderBy(courseSectionsTable.sectionName, studentsTable.name);
 
     res.json(rows);
   } catch (err) {

@@ -71,7 +71,7 @@ export const adminApi = {
     addLevel:        (courseId: number, data: unknown) => request("POST", `/courses/${courseId}/levels`, data),
     updateLevel:     (levelId: number, data: unknown) => request("PUT", `/courses/levels/${levelId}`, data),
     deleteLevel:     (levelId: number) => request("DELETE", `/courses/levels/${levelId}`),
-    levelStudents:   (levelId: number) => request<unknown[]>("GET", `/courses/levels/${levelId}/students`),
+    levelStudents:   (levelId: number, sectionId?: number | null) => request<unknown[]>("GET", `/courses/levels/${levelId}/students${sectionId ? `?sectionId=${sectionId}` : ""}`),
     levelSections:   (levelId: number) => request<unknown[]>("GET", `/courses/levels/${levelId}/sections`),
     addSection:      (levelId: number, data: unknown) => request("POST", `/courses/levels/${levelId}/sections`, data),
     updateSection:   (sectionId: number, data: unknown) => request("PUT", `/courses/sections/${sectionId}`, data),

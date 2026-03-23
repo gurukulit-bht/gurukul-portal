@@ -34,6 +34,7 @@ type CourseRow = {
 type LevelStudent = {
   studentId: number; studentCode: string; studentName: string;
   parentName: string; paymentStatus: string | null;
+  sectionId: number | null; sectionName: string | null;
 };
 
 type FormData = {
@@ -251,33 +252,59 @@ function LevelAccordion({
             <div className="px-4 py-3 text-xs text-muted-foreground">Loading students…</div>
           ) : students.length === 0 ? (
             <div className="px-4 py-3 text-xs text-muted-foreground italic">No students enrolled in this level.</div>
-          ) : (
-            <table className="w-full text-xs">
-              <thead className="bg-amber-50">
-                <tr>
-                  {["Code", "Name", "Parent", "Payment"].map(h => (
-                    <th key={h} className="px-3 py-2 text-left font-semibold text-muted-foreground">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {students.map(s => (
-                  <tr key={s.studentId} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{s.studentCode}</td>
-                    <td className="px-3 py-2 font-semibold text-secondary">{s.studentName}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{s.parentName}</td>
-                    <td className="px-3 py-2">
-                      {s.paymentStatus && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${PAYMENT_COLORS[s.paymentStatus] ?? "bg-gray-100 text-gray-600"}`}>
-                          {s.paymentStatus}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
+          ) : (() => {
+            // Group students by section
+            const groups = new Map<string, { label: string; students: LevelStudent[] }>();
+            for (const s of students) {
+              const key = s.sectionId != null ? String(s.sectionId) : "__none__";
+              const label = s.sectionName ?? "Unassigned";
+              if (!groups.has(key)) groups.set(key, { label, students: [] });
+              groups.get(key)!.students.push(s);
+            }
+            const sectionGroups = Array.from(groups.entries()).sort(([a], [b]) => {
+              if (a === "__none__") return 1;
+              if (b === "__none__") return -1;
+              return 0;
+            });
+            return (
+              <div className="divide-y divide-border">
+                {sectionGroups.map(([key, group]) => (
+                  <div key={key}>
+                    <div className="px-4 py-1.5 bg-amber-50 flex items-center gap-2">
+                      <Tag className="w-3 h-3 text-amber-600" />
+                      <span className="text-[11px] font-semibold text-amber-800">{group.label}</span>
+                      <span className="text-[10px] text-amber-600 ml-auto">{group.students.length} student{group.students.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {["Code", "Name", "Parent", "Payment"].map(h => (
+                            <th key={h} className="px-3 py-2 text-left font-semibold text-muted-foreground">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {group.students.map(s => (
+                          <tr key={s.studentId} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{s.studentCode}</td>
+                            <td className="px-3 py-2 font-semibold text-secondary">{s.studentName}</td>
+                            <td className="px-3 py-2 text-muted-foreground">{s.parentName}</td>
+                            <td className="px-3 py-2">
+                              {s.paymentStatus && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${PAYMENT_COLORS[s.paymentStatus] ?? "bg-gray-100 text-gray-600"}`}>
+                                  {s.paymentStatus}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

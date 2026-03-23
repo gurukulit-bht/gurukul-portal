@@ -47,6 +47,7 @@ Auth is localStorage-based (demo, structured for AWS Cognito integration). **All
 - `course_sections` — sections within a level (Morning Batch, Section A, etc.); cascades on level delete
 - `section_assignments` — teacher↔section assignment with role (Teacher/Assistant); cascades on section delete
 - `teacher_assignments` — teacher↔course assignment with level range
+- `enrollments` — includes nullable `section_id` FK → `course_sections.id` (onDelete: set null); a student is assigned to the full Course → Level → Section hierarchy
 - `attendance_records` — per student per level per date attendance (Present/Absent/Late)
 - `parent_notifications` — audience-targeted notifications with Draft/Published/Sent status
 
@@ -65,7 +66,7 @@ Auth is localStorage-based (demo, structured for AWS Cognito integration). **All
 - `GET /courses/levels/:id/sections` — list sections; `POST /courses/levels/:id/sections` — add section
 - `PUT /courses/sections/:id` — update section; `DELETE /courses/sections/:id` — remove section
 - `POST /courses/sections/:id/assign` — assign teacher to section; `DELETE /courses/sections/:id/unassign/:teacherId`
-- `GET /courses/levels/:id/students` — enrolled students for a level
+- `GET /courses/levels/:id/students` — enrolled students for a level; supports `?sectionId=X` to filter to a specific section
 - `GET /attendance/levels` — all course levels with course names (for Attendance dropdown)
 - `GET /attendance?levelId&date` — records for one level+date
 - `GET /attendance/history?levelId` — full history for a level

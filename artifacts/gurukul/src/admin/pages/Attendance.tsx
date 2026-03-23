@@ -82,10 +82,10 @@ export default function Attendance() {
       .finally(() => setLoadingSections(false));
   }, [selectedLevel]);
 
-  const loadStudents = useCallback(async (levelId: number) => {
+  const loadStudents = useCallback(async (levelId: number, sectionId?: number | null) => {
     setLoadingStudents(true);
     try {
-      const data = await adminApi.courses.levelStudents(levelId) as {
+      const data = await adminApi.courses.levelStudents(levelId, sectionId) as {
         studentId: number; studentCode: string; studentName: string; parentName: string;
       }[];
       setStudents(data.map(s => ({ studentId: s.studentId, studentCode: s.studentCode, name: s.studentName, parentName: s.parentName, status: "Present" as AttStatus })));
@@ -120,9 +120,9 @@ export default function Attendance() {
 
   useEffect(() => {
     if (!selectedLevel) return;
-    loadStudents(selectedLevel).then(() => loadAttendance(selectedLevel, date));
+    loadStudents(selectedLevel, selectedSection).then(() => loadAttendance(selectedLevel, date));
     loadHistory(selectedLevel);
-  }, [selectedLevel, date]);
+  }, [selectedLevel, selectedSection, date]);
 
   function setStatus(studentId: number, status: AttStatus) {
     setStudents(prev => prev.map(s => s.studentId === studentId ? { ...s, status } : s));
