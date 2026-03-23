@@ -132,6 +132,18 @@ export const studentsTable = pgTable("students", {
   parentName: text("parent_name").notNull(),
   email: text("email"),
   phone: text("phone"),
+  // Extended student fields
+  dob: text("dob"),                        // Date of birth e.g. "2015-06-10"
+  grade: text("grade"),                    // School grade e.g. "4th"
+  isNewStudent: boolean("is_new_student").default(true),
+  // Separate parent contacts
+  motherName:  text("mother_name"),
+  motherPhone: text("mother_phone"),
+  motherEmail: text("mother_email"),
+  fatherName:  text("father_name"),
+  fatherPhone: text("father_phone"),
+  fatherEmail: text("father_email"),
+  address: text("address"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

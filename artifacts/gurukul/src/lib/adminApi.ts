@@ -41,6 +41,9 @@ export const adminApi = {
   },
   students: {
     list:          () => request<unknown[]>("GET", "/students"),
+    meta:          () => request<unknown>("GET", "/students/meta"),
+    register:      (data: unknown) => request("POST", "/students", data),
+    remove:        (code: string) => request("DELETE", `/students/${code}`),
     assignSection: (enrollmentId: number, sectionId: number | null) =>
       request("PATCH", `/students/enrollments/${enrollmentId}/section`, { sectionId }),
   },

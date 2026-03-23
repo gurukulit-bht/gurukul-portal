@@ -48,6 +48,7 @@ Auth is localStorage-based (demo, structured for AWS Cognito integration). **All
 - `section_assignments` — teacher↔section assignment with role (Teacher/Assistant); cascades on section delete
 - `teacher_assignments` — teacher↔course assignment with level range
 - `enrollments` — includes nullable `section_id` FK → `course_sections.id` (onDelete: set null); a student is assigned to the full Course → Level → Section hierarchy
+- `students` — extended fields: `dob`, `grade`, `is_new_student`, `mother_name/phone/email`, `father_name/phone/email`, `address` (all nullable, added 2026-03-23)
 - `attendance_records` — per student per level per date attendance (Present/Absent/Late)
 - `parent_notifications` — audience-targeted notifications with Draft/Published/Sent status
 
@@ -67,6 +68,11 @@ Auth is localStorage-based (demo, structured for AWS Cognito integration). **All
 - `PUT /courses/sections/:id` — update section; `DELETE /courses/sections/:id` — remove section
 - `POST /courses/sections/:id/assign` — assign teacher to section; `DELETE /courses/sections/:id/unassign/:teacherId`
 - `GET /courses/levels/:id/students` — enrolled students for a level; supports `?sectionId=X` to filter to a specific section
+- `GET /students` — all students with enrollment/payment details (flat rows)
+- `GET /students/meta` — returns nextStudentCode + available courses/levels/sections for registration form
+- `POST /students` — register a new student with enrollments+payments; auto-generates GK-XXX code; body: `{ firstName, lastName, dob?, grade?, isNewStudent?, motherName/Phone/Email?, fatherName/Phone/Email?, address?, enrollments: [{courseLevelId, sectionId?, amountDue?}] }`
+- `DELETE /students/:code` — remove a student and all enrollments/payments (cascades)
+- `PATCH /students/enrollments/:enrollmentId/section` — assign student to section
 - `GET /attendance/levels` — all course levels with course names (for Attendance dropdown)
 - `GET /attendance?levelId&date` — records for one level+date
 - `GET /attendance/history?levelId` — full history for a level
