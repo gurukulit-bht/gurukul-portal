@@ -24,10 +24,6 @@ type LevelStudent = {
   fatherName: string | null;
   fatherPhone: string | null;
   fatherEmail: string | null;
-  paymentStatus: "Paid" | "Pending" | "Overdue" | null;
-  amountDue: string | null;
-  amountPaid: string | null;
-  paymentDate: string | null;
 };
 
 type CourseLevel = {
@@ -38,12 +34,6 @@ type CourseLevel = {
 type AdminCourse = {
   id: number; name: string; icon: string; description: string;
   curriculumYear: string | null; levels: CourseLevel[];
-};
-
-const PAYMENT_COLORS: Record<string, string> = {
-  Paid: "bg-green-100 text-green-700",
-  Pending: "bg-yellow-100 text-yellow-700",
-  Overdue: "bg-red-100 text-red-700",
 };
 
 const ENROLL_COLORS: Record<string, string> = {
@@ -210,14 +200,12 @@ function LevelRow({
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Code</th>
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Student</th>
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Parent Contact</th>
-                          <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Enrolled</th>
-                          <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Payment</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {students.map((s) => (
-                          <tr key={s.enrollmentId} className="bg-white hover:bg-slate-50 transition-colors">
-                            <td className="px-4 py-2.5">
+                          <tr key={s.enrollmentId} className="bg-white hover:bg-slate-50 transition-colors align-top">
+                            <td className="px-4 py-2.5 whitespace-nowrap">
                               <span className="font-mono text-xs text-muted-foreground">{s.studentCode}</span>
                             </td>
                             <td className="px-4 py-2.5">
@@ -227,55 +215,27 @@ function LevelRow({
                               </span>
                             </td>
                             <td className="px-4 py-2.5 hidden sm:table-cell">
-                              <div className="space-y-2">
+                              <div className="space-y-1">
                                 {(s.motherName || s.motherPhone || s.motherEmail) && (
-                                  <div>
-                                    <div className="text-[10px] font-semibold text-pink-500 uppercase tracking-wide mb-0.5">Mother</div>
-                                    {s.motherName && <div className="text-xs font-medium text-secondary">{s.motherName}</div>}
-                                    {s.motherPhone && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Phone className="w-3 h-3" />{s.motherPhone}
-                                      </div>
-                                    )}
-                                    {s.motherEmail && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Mail className="w-3 h-3" />{s.motherEmail}
-                                      </div>
-                                    )}
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                                    <span className="font-semibold text-pink-500 shrink-0">M</span>
+                                    {s.motherName && <span className="font-medium text-secondary">{s.motherName}</span>}
+                                    {s.motherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.motherPhone}</span>}
+                                    {s.motherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail className="w-3 h-3" />{s.motherEmail}</span>}
                                   </div>
                                 )}
                                 {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
-                                  <div>
-                                    <div className="text-[10px] font-semibold text-blue-500 uppercase tracking-wide mb-0.5">Father</div>
-                                    {s.fatherName && <div className="text-xs font-medium text-secondary">{s.fatherName}</div>}
-                                    {s.fatherPhone && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Phone className="w-3 h-3" />{s.fatherPhone}
-                                      </div>
-                                    )}
-                                    {s.fatherEmail && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Mail className="w-3 h-3" />{s.fatherEmail}
-                                      </div>
-                                    )}
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                                    <span className="font-semibold text-blue-500 shrink-0">F</span>
+                                    {s.fatherName && <span className="font-medium text-secondary">{s.fatherName}</span>}
+                                    {s.fatherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.fatherPhone}</span>}
+                                    {s.fatherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail className="w-3 h-3" />{s.fatherEmail}</span>}
                                   </div>
                                 )}
                                 {!s.motherName && !s.motherPhone && !s.motherEmail && !s.fatherName && !s.fatherPhone && !s.fatherEmail && (
-                                  <div className="text-xs text-muted-foreground">{s.parentName}</div>
+                                  <span className="text-xs text-muted-foreground">{s.parentName}</span>
                                 )}
                               </div>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <div className="text-xs text-muted-foreground">{s.enrollDate}</div>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              {s.paymentStatus ? (
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${PAYMENT_COLORS[s.paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>
-                                  {s.paymentStatus}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
                             </td>
                           </tr>
                         ))}

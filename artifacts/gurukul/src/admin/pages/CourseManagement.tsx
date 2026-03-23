@@ -418,40 +418,24 @@ function LevelAccordion({
                       <tbody className="divide-y divide-border">
                         {group.students.map(s => (
                           <tr key={s.studentId} className="hover:bg-gray-50 align-top">
-                            <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{s.studentCode}</td>
+                            <td className="px-3 py-2 font-mono whitespace-nowrap text-muted-foreground">{s.studentCode}</td>
                             <td className="px-3 py-2 font-semibold text-secondary">{s.studentName}</td>
                             <td className="px-3 py-2">
-                              <div className="space-y-1.5">
+                              <div className="space-y-1">
                                 {(s.motherName || s.motherPhone || s.motherEmail) && (
-                                  <div>
-                                    <div className="text-[10px] font-semibold text-pink-500 uppercase tracking-wide">Mother</div>
-                                    {s.motherName && <div className="text-xs font-medium text-secondary">{s.motherName}</div>}
-                                    {s.motherPhone && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Phone className="w-3 h-3" />{s.motherPhone}
-                                      </div>
-                                    )}
-                                    {s.motherEmail && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Mail className="w-3 h-3" />{s.motherEmail}
-                                      </div>
-                                    )}
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    <span className="font-semibold text-pink-500 shrink-0">M</span>
+                                    {s.motherName && <span className="font-medium text-secondary">{s.motherName}</span>}
+                                    {s.motherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.motherPhone}</span>}
+                                    {s.motherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail className="w-3 h-3" />{s.motherEmail}</span>}
                                   </div>
                                 )}
                                 {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
-                                  <div>
-                                    <div className="text-[10px] font-semibold text-blue-500 uppercase tracking-wide">Father</div>
-                                    {s.fatherName && <div className="text-xs font-medium text-secondary">{s.fatherName}</div>}
-                                    {s.fatherPhone && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Phone className="w-3 h-3" />{s.fatherPhone}
-                                      </div>
-                                    )}
-                                    {s.fatherEmail && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Mail className="w-3 h-3" />{s.fatherEmail}
-                                      </div>
-                                    )}
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    <span className="font-semibold text-blue-500 shrink-0">F</span>
+                                    {s.fatherName && <span className="font-medium text-secondary">{s.fatherName}</span>}
+                                    {s.fatherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.fatherPhone}</span>}
+                                    {s.fatherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail className="w-3 h-3" />{s.fatherEmail}</span>}
                                   </div>
                                 )}
                                 {!s.motherName && !s.motherPhone && !s.motherEmail && !s.fatherName && !s.fatherPhone && !s.fatherEmail && (
