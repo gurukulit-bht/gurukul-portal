@@ -36,6 +36,8 @@ type LevelStudent = {
   studentId: number; enrollmentId: number; studentCode: string; studentName: string;
   parentName: string; paymentStatus: string | null;
   sectionId: number | null; sectionName: string | null;
+  motherName: string | null; motherPhone: string | null; motherEmail: string | null;
+  fatherName: string | null; fatherPhone: string | null; fatherEmail: string | null;
 };
 
 type FormData = {
@@ -408,17 +410,55 @@ function LevelAccordion({
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
-                          {["Code", "Name", "Parent", "Section"].map(h => (
+                          {["Code", "Name", "Parent Contact", "Section"].map(h => (
                             <th key={h} className="px-3 py-2 text-left font-semibold text-muted-foreground">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {group.students.map(s => (
-                          <tr key={s.studentId} className="hover:bg-gray-50">
+                          <tr key={s.studentId} className="hover:bg-gray-50 align-top">
                             <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{s.studentCode}</td>
                             <td className="px-3 py-2 font-semibold text-secondary">{s.studentName}</td>
-                            <td className="px-3 py-2 text-muted-foreground">{s.parentName}</td>
+                            <td className="px-3 py-2">
+                              <div className="space-y-1.5">
+                                {(s.motherName || s.motherPhone || s.motherEmail) && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-pink-500 uppercase tracking-wide">Mother</div>
+                                    {s.motherName && <div className="text-xs font-medium text-secondary">{s.motherName}</div>}
+                                    {s.motherPhone && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Phone className="w-3 h-3" />{s.motherPhone}
+                                      </div>
+                                    )}
+                                    {s.motherEmail && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Mail className="w-3 h-3" />{s.motherEmail}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-blue-500 uppercase tracking-wide">Father</div>
+                                    {s.fatherName && <div className="text-xs font-medium text-secondary">{s.fatherName}</div>}
+                                    {s.fatherPhone && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Phone className="w-3 h-3" />{s.fatherPhone}
+                                      </div>
+                                    )}
+                                    {s.fatherEmail && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Mail className="w-3 h-3" />{s.fatherEmail}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {!s.motherName && !s.motherPhone && !s.motherEmail && !s.fatherName && !s.fatherPhone && !s.fatherEmail && (
+                                  <span className="text-muted-foreground">{s.parentName}</span>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-3 py-2">
                               {isAdmin ? (
                                 <select

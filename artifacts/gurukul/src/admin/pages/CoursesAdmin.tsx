@@ -18,6 +18,12 @@ type LevelStudent = {
   parentName: string;
   email: string | null;
   phone: string | null;
+  motherName: string | null;
+  motherPhone: string | null;
+  motherEmail: string | null;
+  fatherName: string | null;
+  fatherPhone: string | null;
+  fatherEmail: string | null;
   paymentStatus: "Paid" | "Pending" | "Overdue" | null;
   amountDue: string | null;
   amountPaid: string | null;
@@ -203,8 +209,7 @@ function LevelRow({
                         <tr className="bg-white border-b border-border">
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Code</th>
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Student</th>
-                          <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Parent</th>
-                          <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground hidden md:table-cell">Contact</th>
+                          <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Parent Contact</th>
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Enrolled</th>
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Payment</th>
                         </tr>
@@ -222,19 +227,41 @@ function LevelRow({
                               </span>
                             </td>
                             <td className="px-4 py-2.5 hidden sm:table-cell">
-                              <div className="text-xs text-secondary">{s.parentName}</div>
-                            </td>
-                            <td className="px-4 py-2.5 hidden md:table-cell">
-                              <div className="space-y-0.5">
-                                {s.phone && (
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Phone className="w-3 h-3" />{s.phone}
+                              <div className="space-y-2">
+                                {(s.motherName || s.motherPhone || s.motherEmail) && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-pink-500 uppercase tracking-wide mb-0.5">Mother</div>
+                                    {s.motherName && <div className="text-xs font-medium text-secondary">{s.motherName}</div>}
+                                    {s.motherPhone && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Phone className="w-3 h-3" />{s.motherPhone}
+                                      </div>
+                                    )}
+                                    {s.motherEmail && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Mail className="w-3 h-3" />{s.motherEmail}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                                {s.email && (
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Mail className="w-3 h-3" />{s.email}
+                                {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-blue-500 uppercase tracking-wide mb-0.5">Father</div>
+                                    {s.fatherName && <div className="text-xs font-medium text-secondary">{s.fatherName}</div>}
+                                    {s.fatherPhone && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Phone className="w-3 h-3" />{s.fatherPhone}
+                                      </div>
+                                    )}
+                                    {s.fatherEmail && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Mail className="w-3 h-3" />{s.fatherEmail}
+                                      </div>
+                                    )}
                                   </div>
+                                )}
+                                {!s.motherName && !s.motherPhone && !s.motherEmail && !s.fatherName && !s.fatherPhone && !s.fatherEmail && (
+                                  <div className="text-xs text-muted-foreground">{s.parentName}</div>
                                 )}
                               </div>
                             </td>
