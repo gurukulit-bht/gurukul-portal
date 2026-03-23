@@ -3,7 +3,7 @@ import {
   coursesTable, courseLevelsTable, courseSectionsTable,
   studentsTable, enrollmentsTable, paymentsTable,
 } from "@workspace/db/schema";
-import { eq, sql, lte } from "drizzle-orm";
+import { eq, sql, lte, isNull, or } from "drizzle-orm";
 import { logger } from "./logger";
 
 /**
@@ -18,6 +18,9 @@ export async function seedIfEmpty() {
 
   // Demo student/enrollment/payment seed — only runs if no enrollments exist
   await seedStudentsIfEmpty();
+
+  // Data patch — always runs, fills in missing fields on existing records
+  await patchStudentData();
 
   try {
     const existingCourses = await db.select().from(coursesTable);
@@ -592,5 +595,145 @@ async function seedStudentsIfEmpty() {
     );
   } catch (err) {
     logger.error({ err }, "Student demo seed failed");
+  }
+}
+
+// ─── Data Patch ───────────────────────────────────────────────────────────────
+// Runs on every startup — fills missing curriculum_year, employer fields, and
+// inserts GK-032..GK-036 if absent. Safe to run repeatedly (idempotent).
+
+const EMPLOYER_MAP: Record<string, [string, string]> = {
+  "GK-001": ["Ohio State University",          "JPMorgan Chase"],
+  "GK-002": ["Nationwide Insurance",           "Accenture"],
+  "GK-003": ["Cardinal Health",                "IBM"],
+  "GK-004": ["Huntington National Bank",       "Tata Consultancy Services (TCS)"],
+  "GK-005": ["Infosys",                        "Amazon"],
+  "GK-006": ["OhioHealth",                     "Deloitte"],
+  "GK-007": ["Wipro",                          "Honda of America"],
+  "GK-008": ["Columbus City Schools",          "Cognizant"],
+  "GK-009": ["Persistent Systems",             "Safelite AutoGlass"],
+  "GK-010": ["State of Ohio",                  "NetJets"],
+  "GK-011": ["Abbott Laboratories",            "American Electric Power (AEP)"],
+  "GK-012": ["Bath & Body Works",              "L Brands / Victoria Secret"],
+  "GK-013": ["JPMorgan Chase",                 "Ohio State University"],
+  "GK-014": ["Accenture",                      "Cardinal Health"],
+  "GK-015": ["IBM",                            "Nationwide Insurance"],
+  "GK-016": ["Tata Consultancy Services (TCS)","Huntington National Bank"],
+  "GK-017": ["Amazon",                         "Infosys"],
+  "GK-018": ["Deloitte",                       "OhioHealth"],
+  "GK-019": ["Honda of America",               "Wipro"],
+  "GK-020": ["Cognizant",                      "Columbus City Schools"],
+  "GK-021": ["Safelite AutoGlass",             "Persistent Systems"],
+  "GK-022": ["NetJets",                        "State of Ohio"],
+  "GK-023": ["American Electric Power (AEP)", "Abbott Laboratories"],
+  "GK-024": ["L Brands / Victoria Secret",    "Bath & Body Works"],
+  "GK-025": ["Ohio State University",          "Accenture"],
+  "GK-026": ["Nationwide Insurance",           "JPMorgan Chase"],
+  "GK-027": ["Cardinal Health",               "Deloitte"],
+  "GK-028": ["Huntington National Bank",      "IBM"],
+  "GK-029": ["OhioHealth",                    "Tata Consultancy Services (TCS)"],
+  "GK-030": ["Infosys",                       "Amazon"],
+  "GK-031": ["Wipro",                         "Cognizant"],
+  "GK-032": ["Columbus City Schools",         "Honda of America"],
+  "GK-033": ["Persistent Systems",            "NetJets"],
+  "GK-034": ["State of Ohio",                 "Safelite AutoGlass"],
+  "GK-035": ["Abbott Laboratories",           "L Brands / Victoria Secret"],
+  "GK-036": ["JPMorgan Chase",               "American Electric Power (AEP)"],
+};
+
+const EXTRA_STUDENTS = [
+  {
+    studentCode: "GK-032", name: "Aarav Mehta",
+    grade: "4", dob: "2015-03-12", curriculumYear: "2027-2028",
+    address: "512 Longview Dr, Powell, OH 43065",
+    motherName: "Priya Mehta",    motherPhone: "(614) 555-0201", motherEmail: "priya.mehta@gmail.com",
+    motherEmployer: "Columbus City Schools",
+    fatherName: "Nikhil Mehta",   fatherPhone: "(614) 555-0202", fatherEmail: "nikhil.mehta@gmail.com",
+    fatherEmployer: "Honda of America",
+    volunteerParent: true, volunteerArea: "Event Setup",
+  },
+  {
+    studentCode: "GK-033", name: "Diya Sharma",
+    grade: "3", dob: "2016-07-20", curriculumYear: "2027-2028",
+    address: "78 Liberty Bell Dr, Dublin, OH 43016",
+    motherName: "Anita Sharma",   motherPhone: "(614) 555-0203", motherEmail: "anita.sharma@gmail.com",
+    motherEmployer: "Persistent Systems",
+    fatherName: "Deepak Sharma",  fatherPhone: "(614) 555-0204", fatherEmail: "deepak.sharma@gmail.com",
+    fatherEmployer: "NetJets",
+  },
+  {
+    studentCode: "GK-034", name: "Kabir Pillai",
+    grade: "6", dob: "2013-11-05", curriculumYear: "2027-2028",
+    address: "345 Scioto Meadows Blvd, Dublin, OH 43016",
+    motherName: "Latha Pillai",   motherPhone: "(740) 555-0205", motherEmail: "latha.pillai@gmail.com",
+    motherEmployer: "State of Ohio",
+    fatherName: "Mohan Pillai",   fatherPhone: "(740) 555-0206", fatherEmail: "mohan.pillai@gmail.com",
+    fatherEmployer: "Safelite AutoGlass",
+    volunteerParent: true, volunteerArea: "Transportation",
+  },
+  {
+    studentCode: "GK-035", name: "Myra Reddy",
+    grade: "2", dob: "2017-04-18", curriculumYear: "2027-2028",
+    address: "890 Polaris Pkwy, Westerville, OH 43082",
+    motherName: "Swathi Reddy",   motherPhone: "(614) 555-0207", motherEmail: "swathi.reddy@gmail.com",
+    motherEmployer: "Abbott Laboratories",
+    fatherName: "Suresh Reddy",   fatherPhone: "(614) 555-0208", fatherEmail: "suresh.reddy@gmail.com",
+    fatherEmployer: "L Brands / Victoria Secret",
+  },
+  {
+    studentCode: "GK-036", name: "Ronak Desai",
+    grade: "5", dob: "2014-09-29", curriculumYear: "2027-2028",
+    address: "224 Hidden Creek Dr, Powell, OH 43065",
+    motherName: "Hemal Desai",    motherPhone: "(614) 555-0209", motherEmail: "hemal.desai@gmail.com",
+    motherEmployer: "JPMorgan Chase",
+    fatherName: "Chirag Desai",   fatherPhone: "(614) 555-0210", fatherEmail: "chirag.desai@gmail.com",
+    fatherEmployer: "American Electric Power (AEP)",
+    volunteerParent: true, volunteerArea: "Fundraising",
+  },
+];
+
+async function patchStudentData() {
+  try {
+    // 1. Set curriculum_year = '2027-2028' for all students where it's missing
+    const yearResult = await db
+      .update(studentsTable)
+      .set({ curriculumYear: "2027-2028" })
+      .where(or(isNull(studentsTable.curriculumYear), sql`${studentsTable.curriculumYear} = ''`));
+    if ((yearResult as unknown as { rowCount: number }).rowCount > 0) {
+      logger.info({ updated: (yearResult as unknown as { rowCount: number }).rowCount },
+        "Patched curriculum_year for existing students.");
+    }
+
+    // 2. Patch employer data for each student code where missing
+    const studentsWithoutEmployer = await db
+      .select({ id: studentsTable.id, code: studentsTable.studentCode })
+      .from(studentsTable)
+      .where(isNull(studentsTable.motherEmployer));
+
+    if (studentsWithoutEmployer.length > 0) {
+      for (const s of studentsWithoutEmployer) {
+        const emp = EMPLOYER_MAP[s.code];
+        if (emp) {
+          await db.update(studentsTable)
+            .set({ motherEmployer: emp[0], fatherEmployer: emp[1] })
+            .where(eq(studentsTable.id, s.id));
+        }
+      }
+      logger.info({ count: studentsWithoutEmployer.length }, "Patched employer data for students.");
+    }
+
+    // 3. Insert GK-032..GK-036 if they don't exist yet
+    for (const s of EXTRA_STUDENTS) {
+      const existing = await db
+        .select({ id: studentsTable.id })
+        .from(studentsTable)
+        .where(eq(studentsTable.studentCode, s.studentCode));
+      if (existing.length === 0) {
+        await db.insert(studentsTable).values(s);
+        logger.info({ code: s.studentCode }, "Inserted missing extra student.");
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, "Student data patch failed");
   }
 }
