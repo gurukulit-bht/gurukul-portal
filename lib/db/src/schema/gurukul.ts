@@ -57,6 +57,7 @@ export const coursesTable = pgTable("courses", {
   learningAreas: text("learning_areas"),
   levelsDetail: text("levels_detail"),
   outcome: text("outcome"),
+  archivedAt: timestamp("archived_at"),              // null = active; set = archived
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -181,6 +182,35 @@ export const inventoryTable = pgTable("inventory", {
   lastReplenishment: text("last_replenishment"),
   vendor: text("vendor"),
   remarks: text("remarks"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Course Sections ─────────────────────────────────────────────────────────
+// Sections subdivide a level (e.g., Level 1 Morning / Level 1 Afternoon).
+// Students are enrolled at the level level; sections handle scheduling/grouping.
+
+export const courseSectionsTable = pgTable("course_sections", {
+  id:            serial("id").primaryKey(),
+  courseLevelId: integer("course_level_id")
+    .notNull()
+    .references(() => courseLevelsTable.id, { onDelete: "cascade" }),
+  sectionName:   text("section_name").notNull(),    // e.g., "Morning Batch", "Section A"
+  schedule:      text("schedule"),                   // e.g., "Sundays 10–11 AM"
+  capacity:      integer("capacity").notNull().default(20),
+  status:        courseLevelStatusEnum("status").notNull().default("Active"),
+  createdAt:     timestamp("created_at").defaultNow(),
+});
+
+// Teacher/Assistant → Section assignment (granular, per section)
+export const sectionAssignmentsTable = pgTable("section_assignments", {
+  id:        serial("id").primaryKey(),
+  sectionId: integer("section_id")
+    .notNull()
+    .references(() => courseSectionsTable.id, { onDelete: "cascade" }),
+  teacherId: integer("teacher_id")
+    .notNull()
+    .references(() => teachersTable.id, { onDelete: "cascade" }),
+  role:      text("role").notNull().default("Teacher"),  // "Teacher" | "Assistant"
   createdAt: timestamp("created_at").defaultNow(),
 });
 

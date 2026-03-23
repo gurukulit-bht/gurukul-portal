@@ -1,0 +1,214 @@
+Enhance the existing Gurukul Portal Admin application to support fully dynamic course management and propagate the new structure across the entire portal for Gurukul Admin, Teachers, and Teacher Assistants.
+
+Objective:
+Replace any hardcoded course, level, and section setup with a dynamic data-driven model managed by Gurukul Admin. The entire admin portal, teacher views, and teacher assistant views must automatically reflect newly created, updated, or deleted courses, levels, and sections without requiring code changes.
+
+Core business rules:
+1. Courses must be dynamic and must not be hardcoded anywhere in the application.
+2. Only Gurukul Admin can create, edit, or delete courses.
+3. Each course can have up to 6 levels.
+4. Each level can have multiple sections.
+5. Gurukul Admin must be able to define:
+   - Course name
+   - Course description
+   - Status (active/inactive)
+   - Number of levels (up to 6)
+   - Level names or labels
+   - Sections within each level
+6. Teachers and Teacher Assistants should only see the courses, levels, and sections assigned to them, and those assignments should automatically reflect the latest dynamic structure.
+7. All pages across the portal that reference courses, classes, levels, sections, attendance, documents, and notifications must use the new dynamic model.
+
+Roles and access:
+1. Gurukul Admin
+   - Full access to all modules
+   - Can create, edit, delete, activate, archive courses
+   - Can define and update levels and sections dynamically
+   - Can assign teachers and assistants to courses, levels, or sections
+   - Can manage all attendance, documents, and parent notifications
+2. Teacher
+   - Can only access assigned courses/classes
+   - Can view dynamic levels and sections tied to their assignments
+   - Can access course documents for assigned courses/classes
+   - Can take attendance for assigned sections
+   - Can publish notifications to parents for assigned classes/sections
+3. Teacher Assistant
+   - Same access pattern as Teacher unless otherwise configured
+   - Can only see assigned courses/classes, levels, and sections
+   - Can access course documents
+   - Can take attendance
+   - Can publish notifications to parents
+
+Data model requirements:
+Design the app using a dynamic relational-style structure. Do not hardcode course names, levels, or sections in components.
+
+Suggested entities:
+1. User
+   - id
+   - name
+   - email
+   - role
+   - assignedCourseIds / assignments
+2. Course
+   - id
+   - name
+   - description
+   - status
+   - createdAt
+   - updatedAt
+3. Level
+   - id
+   - courseId
+   - levelNumber
+   - levelName
+   - status
+4. Section
+   - id
+   - courseId
+   - levelId
+   - sectionName
+   - schedule metadata if needed
+   - assignedTeacherIds
+   - assignedAssistantIds
+   - status
+5. CourseDocument
+   - id
+   - courseId
+   - levelId (optional)
+   - sectionId (optional)
+   - title
+   - type
+   - fileUrl or mock file reference
+6. AttendanceRecord
+   - id
+   - courseId
+   - levelId
+   - sectionId
+   - date
+   - student attendance entries
+   - markedBy
+7. ParentNotification
+   - id
+   - courseId
+   - levelId
+   - sectionId
+   - audience
+   - title
+   - message
+   - priority
+   - status
+   - publishedBy
+
+Admin functionality to add:
+Create a full Course Management module for Gurukul Admin with the following capabilities:
+
+1. Course Management Dashboard
+   - List all courses in a table or card layout
+   - Show course name, description, status, number of levels, total sections, assigned teachers, assigned assistants
+   - Search, sort, filter by active/inactive
+   - Actions: View, Edit, Delete, Archive, Duplicate
+
+2. Create Course Flow
+   - Form for course name and description
+   - Admin can choose number of levels up to 6
+   - For each level, admin can define:
+     - level label/name
+     - one or more sections
+   - Admin can add/remove sections dynamically within each level
+   - Validate that course names are unique
+   - Validate no empty levels or sections
+   - Save the course structure in dynamic state/mock backend
+
+3. Edit Course Flow
+   - Admin can rename course
+   - Admin can add/remove/rename levels
+   - Admin can add/remove/rename sections
+   - Prevent accidental deletion with confirmations
+   - Handle impact warnings when deleting levels or sections tied to assignments, attendance, or documents
+
+4. Delete / Archive Course
+   - Add confirmation dialog
+   - Prefer archive/soft delete where possible
+   - Ensure deleted or archived courses no longer appear for Teachers/Assistants unless specifically viewing archived records
+
+5. Assignment Management
+   - Admin can assign Teachers and Assistants to:
+     - entire course
+     - specific level
+     - specific section
+   - Assignment UI should dynamically reference the live course hierarchy
+
+Portal-wide updates required:
+Update every relevant page in the portal to use dynamic course, level, and section data.
+
+1. Navigation and Views
+   - Sidebar and page menus should update dynamically based on role and assignments
+   - Teachers and Assistants should only see courses/classes that exist and are assigned to them
+   - If a course is deleted or archived, it should disappear from their view automatically
+
+2. Courses Page
+   - Replace hardcoded course cards/tables with dynamic data
+   - Show nested hierarchy: Course > Level > Section
+   - Teachers/Assistants see only assigned items
+   - Admin sees all
+
+3. Classes Page
+   - Generate class/class-section listings dynamically from course-level-section hierarchy
+   - Show assigned teachers and assistants
+   - Support filtering by course, level, section
+
+4. Course Documents
+   - Documents should be attached dynamically to course, level, or section
+   - Teachers/Assistants only see documents for assigned course/level/section
+   - Admin can see and manage all documents
+
+5. Attendance
+   - Attendance page must let Teachers/Assistants select from assigned dynamic course > level > section combinations
+   - Admin can view attendance for all
+   - No hardcoded class names or static student grouping assumptions
+
+6. Parent Notifications
+   - Notification publishing must support targeting:
+     - entire course
+     - specific level
+     - specific section
+   - Recipient selection must be based on the dynamic hierarchy
+   - Teachers/Assistants can only publish for assigned course/level/section
+   - Admin can publish for anything
+
+7. Teacher and Assistant Dashboards
+   - Their landing pages should dynamically display assigned courses, levels, and sections
+   - Show upcoming classes, pending attendance, recent notifications, and documents based on assignments
+
+8. Student Enrollment Views
+   - Student rosters should be associated to course, level, and section dynamically
+   - Admin can view all
+   - Teachers/Assistants only view students in assigned sections
+
+Technical architecture requirements:
+1. Remove all hardcoded course structures from code.
+2. Use a centralized data model and state management pattern.
+3. Make the structure reusable and scalable for future backend integration.
+4. Build modular components such as:
+   - CourseForm
+   - LevelSectionBuilder
+   - CourseHierarchyTree
+   - AssignmentManager
+   - ProtectedRoute
+   - RoleBasedMenu
+5. Use route guards and permission checks based on roles and assignments.
+6. Build using clean React patterns and reusable hooks/services.
+7. Use mock APIs or local mock database now, but structure it so it can later integrate with:
+   - AWS Cognito for auth
+   - API Gateway + Lambda for APIs
+   - DynamoDB or RDS for persistent storage
+8. Use IDs and relationships instead of hardcoded text matching.
+9. Ensure deletion or update of a course cascades safely through dependent views with proper warnings.
+
+UI/UX requirements:
+1. Keep the UI modern, clean, and intuitive.
+2. Show expandable hierarchy views for Course > Level > Section.
+3. Use forms with add/remove controls for dynamic levels and sections.
+4. Include validation messages and confirmation modals.
+5. Show role and assignment context clearly in the header or dashboard.
+6. Use tables/cards/forms consistently across Admin, Teacher, and Assistant views.
+7. Ensure the app remains easy to use for non-technical school administrators.

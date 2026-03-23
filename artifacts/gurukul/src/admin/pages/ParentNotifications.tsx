@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Bell, Plus, X, Send, FileEdit, CheckCircle2, Clock, AlertCircle, ChevronDown } from "lucide-react";
+import { Bell, Plus, X, Send, FileEdit, CheckCircle2, Clock, AlertCircle, ChevronDown, Tag, Layers } from "lucide-react";
 import { useAuth } from "../AuthContext";
-import { useListCourses } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminApi } from "@/lib/adminApi";
@@ -11,17 +10,15 @@ type Priority = "High" | "Normal" | "Low";
 type NStatus  = "Draft" | "Published" | "Sent";
 
 type Notification = {
-  id:          number;
-  title:       string;
-  message:     string;
-  courseName:  string | null;
-  audience:    string;
-  priority:    Priority;
-  status:      NStatus;
-  createdBy:   string;
-  createdAt:   string;
-  publishedAt: string | null;
+  id: number; title: string; message: string;
+  courseName: string | null; audience: string;
+  priority: Priority; status: NStatus;
+  createdBy: string; createdAt: string; publishedAt: string | null;
 };
+
+type SectionRow = { id: number; sectionName: string; schedule: string; };
+type LevelRow   = { id: number; level: number; className: string; schedule: string; sections: SectionRow[]; };
+type CourseRow  = { id: number; name: string; icon: string; levels: LevelRow[]; };
 
 const PRIORITY_COLORS: Record<Priority, string> = {
   High:   "bg-red-100   text-red-800   border-red-300",
@@ -36,17 +33,23 @@ const STATUS_COLORS: Record<NStatus, string> = {
 };
 
 const STATUS_ICONS: Record<NStatus, React.ElementType> = {
-  Draft:     FileEdit,
-  Published: CheckCircle2,
-  Sent:      Send,
+  Draft: FileEdit, Published: CheckCircle2, Sent: Send,
 };
 
-const AUDIENCES = ["All Students", "Hindi Class", "Dharma Class", "Telugu Class", "Tamil Class", "Sanskrit Class", "Gujarati Class", "Level 1 Students", "Level 2 Students", "New Enrollees"];
+// Build audience string from course/level/section
+function buildAudience(course: string, levelName: string, sectionName: string) {
+  if (!course) return "All Students";
+  if (!levelName) return `All ${course} Students`;
+  if (!sectionName) return `${course} – ${levelName} Students`;
+  return `${course} – ${levelName} – ${sectionName} Students`;
+}
 
 export default function ParentNotifications() {
   const { user } = useAuth();
-  const { data: rawCourses = [] } = useListCourses();
-  const courseNames = (rawCourses as { name: string }[]).map(c => c.name);
+
+  // Dynamic course hierarchy
+  const [courses, setCourses]     = useState<CourseRow[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -54,28 +57,54 @@ export default function ParentNotifications() {
   const [submitting, setSubmitting]       = useState(false);
   const [filter, setFilter]               = useState<NStatus | "All">("All");
 
+  // Form state
+  const [selectedCourseId, setSelectedCourseId]   = useState<number | null>(null);
+  const [selectedLevelId, setSelectedLevelId]     = useState<number | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [form, setForm] = useState({
-    title:    "",
-    message:  "",
-    course:   "",
-    audience: "All Students",
-    priority: "Normal" as Priority,
+    title: "", message: "", priority: "Normal" as Priority,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Derived hierarchy
+  const selectedCourse  = courses.find(c => c.id === selectedCourseId);
+  const selectedLevel   = selectedCourse?.levels.find(l => l.id === selectedLevelId);
+  const availableSections = selectedLevel?.sections ?? [];
+  const selectedSection = availableSections.find(s => s.id === selectedSectionId);
+
+  const audience = buildAudience(
+    selectedCourse?.name ?? "",
+    selectedLevel?.className ?? "",
+    selectedSection?.sectionName ?? "",
+  );
+
+  // Load courses
+  useEffect(() => {
+    setLoadingCourses(true);
+    adminApi.courses.list()
+      .then(data => setCourses(data as CourseRow[]))
+      .catch(() => setCourses([]))
+      .finally(() => setLoadingCourses(false));
+  }, []);
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
     try {
       const data = await adminApi.notifications.list() as Notification[];
       setNotifications(data);
-    } catch {
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setNotifications([]); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { loadNotifications(); }, []);
+
+  function resetForm() {
+    setForm({ title: "", message: "", priority: "Normal" });
+    setSelectedCourseId(null);
+    setSelectedLevelId(null);
+    setSelectedSectionId(null);
+    setErrors({});
+  }
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -92,15 +121,15 @@ export default function ParentNotifications() {
       await adminApi.notifications.create({
         title:      form.title.trim(),
         message:    form.message.trim(),
-        courseName: form.course || null,
-        audience:   form.audience,
+        courseName: selectedCourse?.name ?? null,
+        audience,
         priority:   form.priority,
         status,
         createdBy:  user?.displayName ?? "Unknown",
       });
       toast.success(status === "Draft" ? "Saved as draft." : "Notification published!");
       setShowForm(false);
-      setForm({ title: "", message: "", course: "", audience: "All Students", priority: "Normal" });
+      resetForm();
       loadNotifications();
     } catch {
       toast.error("Failed to save notification.");
@@ -145,7 +174,7 @@ export default function ParentNotifications() {
         ))}
       </div>
 
-      {/* Header / actions */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex gap-1.5">
           {(["All", "Draft", "Published", "Sent"] as const).map(f => (
@@ -160,12 +189,8 @@ export default function ParentNotifications() {
             </button>
           ))}
         </div>
-        <Button
-          onClick={() => { setShowForm(true); setErrors({}); }}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          New Notification
+        <Button onClick={() => { setShowForm(true); resetForm(); }} className="flex items-center gap-2">
+          <Plus className="w-4 h-4" /> New Notification
         </Button>
       </div>
 
@@ -174,9 +199,88 @@ export default function ParentNotifications() {
         <div className="bg-white rounded-xl shadow-sm border border-border p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-secondary flex items-center gap-2"><Bell className="w-4 h-4" /> New Notification</h3>
-            <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-secondary">
+            <button onClick={() => { setShowForm(false); resetForm(); }} className="text-muted-foreground hover:text-secondary">
               <X className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Audience targeting row */}
+          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 space-y-3">
+            <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">Target Audience</h4>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {/* Course */}
+              <div>
+                <label className="text-xs font-semibold text-secondary mb-1 block">Course</label>
+                <div className="relative">
+                  <select
+                    value={selectedCourseId ?? ""}
+                    onChange={e => {
+                      setSelectedCourseId(e.target.value ? Number(e.target.value) : null);
+                      setSelectedLevelId(null);
+                      setSelectedSectionId(null);
+                    }}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8"
+                    disabled={loadingCourses}
+                  >
+                    <option value="">All Courses</option>
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Level */}
+              <div>
+                <label className="text-xs font-semibold text-secondary mb-1 block flex items-center gap-1">
+                  <Layers className="w-3 h-3" /> Level
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedLevelId ?? ""}
+                    onChange={e => {
+                      setSelectedLevelId(e.target.value ? Number(e.target.value) : null);
+                      setSelectedSectionId(null);
+                    }}
+                    disabled={!selectedCourse}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8 disabled:opacity-50"
+                  >
+                    <option value="">All Levels</option>
+                    {selectedCourse?.levels.map(l => <option key={l.id} value={l.id}>{l.className}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Section */}
+              <div>
+                <label className="text-xs font-semibold text-secondary mb-1 block flex items-center gap-1">
+                  <Tag className="w-3 h-3" /> Section
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedSectionId ?? ""}
+                    onChange={e => setSelectedSectionId(e.target.value ? Number(e.target.value) : null)}
+                    disabled={!selectedLevel || availableSections.length === 0}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8 disabled:opacity-50"
+                  >
+                    <option value="">All Sections</option>
+                    {availableSections.map(s => <option key={s.id} value={s.id}>{s.sectionName}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                </div>
+                {selectedLevel && availableSections.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">No sections defined for this level.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Audience preview */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-blue-600 font-medium">Will send to:</span>
+              <span className="bg-white border border-blue-200 text-blue-800 px-2.5 py-1 rounded-full font-semibold">
+                {audience}
+              </span>
+            </div>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -203,36 +307,7 @@ export default function ParentNotifications() {
               {errors.message && <p className="text-xs text-red-500 mt-1">{errors.message}</p>}
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-secondary mb-1 block">Course (optional)</label>
-              <div className="relative">
-                <select
-                  value={form.course}
-                  onChange={e => setForm(f => ({ ...f, course: e.target.value }))}
-                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8"
-                >
-                  <option value="">All Courses</option>
-                  {courseNames.map(c => <option key={c}>{c}</option>)}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-secondary mb-1 block">Audience</label>
-              <div className="relative">
-                <select
-                  value={form.audience}
-                  onChange={e => setForm(f => ({ ...f, audience: e.target.value }))}
-                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8"
-                >
-                  {AUDIENCES.map(a => <option key={a}>{a}</option>)}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
+            <div className="sm:col-span-2">
               <label className="text-xs font-semibold text-secondary mb-1 block">Priority</label>
               <div className="flex gap-2">
                 {(["High", "Normal", "Low"] as Priority[]).map(p => (
@@ -272,7 +347,7 @@ export default function ParentNotifications() {
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
             <Bell className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
@@ -292,13 +367,12 @@ export default function ParentNotifications() {
                           {n.priority}
                         </span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1 ${STATUS_COLORS[n.status]}`}>
-                          <Icon className="w-2.5 h-2.5" />
-                          {n.status}
+                          <Icon className="w-2.5 h-2.5" />{n.status}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-2">{n.message}</p>
                       <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
-                        <span>Audience: <span className="font-medium text-secondary">{n.audience}</span></span>
+                        <span>To: <span className="font-medium text-secondary">{n.audience}</span></span>
                         {n.courseName && <span>Course: <span className="font-medium text-secondary">{n.courseName}</span></span>}
                         <span>By: <span className="font-medium">{n.createdBy}</span></span>
                         <span>{new Date(n.createdAt).toLocaleDateString()}</span>

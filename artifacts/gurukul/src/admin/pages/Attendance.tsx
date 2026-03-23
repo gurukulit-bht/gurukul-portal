@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Calendar, CheckCircle2, XCircle, Clock, Save, ChevronDown, Users, AlertCircle } from "lucide-react";
+import { Calendar, CheckCircle2, XCircle, Clock, Save, ChevronDown, Users, AlertCircle, Tag } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { Button } from "@/components/ui/button";
 import { adminApi } from "@/lib/adminApi";
@@ -8,27 +8,20 @@ import { toast } from "sonner";
 type AttStatus = "Present" | "Absent" | "Late";
 
 type LevelOption = {
-  id: number;
-  label: string;
-  courseName: string;
-  schedule: string;
+  id: number; label: string; courseName: string; schedule: string;
+};
+
+type SectionOption = {
+  id: number; sectionName: string; schedule: string;
 };
 
 type StudentRow = {
-  studentId:    number;
-  studentCode:  string;
-  name:         string;
-  parentName:   string;
-  status:       AttStatus;
+  studentId: number; studentCode: string; name: string; parentName: string; status: AttStatus;
 };
 
 type HistoryRow = {
-  id: number;
-  studentName: string;
-  studentCode: string;
-  date: string;
-  status: AttStatus;
-  recordedBy: string;
+  id: number; studentName: string; studentCode: string;
+  date: string; status: AttStatus; recordedBy: string;
 };
 
 const STATUS_OPTS: AttStatus[] = ["Present", "Absent", "Late"];
@@ -38,29 +31,29 @@ const STATUS_COLORS: Record<AttStatus, string> = {
   Late:    "bg-yellow-100 text-yellow-800 border-yellow-300",
 };
 const STATUS_ICONS: Record<AttStatus, React.ElementType> = {
-  Present: CheckCircle2,
-  Absent:  XCircle,
-  Late:    Clock,
+  Present: CheckCircle2, Absent: XCircle, Late: Clock,
 };
 
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
+function todayStr() { return new Date().toISOString().split("T")[0]; }
 
 export default function Attendance() {
   const { user } = useAuth();
-  const [levels, setLevels]           = useState<LevelOption[]>([]);
-  const [selectedLevel, setLevel]     = useState<number | null>(null);
-  const [date, setDate]               = useState(todayStr());
-  const [students, setStudents]       = useState<StudentRow[]>([]);
-  const [existing, setExisting]       = useState<Record<number, AttStatus>>({});
+  const [levels, setLevels]                   = useState<LevelOption[]>([]);
+  const [selectedLevel, setLevel]             = useState<number | null>(null);
+  const [sections, setSections]               = useState<SectionOption[]>([]);
+  const [selectedSection, setSelectedSection] = useState<number | null>(null);
+  const [date, setDate]                       = useState(todayStr());
+  const [students, setStudents]               = useState<StudentRow[]>([]);
+  const [existing, setExisting]               = useState<Record<number, AttStatus>>({});
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const [loadingAtt, setLoadingAtt]   = useState(false);
-  const [saving, setSaving]           = useState(false);
-  const [saved, setSaved]             = useState(false);
-  const [history, setHistory]         = useState<HistoryRow[]>([]);
-  const [tab, setTab]                 = useState<"mark" | "history">("mark");
+  const [loadingSections, setLoadingSections] = useState(false);
+  const [loadingAtt, setLoadingAtt]           = useState(false);
+  const [saving, setSaving]                   = useState(false);
+  const [saved, setSaved]                     = useState(false);
+  const [history, setHistory]                 = useState<HistoryRow[]>([]);
+  const [tab, setTab]                         = useState<"mark" | "history">("mark");
 
+  // Load all levels on mount
   useEffect(() => {
     adminApi.courses.levels()
       .then((data) => {
@@ -74,6 +67,20 @@ export default function Attendance() {
       })
       .catch(() => {});
   }, []);
+
+  // When level changes, load its sections
+  useEffect(() => {
+    if (!selectedLevel) { setSections([]); setSelectedSection(null); return; }
+    setLoadingSections(true);
+    adminApi.courses.levelSections(selectedLevel)
+      .then((data) => {
+        const s = (data as SectionOption[]);
+        setSections(s);
+        setSelectedSection(null);
+      })
+      .catch(() => setSections([]))
+      .finally(() => setLoadingSections(false));
+  }, [selectedLevel]);
 
   const loadStudents = useCallback(async (levelId: number) => {
     setLoadingStudents(true);
@@ -108,9 +115,7 @@ export default function Attendance() {
     try {
       const data = await adminApi.attendance.history(levelId) as HistoryRow[];
       setHistory(data);
-    } catch {
-      setHistory([]);
-    }
+    } catch { setHistory([]); }
   }, []);
 
   useEffect(() => {
@@ -125,13 +130,14 @@ export default function Attendance() {
 
   async function handleSave() {
     if (!selectedLevel || !user) return;
+    const selectedSectionObj = sections.find(s => s.id === selectedSection);
     setSaving(true);
     try {
       await adminApi.attendance.save({
         courseLevelId: selectedLevel,
         date,
         records: students.map(s => ({ studentId: s.studentId, status: s.status })),
-        recordedBy: user.displayName,
+        recordedBy: user.displayName + (selectedSectionObj ? ` [${selectedSectionObj.sectionName}]` : ""),
       });
       setSaved(true);
       toast.success("Attendance saved successfully!");
@@ -144,6 +150,9 @@ export default function Attendance() {
     }
   }
 
+  const selectedLevelLabel = levels.find(l => l.id === selectedLevel)?.label ?? "";
+  const selectedSectionLabel = sections.find(s => s.id === selectedSection)?.sectionName ?? "All Students";
+
   const summary = {
     present: students.filter(s => s.status === "Present").length,
     absent:  students.filter(s => s.status === "Absent").length,
@@ -155,22 +164,52 @@ export default function Attendance() {
       {/* Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-border p-5">
         <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-semibold text-secondary mb-1.5">Select Class</label>
+          {/* Level selector */}
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-xs font-semibold text-secondary mb-1.5">Select Class / Level</label>
             <div className="relative">
               <select
                 value={selectedLevel ?? ""}
                 onChange={e => { setLevel(Number(e.target.value)); setSaved(false); }}
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8"
               >
-                <option value="" disabled>Choose a class...</option>
-                {levels.map(l => (
-                  <option key={l.id} value={l.id}>{l.label}</option>
-                ))}
+                <option value="" disabled>Choose a class…</option>
+                {levels.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
+
+          {/* Section selector — shown only when sections exist */}
+          {selectedLevel && (
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-xs font-semibold text-secondary mb-1.5 flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5" /> Section
+                {loadingSections && <span className="text-muted-foreground font-normal ml-1">(loading…)</span>}
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedSection ?? ""}
+                  onChange={e => setSelectedSection(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary appearance-none pr-8"
+                  disabled={loadingSections}
+                >
+                  <option value="">All Students</option>
+                  {sections.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.sectionName}{s.schedule ? ` (${s.schedule})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              </div>
+              {sections.length === 0 && !loadingSections && selectedLevel && (
+                <p className="text-xs text-muted-foreground mt-1">No sections defined — showing all enrolled students.</p>
+              )}
+            </div>
+          )}
+
+          {/* Date picker */}
           <div>
             <label className="block text-xs font-semibold text-secondary mb-1.5">Date</label>
             <input
@@ -181,6 +220,23 @@ export default function Attendance() {
             />
           </div>
         </div>
+
+        {/* Context pill */}
+        {selectedLevel && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+              {selectedLevelLabel}
+            </span>
+            {selectedSection && (
+              <>
+                <span>→</span>
+                <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Tag className="w-3 h-3" /> {selectedSectionLabel}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {selectedLevel && (
@@ -216,12 +272,16 @@ export default function Attendance() {
                 ))}
               </div>
 
-              {/* Student List */}
+              {/* Student list */}
               <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-semibold text-secondary">
-                    {students.length} Enrolled Student{students.length !== 1 ? "s" : ""}
+                    {students.length} Student{students.length !== 1 ? "s" : ""}
+                    {selectedSection
+                      ? <span className="text-muted-foreground font-normal"> — {selectedSectionLabel}</span>
+                      : <span className="text-muted-foreground font-normal"> (all enrolled)</span>
+                    }
                   </span>
                   {Object.keys(existing).length > 0 && (
                     <span className="ml-auto text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
@@ -231,7 +291,7 @@ export default function Attendance() {
                 </div>
 
                 {loadingStudents ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Loading students...</div>
+                  <div className="p-8 text-center text-muted-foreground text-sm">Loading students…</div>
                 ) : students.length === 0 ? (
                   <div className="p-8 text-center">
                     <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -279,19 +339,12 @@ export default function Attendance() {
                   <div className="px-5 py-4 bg-gray-50 border-t border-border flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">
                       Recording for: <span className="font-medium">{date}</span>
-                    </p>
-                    <Button
-                      onClick={handleSave}
-                      disabled={saving || students.length === 0}
-                      className="flex items-center gap-2"
-                    >
-                      {saving ? (
-                        <span>Saving...</span>
-                      ) : saved ? (
-                        <><CheckCircle2 className="w-4 h-4" /> Saved!</>
-                      ) : (
-                        <><Save className="w-4 h-4" /> Save Attendance</>
+                      {selectedSection && (
+                        <> · Section: <span className="font-medium">{selectedSectionLabel}</span></>
                       )}
+                    </p>
+                    <Button onClick={handleSave} disabled={saving || students.length === 0} className="flex items-center gap-2">
+                      {saving ? <span>Saving…</span> : saved ? <><CheckCircle2 className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Attendance</>}
                     </Button>
                   </div>
                 )}
@@ -326,8 +379,7 @@ export default function Attendance() {
                             <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{r.studentCode}</td>
                             <td className="px-4 py-3">
                               <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[r.status]}`}>
-                                <Icon className="w-3 h-3" />
-                                {r.status}
+                                <Icon className="w-3 h-3" />{r.status}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground text-xs">{r.recordedBy}</td>

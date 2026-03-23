@@ -7,7 +7,7 @@ import AdminLayout from "./AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import AdminAnnouncements from "./pages/Announcements";
 import CalendarAdmin from "./pages/CalendarAdmin";
-import CoursesAdmin from "./pages/CoursesAdmin";
+import CoursesAdmin from "./pages/CourseManagement";
 import Teachers from "./pages/Teachers";
 import Students from "./pages/Students";
 import Inventory from "./pages/Inventory";
