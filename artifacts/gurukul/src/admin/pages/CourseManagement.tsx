@@ -745,15 +745,18 @@ export default function CourseManagement() {
     }
   }
 
-  // Collect distinct curriculum years from loaded courses for the filter
-  const availableYears = Array.from(
-    new Set(courses.map(c => c.curriculumYear).filter(Boolean) as string[])
-  ).sort();
-
   // Apply year filter (only applies if not "all")
   const filteredCourses = yearFilter === "all"
     ? courses
     : courses.filter(c => c.curriculumYear === yearFilter);
+
+  function handleYearFilter(value: string) {
+    setYearFilter(value);
+    const filtered = value === "all" ? courses : courses.filter(c => c.curriculumYear === value);
+    // Keep current selection if it's still in the filtered set; otherwise pick the first
+    const stillSelected = filtered.find(c => c.id === selectedId);
+    setSelectedId(stillSelected?.id ?? filtered[0]?.id ?? null);
+  }
 
   // Stats
   const active   = courses.filter(c => !c.archivedAt);
@@ -791,7 +794,7 @@ export default function CourseManagement() {
           <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
             <select
               value={yearFilter}
-              onChange={e => { setYearFilter(e.target.value); setSelectedId(null); }}
+              onChange={e => handleYearFilter(e.target.value)}
               className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-secondary h-7 focus:outline-none focus:border-primary"
             >
               <option value="all">All Years</option>
