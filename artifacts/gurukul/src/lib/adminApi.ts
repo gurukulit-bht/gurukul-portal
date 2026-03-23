@@ -34,10 +34,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const adminApi = {
   teachers: {
-    list:   () => request<unknown[]>("GET", "/teachers"),
-    create: (data: unknown) => request("POST", "/teachers", data),
-    update: (id: number, data: unknown) => request("PUT", `/teachers/${id}`, data),
-    remove: (id: number) => request("DELETE", `/teachers/${id}`),
+    list:       () => request<unknown[]>("GET", "/teachers"),
+    assistants: () => request<{ id: number; name: string }[]>("GET", "/teachers/assistants"),
+    create:     (data: unknown) => request("POST", "/teachers", data),
+    update:     (id: number, data: unknown) => request("PUT", `/teachers/${id}`, data),
+    remove:     (id: number) => request("DELETE", `/teachers/${id}`),
   },
   students: {
     list:          () => request<unknown[]>("GET", "/students"),

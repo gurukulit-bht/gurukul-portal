@@ -92,6 +92,7 @@ export const teachersTable = pgTable("teachers", {
   email: text("email").notNull().unique(),
   phone: text("phone"),
   bio: text("bio"),
+  category: text("category").notNull().default("Senior Teacher"), // "Senior Teacher" | "Assistant"
   status: teacherStatusEnum("status").notNull().default("Active"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -108,9 +109,13 @@ export const teacherAssignmentsTable = pgTable("teacher_assignments", {
   courseId: integer("course_id")
     .notNull()
     .references(() => coursesTable.id, { onDelete: "cascade" }),
-  levelFrom: integer("level_from").notNull().default(1),   // e.g., 1
-  levelTo: integer("level_to").notNull().default(7),       // e.g., 3 = handles L1–L3
-  timing: text("timing"),                                   // e.g., "Sundays 10–11 AM"
+  levelFrom: integer("level_from").notNull().default(1),
+  levelTo: integer("level_to").notNull().default(7),
+  timing: text("timing"),
+  sectionId: integer("section_id")
+    .references(() => courseSectionsTable.id, { onDelete: "set null" }),
+  assistantTeacherId: integer("assistant_teacher_id")
+    .references(() => teachersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

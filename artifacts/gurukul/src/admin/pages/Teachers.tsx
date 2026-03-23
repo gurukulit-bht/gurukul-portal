@@ -1,36 +1,65 @@
 import { useState, useEffect, useMemo } from "react";
 import { adminApi } from "@/lib/adminApi";
-import { Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, Clock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type Teacher = {
-  id: number; name: string; email: string; phone: string;
-  assignedCourse: string; assignedLevel: string; timing: string; status: "Active" | "Inactive";
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  category: string;
+  status: "Active" | "Inactive";
+  assignedCourse: string;
+  assignedLevel: string;
+  sectionId: number | null;
+  sectionName: string | null;
+  sectionSchedule: string | null;
+  assistantTeacherId: number | null;
+  assistantTeacherName: string | null;
 };
 
-type CourseLevel = { id: number; levelNumber: number; className: string };
-type DbCourse = { id: number; name: string; icon: string; levels: CourseLevel[] };
+type DbSection = { id: number; sectionName: string; schedule: string | null };
+type DbLevel   = { id: number; levelNumber: number; className: string; sections: DbSection[] };
+type DbCourse  = { id: number; name: string; icon: string; levels: DbLevel[] };
+type Assistant = { id: number; name: string };
 
-const emptyForm: Omit<Teacher, "id"> = {
+const CATEGORIES = ["Senior Teacher", "Assistant"];
+
+type FormState = {
+  name: string;
+  email: string;
+  phone: string;
+  category: string;
+  assignedCourse: string;
+  assignedLevel: string;
+  sectionId: number | null;
+  assistantTeacherId: number | null;
+};
+
+const emptyForm: FormState = {
   name: "", email: "", phone: "",
-  assignedCourse: "", assignedLevel: "All Levels",
-  timing: "", status: "Active",
+  category: "Senior Teacher",
+  assignedCourse: "", assignedLevel: "",
+  sectionId: null,
+  assistantTeacherId: null,
 };
 
 export default function Teachers() {
-  const [teachers, setTeachers]   = useState<Teacher[]>([]);
-  const [dbCourses, setDbCourses] = useState<DbCourse[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState(false);
-  const [search, setSearch]       = useState("");
+  const [teachers,    setTeachers]    = useState<Teacher[]>([]);
+  const [dbCourses,   setDbCourses]   = useState<DbCourse[]>([]);
+  const [assistants,  setAssistants]  = useState<Assistant[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(false);
+  const [search,      setSearch]      = useState("");
   const [filterCourse, setFilterCourse] = useState("All");
-  const [showModal, setShowModal]   = useState(false);
-  const [editing, setEditing]       = useState<Teacher | null>(null);
-  const [form, setForm]             = useState<Omit<Teacher, "id">>(emptyForm);
+  const [showModal,   setShowModal]   = useState(false);
+  const [editing,     setEditing]     = useState<Teacher | null>(null);
+  const [form,        setForm]        = useState<FormState>(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [error, setError]           = useState("");
+  const [error,       setError]       = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -38,24 +67,33 @@ export default function Teachers() {
       adminApi.courses.list().then((d) => {
         const courses = d as DbCourse[];
         setDbCourses(courses);
-        setForm((f) => ({ ...f, assignedCourse: courses[0]?.name ?? "" }));
+        setForm((f) => ({
+          ...f,
+          assignedCourse: courses[0]?.name ?? "",
+          assignedLevel:  courses[0]?.levels?.[0]?.className ?? "",
+        }));
       }),
+      adminApi.teachers.assistants().then(setAssistants),
     ]).finally(() => setLoading(false));
   }, []);
 
   const courseNames = useMemo(() => dbCourses.map((c) => c.name), [dbCourses]);
 
-  const levelsForCourse = useMemo((): string[] => {
+  const levelsForCourse = useMemo((): DbLevel[] => {
     const course = dbCourses.find((c) => c.name === form.assignedCourse);
-    if (!course || course.levels.length === 0) return ["All Levels"];
-    return [
-      "All Levels",
-      ...course.levels
-        .slice()
-        .sort((a, b) => a.levelNumber - b.levelNumber)
-        .map((l) => l.className),
-    ];
+    if (!course) return [];
+    return course.levels.slice().sort((a, b) => a.levelNumber - b.levelNumber);
   }, [dbCourses, form.assignedCourse]);
+
+  const sectionsForLevel = useMemo((): DbSection[] => {
+    const level = levelsForCourse.find((l) => l.className === form.assignedLevel);
+    return level?.sections ?? [];
+  }, [levelsForCourse, form.assignedLevel]);
+
+  const selectedSection = useMemo(
+    () => sectionsForLevel.find((s) => s.id === form.sectionId) ?? null,
+    [sectionsForLevel, form.sectionId]
+  );
 
   const filtered = teachers.filter((t) =>
     (filterCourse === "All" || t.assignedCourse === filterCourse) &&
@@ -64,34 +102,55 @@ export default function Teachers() {
 
   function openAdd() {
     setEditing(null);
-    setForm({ ...emptyForm, assignedCourse: courseNames[0] ?? "" });
+    const firstCourse = dbCourses[0];
+    const firstLevel  = firstCourse?.levels?.slice().sort((a, b) => a.levelNumber - b.levelNumber)[0];
+    setForm({
+      ...emptyForm,
+      assignedCourse: firstCourse?.name ?? "",
+      assignedLevel:  firstLevel?.className ?? "",
+    });
     setError("");
     setShowModal(true);
   }
 
   function openEdit(t: Teacher) {
     setEditing(t);
-    setForm({ name: t.name, email: t.email, phone: t.phone, assignedCourse: t.assignedCourse, assignedLevel: t.assignedLevel, timing: t.timing, status: t.status });
+    setForm({
+      name:               t.name,
+      email:              t.email,
+      phone:              t.phone,
+      category:           t.category || "Senior Teacher",
+      assignedCourse:     t.assignedCourse,
+      assignedLevel:      t.assignedLevel,
+      sectionId:          t.sectionId,
+      assistantTeacherId: t.assistantTeacherId,
+    });
     setError("");
     setShowModal(true);
   }
 
   function handleCourseChange(courseName: string) {
-    setForm((f) => ({ ...f, assignedCourse: courseName, assignedLevel: "All Levels" }));
+    const course     = dbCourses.find((c) => c.name === courseName);
+    const firstLevel = course?.levels?.slice().sort((a, b) => a.levelNumber - b.levelNumber)[0];
+    setForm((f) => ({
+      ...f,
+      assignedCourse: courseName,
+      assignedLevel:  firstLevel?.className ?? "",
+      sectionId:      null,
+    }));
+  }
+
+  function handleLevelChange(levelName: string) {
+    setForm((f) => ({ ...f, assignedLevel: levelName, sectionId: null }));
   }
 
   async function handleSave() {
-    if (!form.name.trim() || !form.email.trim() || !form.timing.trim()) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    const conflict = teachers.find(
-      (t) => t.timing === form.timing && t.assignedCourse === form.assignedCourse && (!editing || t.id !== editing.id)
-    );
-    if (conflict) {
-      setError(`Conflict: ${conflict.name} is already assigned to ${form.assignedCourse} at this time.`);
-      return;
-    }
+    if (!form.name.trim())          { setError("Full name is required."); return; }
+    if (!form.email.trim())         { setError("Email is required."); return; }
+    if (!form.category)             { setError("Category is required."); return; }
+    if (!form.assignedCourse)       { setError("Course is required."); return; }
+    if (!form.assignedLevel)        { setError("Level is required."); return; }
+
     setSaving(true);
     try {
       if (editing) {
@@ -99,7 +158,11 @@ export default function Teachers() {
         setTeachers((prev) => prev.map((t) => t.id === editing.id ? updated as Teacher : t));
       } else {
         const created = await adminApi.teachers.create(form);
-        setTeachers((prev) => [...prev, created as Teacher]);
+        const newTeacher = created as Teacher;
+        setTeachers((prev) => [...prev, newTeacher]);
+        if (form.category === "Assistant") {
+          setAssistants((prev) => [...prev, { id: newTeacher.id, name: newTeacher.name }]);
+        }
       }
       setShowModal(false);
     } catch (e: unknown) {
@@ -113,6 +176,7 @@ export default function Teachers() {
     try {
       await adminApi.teachers.remove(id);
       setTeachers((prev) => prev.filter((t) => t.id !== id));
+      setAssistants((prev) => prev.filter((a) => a.id !== id));
       setDeleteConfirm(null);
     } catch {
       /* silent */
@@ -127,6 +191,7 @@ export default function Teachers() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-secondary">Teacher Assignment</h2>
@@ -137,6 +202,7 @@ export default function Teachers() {
         </Button>
       </div>
 
+      {/* Search + Course filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -152,19 +218,20 @@ export default function Teachers() {
         </div>
       </div>
 
+      {/* Table */}
       <div className="bg-white rounded-2xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-border">
               <tr>
-                {["Teacher", "Contact", "Course", "Level", "Timing", "Status", "Actions"].map((h) => (
+                {["Teacher", "Contact", "Category", "Course", "Level / Section", "Actions"].map((h) => (
                   <th key={h} className="text-left font-semibold text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No teachers found.</td></tr>
+                <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No teachers found.</td></tr>
               )}
               {filtered.map((t) => (
                 <tr key={t.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
@@ -173,22 +240,44 @@ export default function Teachers() {
                       <div className="w-9 h-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                         {t.name.split(" ").pop()?.charAt(0) ?? "T"}
                       </div>
-                      <div className="font-medium text-secondary">{t.name}</div>
+                      <div>
+                        <div className="font-medium text-secondary">{t.name}</div>
+                        {t.assistantTeacherName && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <User className="w-3 h-3" /> TA: {t.assistantTeacherName}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{t.email}</div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{t.phone}</div>
+                      {t.phone && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{t.phone}</div>}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-medium">{t.assignedCourse || "—"}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.category === "Assistant" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                      {t.category || "Senior Teacher"}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{t.assignedLevel || "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{t.timing || "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.status === "Active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{t.status}</span>
+                    {t.assignedCourse
+                      ? <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-medium">{t.assignedCourse}</span>
+                      : <span className="text-muted-foreground text-xs">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs">
+                      <div className="font-medium text-secondary">{t.assignedLevel || "—"}</div>
+                      {t.sectionName && (
+                        <div className="text-muted-foreground mt-0.5">{t.sectionName}</div>
+                      )}
+                      {t.sectionSchedule && (
+                        <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
+                          <Clock className="w-3 h-3" />{t.sectionSchedule}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
@@ -214,6 +303,7 @@ export default function Teachers() {
         </div>
       </div>
 
+      {/* Teacher–Course Mapping */}
       <div className="bg-white rounded-2xl border border-border p-6">
         <h3 className="font-bold text-secondary mb-4">Teacher–Course Mapping</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -225,7 +315,10 @@ export default function Teachers() {
                 {assigned.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic">No teacher assigned</p>
                 ) : assigned.map((t) => (
-                  <div key={t.id} className="text-xs text-muted-foreground mb-1">• {t.name} — {t.assignedLevel}</div>
+                  <div key={t.id} className="text-xs text-muted-foreground mb-1">
+                    • {t.name} — {t.assignedLevel}
+                    {t.sectionName && <span className="ml-1 text-xs">({t.sectionName})</span>}
+                  </div>
                 ))}
               </div>
             );
@@ -233,6 +326,7 @@ export default function Teachers() {
         </div>
       </div>
 
+      {/* Add / Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -242,58 +336,98 @@ export default function Teachers() {
             <div className="p-6 space-y-4">
               {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{error}</div>}
 
+              {/* Name */}
               <div className="space-y-1.5">
-                <Label>Full Name *</Label>
+                <Label>Full Name <span className="text-red-500">*</span></Label>
                 <Input placeholder="Teacher name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="rounded-xl" />
               </div>
+
+              {/* Email */}
               <div className="space-y-1.5">
-                <Label>Email *</Label>
+                <Label>Email <span className="text-red-500">*</span></Label>
                 <Input type="email" placeholder="Email address" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="rounded-xl" />
               </div>
+
+              {/* Phone */}
               <div className="space-y-1.5">
                 <Label>Phone</Label>
                 <Input placeholder="Phone number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className="rounded-xl" />
               </div>
 
+              {/* Category (mandatory) */}
+              <div className="space-y-1.5">
+                <Label>Category <span className="text-red-500">*</span></Label>
+                <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className={selectCls}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              {/* Course + Level (both mandatory) */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Assigned Course</Label>
-                  <select
-                    value={form.assignedCourse}
-                    onChange={(e) => handleCourseChange(e.target.value)}
-                    className={selectCls}
-                  >
+                  <Label>Course <span className="text-red-500">*</span></Label>
+                  <select value={form.assignedCourse} onChange={(e) => handleCourseChange(e.target.value)} className={selectCls}>
                     {courseNames.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Level</Label>
-                  <select
-                    value={levelsForCourse.includes(form.assignedLevel) ? form.assignedLevel : "All Levels"}
-                    onChange={(e) => setForm((f) => ({ ...f, assignedLevel: e.target.value }))}
-                    className={selectCls}
-                  >
-                    {levelsForCourse.map((l) => <option key={l} value={l}>{l}</option>)}
+                  <Label>Level <span className="text-red-500">*</span></Label>
+                  <select value={form.assignedLevel} onChange={(e) => handleLevelChange(e.target.value)} className={selectCls}>
+                    {levelsForCourse.length === 0
+                      ? <option value="">No levels</option>
+                      : levelsForCourse.map((l) => <option key={l.id} value={l.className}>{l.className}</option>)
+                    }
                   </select>
                 </div>
               </div>
 
+              {/* Section (optional) */}
               <div className="space-y-1.5">
-                <Label>Class Timing *</Label>
-                <Input placeholder="e.g. Sundays 10:00–11:00 AM" value={form.timing} onChange={(e) => setForm((f) => ({ ...f, timing: e.target.value }))} className="rounded-xl" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
+                <Label>Section <span className="text-xs text-muted-foreground ml-1">(optional)</span></Label>
                 <select
-                  value={form.status}
-                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as "Active" | "Inactive" }))}
+                  value={form.sectionId ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value ? parseInt(e.target.value) : null }))}
                   className={selectCls}
                 >
-                  <option>Active</option>
-                  <option>Inactive</option>
+                  <option value="">— No section —</option>
+                  {sectionsForLevel.map((s) => (
+                    <option key={s.id} value={s.id}>{s.sectionName}</option>
+                  ))}
                 </select>
+                {/* Timing read-only when section selected */}
+                {selectedSection?.schedule && (
+                  <div className="flex items-center gap-2 mt-1.5 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span>{selectedSection.schedule}</span>
+                  </div>
+                )}
+                {sectionsForLevel.length === 0 && form.assignedLevel && (
+                  <p className="text-xs text-muted-foreground mt-1">No sections defined for this level.</p>
+                )}
+              </div>
+
+              {/* Teacher Assistant (optional) */}
+              <div className="space-y-1.5">
+                <Label>Teacher Assistant <span className="text-xs text-muted-foreground ml-1">(optional)</span></Label>
+                <select
+                  value={form.assistantTeacherId ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, assistantTeacherId: e.target.value ? parseInt(e.target.value) : null }))}
+                  className={selectCls}
+                >
+                  <option value="">— None —</option>
+                  {assistants
+                    .filter((a) => !editing || a.id !== editing.id)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))
+                  }
+                </select>
+                {assistants.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">No assistants found. Add a teacher with the "Assistant" category first.</p>
+                )}
               </div>
             </div>
+
             <div className="p-6 border-t border-border flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-xl" disabled={saving}>Cancel</Button>
               <Button onClick={handleSave} className="rounded-xl gap-2" disabled={saving}>
