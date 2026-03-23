@@ -327,7 +327,7 @@ router.get("/levels/:id/sections", async (req, res) => {
             (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'role', sa.role))
              FROM section_assignments sa
              JOIN teachers t ON t.id = sa.teacher_id
-             WHERE sa.section_id = ${courseSectionsTable.id}),
+             WHERE sa.section_id = course_sections.id),
             '[]'::json
           )
         `,
