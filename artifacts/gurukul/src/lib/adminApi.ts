@@ -96,6 +96,12 @@ export const adminApi = {
     history: (levelId: number) => request<unknown[]>("GET", `/attendance/history?levelId=${levelId}`),
     save:    (data: unknown) => request("POST", "/attendance", data),
   },
+  testimonials: {
+    list:   () => request<unknown[]>("GET", "/testimonials"),
+    create: (data: unknown) => request<{ id: number }>("POST", "/testimonials", data),
+    update: (id: number, data: unknown) => request("PUT", `/testimonials/${id}`, data),
+    remove: (id: number) => request("DELETE", `/testimonials/${id}`),
+  },
   notifications: {
     list:         () => request<unknown[]>("GET", "/notifications"),
     create:       (data: unknown) => request("POST", "/notifications", data),

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -91,53 +91,32 @@ const PILLARS = [
   { no: "04", title: "Social Connection",       desc: "A vibrant peer community built around shared values creates friendships that last a lifetime." },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote: "Our daughter started coming home reciting small shlokas she had learned. We did not expect it to catch on so quickly. The teachers are very patient and encouraging.",
-    name: "Priya Iyer",
-    detail: "Parent of a Hindi student",
-    initials: "PI",
-    color: "bg-orange-500",
-  },
-  {
-    quote: "My son was shy at first, but within a few weeks he had made friends and looked forward to Sundays. Seeing him engaged with his language and culture has been really rewarding.",
-    name: "Suresh Reddy",
-    detail: "Parent of a Telugu student",
-    initials: "SR",
-    color: "bg-violet-600",
-  },
-  {
-    quote: "What I appreciate most is the sense of community. The children celebrate festivals together and learn that their traditions are something to be proud of.",
-    name: "Meera Patel",
-    detail: "Parent of two enrolled children",
-    initials: "MP",
-    color: "bg-rose-600",
-  },
-  {
-    quote: "We were hesitant because our schedule is busy, but Sunday classes fit perfectly. The Gurukul has become an important part of our week for the whole family.",
-    name: "Anita Sharma",
-    detail: "Parent of a Sanskrit student",
-    initials: "AS",
-    color: "bg-amber-600",
-  },
-  {
-    quote: "My daughter's Hindi teacher noticed she was struggling and took extra time to help her. That personal attention made a real difference. We are very grateful.",
-    name: "Kavitha Nair",
-    detail: "Parent of a 2nd-year student",
-    initials: "KN",
-    color: "bg-teal-600",
-  },
-  {
-    quote: "Learning Sanskrit has helped my son with his school vocabulary more than we expected. The Gurukul programs have practical benefits that go beyond cultural connection.",
-    name: "Rajesh Menon",
-    detail: "Parent of a Dharma & Sanskrit student",
-    initials: "RM",
-    color: "bg-sky-600",
-  },
-];
+type Testimonial = {
+  id: number;
+  name: string;
+  detail: string;
+  quote: string;
+  avatarColor: string;
+};
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
 
 export default function ParentsPortal() {
   const programsRef = useRef<HTMLDivElement>(null);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/testimonials")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setTestimonials(Array.isArray(data) ? data : []))
+      .catch(() => setTestimonials([]))
+      .finally(() => setTestimonialsLoading(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
@@ -403,51 +382,76 @@ export default function ParentsPortal() {
       </section>
 
       {/* ── TESTIMONIALS ─────────────────────────────────────────────── */}
-      <section className="py-20 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            className="text-center mb-14"
-          >
-            <motion.p variants={fadeUp} custom={0}
-              className="text-primary font-semibold uppercase tracking-widest text-sm mb-3">
-              From Our Families
-            </motion.p>
-            <motion.h2 variants={fadeUp} custom={1}
-              className="text-3xl sm:text-4xl font-display font-bold text-secondary">
-              What Parents Are Saying
-            </motion.h2>
-          </motion.div>
+      {(testimonialsLoading || testimonials.length > 0) && (
+        <section className="py-20 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+              className="text-center mb-14"
+            >
+              <motion.p variants={fadeUp} custom={0}
+                className="text-primary font-semibold uppercase tracking-widest text-sm mb-3">
+                From Our Families
+              </motion.p>
+              <motion.h2 variants={fadeUp} custom={1}
+                className="text-3xl sm:text-4xl font-display font-bold text-secondary">
+                What Parents Are Saying
+              </motion.h2>
+            </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
-              <motion.div
-                key={t.name}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-60px" }}
-                custom={i * 0.1}
-                variants={fadeUp}
-                className="bg-amber-50/60 border border-amber-100 rounded-2xl p-7 flex flex-col gap-5"
-              >
-                <div className="text-3xl text-primary/40 font-serif leading-none">"</div>
-                <p className="text-secondary/80 text-sm leading-relaxed flex-1 -mt-4">{t.quote}</p>
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0", t.color)}>
-                    {t.initials}
+            {/* Loading skeleton */}
+            {testimonialsLoading && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-amber-50/60 border border-amber-100 rounded-2xl p-7 space-y-4 animate-pulse">
+                    <div className="h-4 bg-amber-200/60 rounded w-3/4" />
+                    <div className="h-4 bg-amber-200/60 rounded w-full" />
+                    <div className="h-4 bg-amber-200/60 rounded w-5/6" />
+                    <div className="flex items-center gap-3 mt-4">
+                      <div className="w-10 h-10 rounded-full bg-amber-200/60" />
+                      <div className="space-y-1.5">
+                        <div className="h-3 bg-amber-200/60 rounded w-24" />
+                        <div className="h-2.5 bg-amber-200/60 rounded w-32" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-secondary text-sm">{t.name}</div>
-                    <div className="text-xs text-muted-foreground">{t.detail}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                ))}
+              </div>
+            )}
+
+            {/* Live testimonials */}
+            {!testimonialsLoading && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {testimonials.map((t, i) => (
+                  <motion.div
+                    key={t.id}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-60px" }}
+                    custom={i * 0.1}
+                    variants={fadeUp}
+                    className="bg-amber-50/60 border border-amber-100 rounded-2xl p-7 flex flex-col gap-5"
+                  >
+                    <div className="text-3xl text-primary/40 font-serif leading-none">"</div>
+                    <p className="text-secondary/80 text-sm leading-relaxed flex-1 -mt-4">{t.quote}</p>
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0", t.avatarColor)}>
+                        {getInitials(t.name)}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-secondary text-sm">{t.name}</div>
+                        <div className="text-xs text-muted-foreground">{t.detail}</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── CTA BANNER ───────────────────────────────────────────────── */}
       <section className="py-20 px-4 bg-gradient-to-br from-secondary via-secondary to-secondary/90 text-white relative overflow-hidden">

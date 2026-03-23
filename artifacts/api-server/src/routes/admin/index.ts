@@ -8,6 +8,7 @@ import eventsRouter from "./events";
 import coursesRouter from "./courses";
 import attendanceRouter from "./attendance";
 import notificationsRouter from "./notifications";
+import testimonialsRouter from "./testimonials";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/events", eventsRouter);
 router.use("/courses", coursesRouter);
 router.use("/attendance", attendanceRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/testimonials", testimonialsRouter);
 
 export default router;

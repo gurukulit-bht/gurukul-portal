@@ -4,6 +4,7 @@ import announcementsRouter from "./announcements";
 import eventsRouter from "./events";
 import coursesRouter from "./courses";
 import contactRouter from "./contact";
+import testimonialsRouter from "./testimonials";
 import adminRouter from "./admin";
 
 const router: IRouter = Router();
@@ -13,6 +14,7 @@ router.use("/announcements", announcementsRouter);
 router.use("/events", eventsRouter);
 router.use("/courses", coursesRouter);
 router.use("/contact", contactRouter);
+router.use("/testimonials", testimonialsRouter);
 router.use("/admin", adminRouter);
 
 export default router;

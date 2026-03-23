@@ -369,6 +369,23 @@ export const insertInventorySchema = createInsertSchema(inventoryTable).omit({ i
 export const insertAttendanceSchema       = createInsertSchema(attendanceRecordsTable).omit({ id: true, createdAt: true });
 export const insertParentNotificationSchema = createInsertSchema(parentNotificationsTable).omit({ id: true, createdAt: true, publishedAt: true });
 
+// ─── Testimonials ─────────────────────────────────────────────────────────────
+
+export const testimonialsTable = pgTable("testimonials", {
+  id:          serial("id").primaryKey(),
+  name:        text("name").notNull(),
+  detail:      text("detail").notNull(),
+  quote:       text("quote").notNull(),
+  avatarColor: text("avatar_color").notNull().default("bg-orange-500"),
+  isActive:    boolean("is_active").notNull().default(true),
+  sortOrder:   integer("sort_order").notNull().default(0),
+  createdAt:   timestamp("created_at").defaultNow(),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonialsTable).omit({ id: true, createdAt: true });
+export type Testimonial = typeof testimonialsTable.$inferSelect;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Announcement = typeof announcementsTable.$inferSelect;
