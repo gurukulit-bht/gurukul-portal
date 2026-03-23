@@ -30,7 +30,8 @@ type CourseLevel = {
 };
 
 type AdminCourse = {
-  id: number; name: string; icon: string; description: string; levels: CourseLevel[];
+  id: number; name: string; icon: string; description: string;
+  curriculumYear: string | null; levels: CourseLevel[];
 };
 
 const PAYMENT_COLORS: Record<string, string> = {
@@ -269,6 +270,7 @@ export default function CoursesAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<number>(0);
+  const [levelFilter, setLevelFilter] = useState<number | "all">("all");
   const [editingLevel, setEditingLevel] = useState<{ courseId: number; levelId: number } | null>(null);
   const [editForm, setEditForm] = useState<Partial<CourseLevel>>({});
 
@@ -277,6 +279,9 @@ export default function CoursesAdmin() {
   }, []);
 
   const course = courses[selectedCourse];
+  const visibleLevels = course
+    ? (levelFilter === "all" ? course.levels : course.levels.filter(l => l.level === levelFilter))
+    : [];
 
   function openEditLevel(level: CourseLevel) {
     setEditingLevel({ courseId: course.id, levelId: level.id });
@@ -323,7 +328,7 @@ export default function CoursesAdmin() {
           const enrolled = c.levels.reduce((a, l) => a + l.enrolled, 0);
           const cap = c.levels.reduce((a, l) => a + l.capacity, 0);
           return (
-            <button key={c.id} onClick={() => { setSelectedCourse(i); setEditingLevel(null); }}
+            <button key={c.id} onClick={() => { setSelectedCourse(i); setEditingLevel(null); setLevelFilter("all"); }}
               className={`p-4 rounded-2xl border text-center transition-all ${selectedCourse === i ? "bg-primary/10 border-primary shadow-sm" : "bg-white border-border hover:border-primary/50"}`}>
               <div className="text-3xl mb-2">{c.icon}</div>
               <div className="font-semibold text-secondary text-sm">{c.name}</div>
@@ -341,7 +346,7 @@ export default function CoursesAdmin() {
               <div>
                 <h3 className="text-lg font-bold text-secondary">{course.name}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{course.description}</p>
-                <div className="flex gap-4 mt-3">
+                <div className="flex gap-4 mt-3 flex-wrap">
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Users className="w-4 h-4" />
                     {course.levels.reduce((a, l) => a + l.enrolled, 0)} enrolled
@@ -350,18 +355,37 @@ export default function CoursesAdmin() {
                     <BookOpen className="w-4 h-4" />
                     {course.levels.filter((l) => l.status === "Active").length} active levels
                   </div>
+                  {course.curriculumYear && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium self-center">
+                      📅 {course.curriculumYear}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-border overflow-hidden">
-            <div className="px-6 py-4 border-b border-border bg-gray-50 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-border bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
               <h3 className="font-bold text-secondary">Class Levels</h3>
-              <span className="text-xs text-muted-foreground">Click a row to see enrolled students • Click ✏️ to edit</span>
+              <div className="flex items-center gap-3 flex-wrap">
+                {course.levels.length > 1 && (
+                  <select
+                    value={levelFilter === "all" ? "all" : String(levelFilter)}
+                    onChange={e => setLevelFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                    className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-secondary h-7 focus:outline-none focus:border-primary"
+                  >
+                    <option value="all">All Levels</option>
+                    {course.levels.map(l => (
+                      <option key={l.id} value={l.level}>Level {l.level} — {l.className}</option>
+                    ))}
+                  </select>
+                )}
+                <span className="text-xs text-muted-foreground">Click a row to see enrolled students • Click ✏️ to edit</span>
+              </div>
             </div>
             <div>
-              {course.levels.map((level) => (
+              {visibleLevels.map((level) => (
                 <LevelRow
                   key={level.id}
                   level={level}

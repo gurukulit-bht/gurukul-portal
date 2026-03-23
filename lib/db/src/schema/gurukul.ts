@@ -58,6 +58,7 @@ export const coursesTable = pgTable("courses", {
   learningAreas: text("learning_areas"),
   levelsDetail: text("levels_detail"),
   outcome: text("outcome"),
+  curriculumYear: text("curriculum_year"),            // e.g. "2026-27"; null = not year-scoped
   archivedAt: timestamp("archived_at"),              // null = active; set = archived
   createdAt: timestamp("created_at").defaultNow(),
 });

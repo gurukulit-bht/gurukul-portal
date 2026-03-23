@@ -127,15 +127,16 @@ async function buildAdminCourses(includeArchived = false, teacherCourseIds?: num
       });
 
     return {
-      id:          course.id,
-      name:        course.name,
-      icon:        course.icon,
-      description: course.description,
-      schedule:    course.schedule,
-      ageGroup:    course.ageGroup,
-      instructor:  course.instructor,
-      archivedAt:  course.archivedAt,
-      levels:      courseLevels,
+      id:             course.id,
+      name:           course.name,
+      icon:           course.icon,
+      description:    course.description,
+      schedule:       course.schedule,
+      ageGroup:       course.ageGroup,
+      instructor:     course.instructor,
+      curriculumYear: course.curriculumYear ?? null,
+      archivedAt:     course.archivedAt,
+      levels:         courseLevels,
     };
   });
 }
@@ -166,9 +167,9 @@ router.get("/", async (req, res) => {
 // POST /api/admin/courses — create a new course with initial levels
 router.post("/", async (req, res) => {
   try {
-    const { name, description, icon, ageGroup, schedule, instructor, numLevels } = req.body as {
+    const { name, description, icon, ageGroup, schedule, instructor, numLevels, curriculumYear } = req.body as {
       name: string; description: string; icon: string; ageGroup: string;
-      schedule: string; instructor: string; numLevels: number;
+      schedule: string; instructor: string; numLevels: number; curriculumYear?: string;
     };
 
     if (!name?.trim()) return res.status(400).json({ error: "Course name is required" });
@@ -179,13 +180,14 @@ router.post("/", async (req, res) => {
     const [course] = await db
       .insert(coursesTable)
       .values({
-        name:        name.trim(),
-        description: description ?? "",
-        icon:        icon ?? "📚",
-        ageGroup:    ageGroup ?? "All Ages",
-        level:       "Beginner to Advanced",
-        schedule:    schedule ?? "",
-        instructor:  instructor ?? "TBD",
+        name:           name.trim(),
+        description:    description ?? "",
+        icon:           icon ?? "📚",
+        ageGroup:       ageGroup ?? "All Ages",
+        level:          "Beginner to Advanced",
+        schedule:       schedule ?? "",
+        instructor:     instructor ?? "TBD",
+        curriculumYear: curriculumYear?.trim() || null,
       })
       .returning();
 
@@ -213,7 +215,7 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, description, icon, ageGroup, schedule, instructor } = req.body;
+    const { name, description, icon, ageGroup, schedule, instructor, curriculumYear } = req.body;
 
     if (name) {
       const conflict = await db
@@ -226,12 +228,13 @@ router.put("/:id", async (req, res) => {
     await db
       .update(coursesTable)
       .set({
-        name:        name?.trim() || undefined,
-        description: description ?? undefined,
-        icon:        icon ?? undefined,
-        ageGroup:    ageGroup ?? undefined,
-        schedule:    schedule ?? undefined,
-        instructor:  instructor ?? undefined,
+        name:           name?.trim() || undefined,
+        description:    description ?? undefined,
+        icon:           icon ?? undefined,
+        ageGroup:       ageGroup ?? undefined,
+        schedule:       schedule ?? undefined,
+        instructor:     instructor ?? undefined,
+        curriculumYear: curriculumYear !== undefined ? (curriculumYear?.trim() || null) : undefined,
       })
       .where(eq(coursesTable.id, id));
 

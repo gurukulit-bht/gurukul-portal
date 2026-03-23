@@ -27,7 +27,8 @@ type LevelRow = {
 
 type CourseRow = {
   id: number; name: string; icon: string; description: string;
-  schedule: string; ageGroup: string; archivedAt: string | null;
+  schedule: string; ageGroup: string; curriculumYear: string | null;
+  archivedAt: string | null;
   levels: LevelRow[];
 };
 
@@ -40,8 +41,10 @@ type LevelStudent = {
 type FormData = {
   name: string; description: string; icon: string;
   ageGroup: string; schedule: string; instructor: string;
-  numLevels: number;
+  numLevels: number; curriculumYear: string;
 };
+
+const CURRICULUM_YEARS = ["2024-25", "2025-26", "2026-27", "2027-28", "2028-29"];
 
 const ICONS = ["📚", "🕉️", "🌿", "☀️", "📝", "🎵", "🏛️", "🌺"];
 
@@ -456,13 +459,14 @@ function CourseFormPanel({
   loading: boolean;
 }) {
   const [form, setForm] = useState<FormData>({
-    name:       editing?.name        ?? "",
-    description:editing?.description ?? "",
-    icon:       editing?.icon        ?? "📚",
-    ageGroup:   editing?.ageGroup    ?? "Ages 5–18",
-    schedule:   editing?.schedule    ?? "Sundays 9 AM–1 PM",
-    instructor: "TBD",
-    numLevels:  editing?.levels.length ?? 7,
+    name:           editing?.name           ?? "",
+    description:    editing?.description    ?? "",
+    icon:           editing?.icon           ?? "📚",
+    ageGroup:       editing?.ageGroup       ?? "Ages 5–18",
+    schedule:       editing?.schedule       ?? "Sundays 9 AM–1 PM",
+    instructor:     "TBD",
+    numLevels:      editing?.levels.length  ?? 7,
+    curriculumYear: editing?.curriculumYear ?? "2026-27",
   });
 
   return (
@@ -510,6 +514,18 @@ function CourseFormPanel({
               className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary resize-none"
               placeholder="Brief description of the course"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-secondary mb-1 block">Curriculum Year</label>
+            <select
+              value={form.curriculumYear}
+              onChange={e => setForm(f => ({ ...f, curriculumYear: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary"
+            >
+              <option value="">— No year assigned —</option>
+              {CURRICULUM_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -600,6 +616,7 @@ export default function CourseManagement() {
   const [courses, setCourses]                   = useState<CourseRow[]>([]);
   const [loading, setLoading]                   = useState(true);
   const [showArchived, setShowArchived]         = useState(false);
+  const [yearFilter, setYearFilter]             = useState<string>("all");
   const [selectedId, setSelectedId]             = useState<number | null>(null);
   const [showForm, setShowForm]                 = useState(false);
   const [editingCourse, setEditingCourse]       = useState<CourseRow | null>(null);
@@ -701,6 +718,16 @@ export default function CourseManagement() {
     }
   }
 
+  // Collect distinct curriculum years from loaded courses for the filter
+  const availableYears = Array.from(
+    new Set(courses.map(c => c.curriculumYear).filter(Boolean) as string[])
+  ).sort();
+
+  // Apply year filter (only applies if not "all")
+  const filteredCourses = yearFilter === "all"
+    ? courses
+    : courses.filter(c => c.curriculumYear === yearFilter);
+
   // Stats
   const active   = courses.filter(c => !c.archivedAt);
   const archived = courses.filter(c => c.archivedAt);
@@ -729,7 +756,17 @@ export default function CourseManagement() {
         <div className="flex items-center gap-2 mb-2.5">
           <BookOpen className="w-4 h-4 text-secondary shrink-0" />
           <span className="text-xs font-bold text-secondary uppercase tracking-wide">Courses</span>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+            {availableYears.length > 0 && (
+              <select
+                value={yearFilter}
+                onChange={e => { setYearFilter(e.target.value); setSelectedId(null); }}
+                className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-secondary h-7 focus:outline-none focus:border-primary"
+              >
+                <option value="all">All Years</option>
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            )}
             <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
               <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="w-3 h-3" />
               Show archived
@@ -750,7 +787,7 @@ export default function CourseManagement() {
           </div>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-            {courses.map(c => {
+            {filteredCourses.map(c => {
               const sectionCount = c.levels.reduce((s, l) => s + l.sections.length, 0);
               const isSelected = selectedId === c.id;
               return (
@@ -794,9 +831,14 @@ export default function CourseManagement() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">{selectedCourse.description}</p>
-                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                      {selectedCourse.ageGroup && <span>👦 {selectedCourse.ageGroup}</span>}
-                      {selectedCourse.schedule  && <span>🕐 {selectedCourse.schedule}</span>}
+                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                      {selectedCourse.ageGroup       && <span>👦 {selectedCourse.ageGroup}</span>}
+                      {selectedCourse.schedule       && <span>🕐 {selectedCourse.schedule}</span>}
+                      {selectedCourse.curriculumYear && (
+                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                          📅 {selectedCourse.curriculumYear}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
