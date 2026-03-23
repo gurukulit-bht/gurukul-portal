@@ -45,11 +45,6 @@ type FormData = {
 
 const ICONS = ["📚", "🕉️", "🌿", "☀️", "📝", "🎵", "🏛️", "🌺"];
 
-const PAYMENT_COLORS: Record<string, string> = {
-  Paid: "bg-green-100 text-green-700", Pending: "bg-yellow-100 text-yellow-700",
-  Overdue: "bg-red-100 text-red-700",
-};
-
 // ─── Section Chip ─────────────────────────────────────────────────────────────
 
 function SectionChip({
@@ -407,7 +402,7 @@ function LevelAccordion({
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
-                          {["Code", "Name", "Parent", "Payment", "Section"].map(h => (
+                          {["Code", "Name", "Parent", "Section"].map(h => (
                             <th key={h} className="px-3 py-2 text-left font-semibold text-muted-foreground">{h}</th>
                           ))}
                         </tr>
@@ -418,13 +413,6 @@ function LevelAccordion({
                             <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{s.studentCode}</td>
                             <td className="px-3 py-2 font-semibold text-secondary">{s.studentName}</td>
                             <td className="px-3 py-2 text-muted-foreground">{s.parentName}</td>
-                            <td className="px-3 py-2">
-                              {s.paymentStatus && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${PAYMENT_COLORS[s.paymentStatus] ?? "bg-gray-100 text-gray-600"}`}>
-                                  {s.paymentStatus}
-                                </span>
-                              )}
-                            </td>
                             <td className="px-3 py-2">
                               {isAdmin ? (
                                 <select
