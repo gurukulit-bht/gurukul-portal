@@ -736,59 +736,63 @@ export default function CourseManagement() {
         ))}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left: Course list */}
-        <div className="lg:w-72 shrink-0 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-secondary">Courses</h2>
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="w-3 h-3" />
-                Archived
-              </label>
-              {isAdmin && (
-                <Button size="sm" className="h-7 text-xs px-2" onClick={() => { setEditingCourse(null); setShowForm(true); }}>
-                  <Plus className="w-3 h-3 mr-1" /> New
-                </Button>
-              )}
-            </div>
+      {/* Horizontal course tab bar */}
+      <div className="bg-white rounded-xl border border-border shadow-sm p-3">
+        <div className="flex items-center gap-2 mb-2.5">
+          <BookOpen className="w-4 h-4 text-secondary shrink-0" />
+          <span className="text-xs font-bold text-secondary uppercase tracking-wide">Courses</span>
+          <div className="ml-auto flex items-center gap-2">
+            <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="w-3 h-3" />
+              Show archived
+            </label>
+            {isAdmin && (
+              <Button size="sm" className="h-7 text-xs px-2.5" onClick={() => { setEditingCourse(null); setShowForm(true); }}>
+                <Plus className="w-3 h-3 mr-1" /> New Course
+              </Button>
+            )}
           </div>
+        </div>
 
-          {loading ? (
-            <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
-          ) : courses.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-4 text-center">
-              {isAdmin ? "No courses yet. Create one!" : "No courses assigned."}
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {courses.map(c => (
+        {loading ? (
+          <div className="text-sm text-muted-foreground py-2 text-center">Loading…</div>
+        ) : courses.length === 0 ? (
+          <div className="text-sm text-muted-foreground py-2 text-center">
+            {isAdmin ? "No courses yet. Create one!" : "No courses assigned."}
+          </div>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {courses.map(c => {
+              const sectionCount = c.levels.reduce((s, l) => s + l.sections.length, 0);
+              const isSelected = selectedId === c.id;
+              return (
                 <button
                   key={c.id}
                   onClick={() => setSelectedId(c.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border ${
-                    selectedId === c.id
-                      ? "bg-primary/10 border-primary/30 text-primary"
-                      : "bg-white border-border hover:bg-gray-50 text-secondary"
+                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl whitespace-nowrap transition-all border shrink-0 ${
+                    isSelected
+                      ? "bg-primary text-white border-primary shadow-md"
+                      : "bg-gray-50 border-border text-secondary hover:bg-primary/5 hover:border-primary/30"
                   } ${c.archivedAt ? "opacity-60" : ""}`}
                 >
-                  <span className="text-xl">{c.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.levels.length} levels · {c.levels.reduce((s, l) => s + l.sections.length, 0)} sections</p>
+                  <span className="text-lg leading-none">{c.icon}</span>
+                  <div className="text-left">
+                    <p className={`text-sm font-semibold leading-tight ${isSelected ? "text-white" : "text-secondary"}`}>{c.name}</p>
+                    <p className={`text-[11px] leading-tight mt-0.5 ${isSelected ? "text-white/70" : "text-muted-foreground"}`}>
+                      {c.levels.length}L · {sectionCount}S
+                      {c.archivedAt && " · Archived"}
+                    </p>
                   </div>
-                  {c.archivedAt && (
-                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Archived</span>
-                  )}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-        {/* Right: Course detail */}
-        {selectedCourse ? (
-          <div className="flex-1 min-w-0 space-y-4">
+      {/* Full-width course detail */}
+      {selectedCourse ? (
+        <div className="space-y-4">
             {/* Course header */}
             <div className="bg-white rounded-xl shadow-sm border border-border p-5">
               <div className="flex items-start justify-between gap-3">
@@ -902,15 +906,14 @@ export default function CourseManagement() {
               )}
             </div>
           </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center min-h-[300px]">
-            <div className="text-center">
-              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">Select a course to view details</p>
-            </div>
+      ) : (
+        <div className="flex items-center justify-center min-h-[300px] bg-white rounded-xl border border-dashed border-border">
+          <div className="text-center">
+            <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Select a course above to view details</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Form panel */}
       {showForm && (
