@@ -22,8 +22,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "students", "inventory", "roles", "settings", "registration",
   ],
   // Teachers and Assistants handle classroom operations
-  teacher:   ["courses", "documents", "attendance", "notifications", "registration"],
-  assistant: ["courses", "documents", "attendance", "notifications", "registration"],
+  teacher:   ["courses", "documents", "attendance", "notifications"],
+  assistant: ["courses", "documents", "attendance", "notifications"],
 };
 
 export function canAccess(role: UserRole, permission: Permission): boolean {

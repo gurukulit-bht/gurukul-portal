@@ -44,7 +44,10 @@ type FormData = {
   numLevels: number; curriculumYear: string;
 };
 
-const CURRICULUM_YEARS = ["2024-25", "2025-26", "2026-27", "2027-28", "2028-29"];
+const CURRICULUM_YEARS = Array.from({ length: 24 }, (_, i) => {
+  const start = 2027 + i;
+  return `${start}-${String(start + 1).slice(-2)}`;
+});
 
 const ICONS = ["📚", "🕉️", "🌿", "☀️", "📝", "🎵", "🏛️", "🌺"];
 
@@ -466,7 +469,7 @@ function CourseFormPanel({
     schedule:       editing?.schedule       ?? "Sundays 9 AM–1 PM",
     instructor:     "TBD",
     numLevels:      editing?.levels.length  ?? 7,
-    curriculumYear: editing?.curriculumYear ?? "2026-27",
+    curriculumYear: editing?.curriculumYear ?? "2027-28",
   });
 
   return (
