@@ -44,8 +44,8 @@ export function Navbar() {
             : "bg-background/80 backdrop-blur-sm shadow-sm py-4"
         )}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3 group">
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform ring-2 ring-primary/10">
                 <BookOpen className="w-5 h-5" />
@@ -61,13 +61,13 @@ export function Navbar() {
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-0.5 whitespace-nowrap">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
+                    "px-2.5 py-2 rounded-full text-[12px] xl:text-[13px] 2xl:text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
                     location === link.href
                       ? "text-primary bg-primary/10"
                       : "text-foreground/75"
@@ -79,7 +79,7 @@ export function Navbar() {
               <Link
                 href={REGISTER_HREF}
                 className={cn(
-                  "ml-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm",
+                  "ml-1 px-3 py-2 rounded-full text-[12px] xl:text-[13px] 2xl:text-sm font-semibold transition-all duration-200 shadow-sm whitespace-nowrap",
                   location === REGISTER_HREF
                     ? "bg-primary text-white"
                     : "bg-primary text-white hover:bg-primary/90 hover:shadow-md"
