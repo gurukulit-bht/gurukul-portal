@@ -16,18 +16,19 @@ export type Permission =
   | "registration"
   | "testimonials"
   | "messaging"
-  | "weeklyUpdates";
+  | "weeklyUpdates"
+  | "help";
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // Admin manages courses/teachers/students strategically — classroom operations are for teachers
   admin: [
     "dashboard", "announcements", "calendar", "courseManagement",
     "teachers", "students", "inventory", "roles", "settings", "registration",
-    "testimonials", "messaging",
+    "testimonials", "messaging", "help",
   ],
   // Teachers and Assistants handle classroom operations
-  teacher:   ["courses", "documents", "attendance", "weeklyUpdates"],
-  assistant: ["courses", "documents", "attendance", "weeklyUpdates"],
+  teacher:   ["courses", "documents", "attendance", "weeklyUpdates", "help"],
+  assistant: ["courses", "documents", "attendance", "weeklyUpdates", "help"],
 };
 
 export function canAccess(role: UserRole, permission: Permission): boolean {

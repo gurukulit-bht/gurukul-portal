@@ -5,8 +5,9 @@ import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./r
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
   Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
-  Bell, ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper,
+  Bell, ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle,
 } from "lucide-react";
+import NaradJiBot from "./components/NaradJiBot";
 import { Button } from "@/components/ui/button";
 
 type NavItem = {
@@ -37,6 +38,8 @@ const NAV_ITEMS: NavItem[] = [
   // Admin-only management
   { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
   { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
+  // Help — available to all
+  { label: "Help & Guide",        icon: HelpCircle,      path: "/admin/help",               permission: "help",             section: "help" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -171,6 +174,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+
+      {/* Narad Ji floating chatbot — available on every admin page */}
+      <NaradJiBot />
     </div>
   );
 }

@@ -21,6 +21,7 @@ import RoleManagement from "./pages/RoleManagement";
 import StudentRegistration from "./pages/StudentRegistration";
 import Testimonials from "./pages/Testimonials";
 import MessagingCenter from "./pages/MessagingCenter";
+import Help from "./pages/Help";
 import AccessDenied from "./components/AccessDenied";
 
 function ProtectedRoute({
@@ -113,6 +114,10 @@ function AdminRoutes() {
 
       <Route path="/admin/roles">
         <ProtectedRoute permission="roles"><RoleManagement /></ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/help">
+        <ProtectedRoute permission="help"><Help /></ProtectedRoute>
       </Route>
 
       <Route path="/admin">
