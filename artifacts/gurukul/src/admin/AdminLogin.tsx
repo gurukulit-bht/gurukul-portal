@@ -140,14 +140,14 @@ export default function AdminLogin() {
               {/* Password / PIN */}
               <div className="space-y-2">
                 <Label htmlFor="secret" className="text-secondary font-medium">
-                  Password / PIN
+                  Password
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="secret"
                     type="password"
-                    placeholder="Password or 4-digit PIN"
+                    placeholder="Password"
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
                     value={secret}
                     onChange={e => setSecret(e.target.value)}
