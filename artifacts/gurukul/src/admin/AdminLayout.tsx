@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   function handleLogout() {
     logout();
-    setLocation("/admin/login");
+    window.location.href = "/";
   }
 
   const allowedItems = NAV_ITEMS.filter(item => user && canAccess(user.role, item.permission));
