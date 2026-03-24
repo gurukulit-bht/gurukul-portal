@@ -47,6 +47,7 @@ export default function UserManagement() {
   const [showPin,    setShowPin]    = useState(false);
   const [resetting,  setResetting]  = useState<number | null>(null);
   const [deleting,   setDeleting]   = useState<number | null>(null);
+  const [showPerms,  setShowPerms]  = useState(false);
 
   // Staff auto-complete
   const [staffList,       setStaffList]       = useState<TeacherOption[]>([]);
@@ -423,51 +424,84 @@ export default function UserManagement() {
         )}
       </div>
 
-      {/* ── Role permissions table ─────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-border p-5">
-        <h3 className="text-sm font-semibold text-secondary mb-4 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4" /> Role Permissions Overview
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 pr-4 font-semibold text-muted-foreground">Module</th>
-                <th className="text-center px-3 py-2 font-semibold text-red-700">Admin</th>
-                <th className="text-center px-3 py-2 font-semibold text-blue-700">Teacher</th>
-                <th className="text-center px-3 py-2 font-semibold text-purple-700">Assistant</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {[
-                ["Dashboard",           true,  false, false],
-                ["Announcements",       true,  false, false],
-                ["Calendar",            true,  false, false],
-                ["Courses & Classes",   true,  true,  true ],
-                ["Staff Management",    true,  false, false],
-                ["Students & Payments", true,  false, false],
-                ["Inventory",           true,  false, false],
-                ["Course Documents",    true,  true,  true ],
-                ["Attendance",          true,  true,  true ],
-                ["Weekly Updates",      true,  true,  true ],
-                ["User Management",     true,  false, false],
-                ["Settings",            true,  false, false],
-              ].map(([mod, admin, teacher, asst]) => (
-                <tr key={String(mod)} className="hover:bg-gray-50">
-                  <td className="py-2.5 pr-4 font-medium text-secondary">{mod}</td>
-                  {[admin, teacher, asst].map((v, i) => (
-                    <td key={i} className="text-center px-3 py-2.5">
-                      {v
-                        ? <span className="text-green-600 font-bold">✓</span>
-                        : <span className="text-gray-300">–</span>}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* ── Role permissions link ─────────────────────────────────────── */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowPerms(true)}
+          className="inline-flex items-center gap-1.5 text-sm text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          View Role Permissions Overview
+        </button>
       </div>
+
+      {/* ── Permissions modal ──────────────────────────────────────────── */}
+      {showPerms && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowPerms(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-border w-full max-w-lg overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h3 className="text-sm font-semibold text-secondary flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                Role Permissions Overview
+              </h3>
+              <button
+                onClick={() => setShowPerms(false)}
+                className="text-muted-foreground hover:text-secondary rounded-lg p-1 hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-x-auto px-6 py-4">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 pr-4 font-semibold text-muted-foreground">Module</th>
+                    <th className="text-center px-3 py-2 font-semibold text-red-700">Admin</th>
+                    <th className="text-center px-3 py-2 font-semibold text-blue-700">Teacher</th>
+                    <th className="text-center px-3 py-2 font-semibold text-purple-700">Assistant</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    ["Dashboard",           true,  false, false],
+                    ["Announcements",       true,  false, false],
+                    ["Calendar",            true,  false, false],
+                    ["Courses & Classes",   true,  true,  true ],
+                    ["Staff Management",    true,  false, false],
+                    ["Students & Payments", true,  false, false],
+                    ["Inventory",           true,  false, false],
+                    ["Course Documents",    true,  true,  true ],
+                    ["Attendance",          true,  true,  true ],
+                    ["Weekly Updates",      true,  true,  true ],
+                    ["User Management",     true,  false, false],
+                    ["Settings",            true,  false, false],
+                  ].map(([mod, admin, teacher, asst]) => (
+                    <tr key={String(mod)} className="hover:bg-gray-50">
+                      <td className="py-2.5 pr-4 font-medium text-secondary">{mod}</td>
+                      {[admin, teacher, asst].map((v, i) => (
+                        <td key={i} className="text-center px-3 py-2.5">
+                          {v
+                            ? <span className="text-green-600 font-bold">✓</span>
+                            : <span className="text-gray-300">–</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-3 border-t border-border flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowPerms(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
