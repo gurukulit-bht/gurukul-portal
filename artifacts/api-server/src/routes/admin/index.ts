@@ -13,6 +13,7 @@ import settingsRouter from "./settings";
 import weeklyUpdatesRouter from "./weekly-updates";
 import portalUsersRouter from "./portal-users";
 import teacherNotesRouter from "./teacher-notes";
+import backfillRouter from "./backfill";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use("/settings", settingsRouter);
 router.use("/weekly-updates", weeklyUpdatesRouter);
 router.use("/portal-users", portalUsersRouter);
 router.use("/teacher-notes", teacherNotesRouter);
+router.use("/backfill", backfillRouter);
 
 export default router;
