@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { StudentRegistrationForm } from "@/components/StudentRegistrationForm";
 import {
-  CheckCircle2, BookOpen, Phone, Mail, MapPin,
+  CheckCircle2, BookOpen,
   ShieldCheck, RefreshCw, ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -228,25 +228,6 @@ export default function Register() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Contact info bar */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  { icon: MapPin, label: "Location", value: "3671 Hyatts Rd, Powell, OH 43065" },
-                  { icon: Phone,  label: "Phone",    value: "(740) 369-0717" },
-                  { icon: Mail,   label: "Email",    value: "gurukul@bhtohio.org" },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="bg-white border border-border rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                      <Icon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</div>
-                      <div className="text-sm font-medium text-secondary mt-0.5">{value}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               <CaptchaGate onVerified={() => setCaptchaVerified(true)} />
 
               <p className="text-xs text-center text-muted-foreground pt-2">
@@ -264,25 +245,6 @@ export default function Register() {
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
-              {/* Contact info bar */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  { icon: MapPin, label: "Location", value: "3671 Hyatts Rd, Powell, OH 43065" },
-                  { icon: Phone,  label: "Phone",    value: "(740) 369-0717" },
-                  { icon: Mail,   label: "Email",    value: "gurukul@bhtohio.org" },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="bg-white border border-border rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                      <Icon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</div>
-                      <div className="text-sm font-medium text-secondary mt-0.5">{value}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {/* Verified badge */}
               <div className="flex items-center justify-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
