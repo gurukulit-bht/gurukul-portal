@@ -446,6 +446,207 @@ const COURSES: Course[] = [
       },
     ],
   },
+  {
+    id: "ganesha-fun-wisdom",
+    title: "Ganesha’s Fun Wisdom",
+    emoji: "🐘",
+    gradient: "from-amber-500 via-yellow-400 to-orange-300",
+    cardBg: "bg-gradient-to-br from-amber-50 to-orange-50",
+    accent: "bg-amber-500",
+    textAccent: "text-amber-600",
+    description: "Learn, laugh, and grow with Ganesha! 🐭 Build smart thinking, patience, kindness, and good habits through playful stories and mini quizzes.",
+    badge: "Ganesha Genius",
+    badgeEmoji: "🐘",
+    character: "🐭",
+    chapters: [
+      {
+        id: "who-is-ganesha",
+        title: "Who is Ganesha? 🐘",
+        emoji: "🐘",
+        value: "Smart Thinking",
+        story: `Lord Ganesha is the friendly elephant-headed God who is loved by children everywhere. He has a big heart, a calm mind, and a sweet smile.\n\nHis little mouse friend helps him travel anywhere. Ganesha is called the remover of obstacles, which means he helps us start new things with confidence.\n\nKids remember Ganesha because he is playful, wise, and always ready to bless good beginnings. When you pray to Ganesha before learning, you are asking for smart thoughts and a happy heart.`,
+        example: "Before starting homework or a new game, take one calm breath like Ganesha and begin with confidence! 🤔",
+        takeaway: "Ganesha teaches us to stay calm, think smart, and start with a smile! 🌟",
+        quiz: [
+          {
+            question: "What kind of head does Ganesha have? 🐘",
+            options: ["Lion 🦁", "Elephant 🐘", "Monkey 🐒", "Horse 🐴"],
+            correct: 1,
+          },
+          {
+            question: "Who is Ganesha's little friend? 🐭",
+            options: ["Mouse 🐭", "Cat 🐱", "Dog 🐶", "Crow 🐦"],
+            correct: 0,
+          },
+          {
+            question: "What does Ganesha help us do? 🚧",
+            options: ["Create obstacles", "Remove obstacles", "Forget homework", "Sleep all day"],
+            correct: 1,
+          },
+          {
+            question: "How should we start a new task? 😊",
+            options: ["With a frown 😠", "With a calm smile 😊", "By giving up 😴", "By rushing fast 🏃"],
+            correct: 1,
+          },
+        ],
+      },
+      {
+        id: "think-before-you-act",
+        title: "Think Before You Act 🧠",
+        emoji: "🧠",
+        value: "Smart Choices",
+        story: `One day, young Ganesha was asked to guard the door. He did not rush. He looked, listened, and thought before acting.\n\nThat is his superpower! Ganesha teaches us that smart people pause first. They ask: "Is this a good choice? Will it help someone? Is it safe?"\n\nWhen you think first, you make fewer mistakes. You also become more trusted by parents and teachers. That is why thoughtful children shine bright!`,
+        example: "If a toy breaks, think first before blaming someone. Smart thinking helps you choose the best words and actions. 🤔",
+        takeaway: "Pause, think, and then act. Smart choices make happy days! 🌈",
+        quiz: [
+          {
+            question: "What should you do before acting? 🤔",
+            options: ["Think first", "Close your eyes and guess", "Run away", "Shout loudly"],
+            correct: 0,
+          },
+          {
+            question: "Why is thinking first helpful? 🧠",
+            options: ["It creates more mistakes", "It helps make good choices", "It makes homework disappear", "It makes you sleepy"],
+            correct: 1,
+          },
+          {
+            question: "What question can smart kids ask? ❓",
+            options: ["Will this help?", "Can I forget?", "Should I hide?", "Do I need to shout?"],
+            correct: 0,
+          },
+          {
+            question: "Ganesha teaches us to be… 🌟",
+            options: ["Rushed", "Thoughtful", "Careless", "Lazy"],
+            correct: 1,
+          },
+        ],
+      },
+      {
+        id: "mahabharata-writing",
+        title: "The Story of Mahabharata Writing ✍️",
+        emoji: "✍️",
+        value: "Focus & Teamwork",
+        story: `The great sage Vyasa wanted someone special to write the Mahabharata. Ganesha agreed, but he had one condition: Vyasa must speak without stopping.\n\nGanesha wrote with amazing focus! When his pen broke, he did not get upset. He calmly broke one of his tusks and continued writing. That is incredible patience.\n\nThis story teaches us to keep going, stay focused, and complete important work with dedication. Ganesha shows us that learning can be both serious and joyful.`,
+        example: "When you are writing a school answer, keep going carefully like Ganesha instead of stopping at the first difficulty. ✍️",
+        takeaway: "Focus, patience, and dedication help you finish big tasks! 🎯",
+        quiz: [
+          {
+            question: "Who asked Ganesha to write the Mahabharata? 📖",
+            options: ["Vyasa", "Krishna", "Arjuna", "Rama"],
+            correct: 0,
+          },
+          {
+            question: "What did Ganesha do when his pen broke? 🖊️",
+            options: ["Stopped forever", "Got angry", "Used his tusk", "Went to sleep"],
+            correct: 2,
+          },
+          {
+            question: "What lesson do we learn? 🌟",
+            options: ["Give up quickly", "Stay focused and patient", "Never write", "Run away from work"],
+            correct: 1,
+          },
+          {
+            question: "Writing with dedication means… ✍️",
+            options: ["Being careless", "Finishing with focus", "Ignoring the page", "Laughing only"],
+            correct: 1,
+          },
+        ],
+      },
+      {
+        id: "removing-obstacles",
+        title: "Removing Obstacles 🚧",
+        emoji: "🚧",
+        value: "Bravery & Hope",
+        story: `Ganesha is called Vighnaharta, the remover of obstacles. That means he helps clear the path when things feel hard.\n\nSometimes a child feels stuck: a puzzle is too tricky, a new school day feels scary, or a mistake feels big. Ganesha teaches us to breathe, ask for help, and try again.\n\nObstacles are not the end of the road. They are just bumps on the path. With courage, prayer, and effort, we can keep moving forward.`,
+        example: "If your pencil breaks during class, take a deep breath, ask for another, and keep learning. That is obstacle-removing power! 🧡",
+        takeaway: "Bumps on the road do not stop brave kids. Keep going! 🚀",
+        quiz: [
+          {
+            question: "What does Vighnaharta mean? 🚧",
+            options: ["Creator of obstacles", "Remover of obstacles", "King of mountains", "Friend of rain"],
+            correct: 1,
+          },
+          {
+            question: "What should you do when something is hard? 💪",
+            options: ["Give up immediately", "Breathe and try again", "Cry forever", "Hide the problem"],
+            correct: 1,
+          },
+          {
+            question: "An obstacle is… 🚧",
+            options: ["A tiny bump on the path", "The end of life", "A happy song", "A kind of fruit"],
+            correct: 0,
+          },
+          {
+            question: "Ganesha helps us feel… 🌈",
+            options: ["Hopeless", "Brave", "Lazy", "Confused forever"],
+            correct: 1,
+          },
+        ],
+      },
+      {
+        id: "focus-patience",
+        title: "Focus & Patience 🎯",
+        emoji: "🎯",
+        value: "Calm Effort",
+        story: `Ganesha loves steady effort. He does not hurry. He listens carefully, moves kindly, and finishes what he starts.\n\nPatience means waiting with a calm heart. Focus means paying attention to one thing at a time. Together, they make a superpower!\n\nWhen kids practice focus and patience, reading becomes easier, drawing becomes prettier, and learning becomes fun. Great habits grow little by little.`,
+        example: "If you are building blocks, place one block at a time. Calm and steady is the best way! 🧱",
+        takeaway: "Slow and steady wins the learning race! 🐢✨",
+        quiz: [
+          {
+            question: "What does patience mean? 😊",
+            options: ["Waiting calmly", "Shouting faster", "Breaking things", "Sleeping all day"],
+            correct: 0,
+          },
+          {
+            question: "Focus means… 🎯",
+            options: ["Doing many things at once", "Paying attention to one thing", "Ignoring work", "Running in circles"],
+            correct: 1,
+          },
+          {
+            question: "What is the best way to build blocks? 🧱",
+            options: ["One at a time", "Throw them", "Never start", "Hide them"],
+            correct: 0,
+          },
+          {
+            question: "Ganesha teaches us to be… 🐘",
+            options: ["Rushed", "Steady and calm", "Angry", "Careless"],
+            correct: 1,
+          },
+        ],
+      },
+      {
+        id: "respect-kindness",
+        title: "Respect & Kindness 😊",
+        emoji: "😊",
+        value: "Good Habits",
+        story: `Ganesha is gentle and loving. He respects his parents, listens carefully, and treats everyone with kindness.\n\nRespect means using good words, helping others, and following loving guidance. Kindness means making people feel safe and happy.\n\nWhen children show respect and kindness, their homes become peaceful and their hearts become bright. That is the secret of happy living!`,
+        example: "Say thank you, help clean up, and listen the first time your parents speak. Those are Ganesha-style habits! 💛",
+        takeaway: "Respect makes hearts soft. Kindness makes the world shine! ✨",
+        quiz: [
+          {
+            question: "What should kids use with parents and teachers? 👂",
+            options: ["Respectful words", "Loud noise", "Ignoring", "Arguing"],
+            correct: 0,
+          },
+          {
+            question: "Kindness means… 💛",
+            options: ["Making others feel happy", "Taking things", "Saying mean words", "Leaving messes"],
+            correct: 0,
+          },
+          {
+            question: "Ganesha is known for being… 🐘",
+            options: ["Rude", "Gentle and loving", "Lazy", "Mean"],
+            correct: 1,
+          },
+          {
+            question: "A respectful child… 🌟",
+            options: ["Listens and helps", "Always shouts", "Never thanks anyone", "Breaks things"],
+            correct: 0,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // ─── Progress helpers ─────────────────────────────────────────────────────────
