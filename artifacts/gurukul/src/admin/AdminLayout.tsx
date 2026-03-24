@@ -33,7 +33,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",            permission: "courses",          section: "teacher" },
   { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
   { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
-  { label: "Parent Notifications",icon: Bell,            path: "/admin/notifications",      permission: "notifications",    section: "teacher" },
   { label: "Weekly Updates",      icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
   // Admin-only management
   { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },

@@ -12,6 +12,13 @@ import { eq, desc, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+function buildAudience(courseName: string, levelName: string, sectionName: string): string {
+  if (!courseName) return "All Students";
+  if (!levelName)  return `All ${courseName} Students`;
+  if (!sectionName) return `${courseName} – ${levelName}`;
+  return `${courseName} – ${levelName} – ${sectionName}`;
+}
+
 function mapUpdate(u: typeof weeklyUpdatesTable.$inferSelect) {
   return {
     id:             u.id,
@@ -21,6 +28,7 @@ function mapUpdate(u: typeof weeklyUpdatesTable.$inferSelect) {
     levelName:      u.levelName,
     sectionId:      u.sectionId,
     sectionName:    u.sectionName,
+    audience:       buildAudience(u.courseName, u.levelName, u.sectionName),
     weekStart:      u.weekStart,
     weekEnd:        u.weekEnd,
     title:          u.title,
@@ -30,6 +38,7 @@ function mapUpdate(u: typeof weeklyUpdatesTable.$inferSelect) {
     upcomingPlan:   u.upcomingPlan ?? "",
     reminders:      u.reminders ?? "",
     attachmentLink: u.attachmentLink ?? "",
+    priority:       u.priority ?? "Normal",
     status:         u.status,
     teacherName:    u.teacherName,
     createdBy:      u.createdBy,

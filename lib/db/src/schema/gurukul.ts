@@ -449,6 +449,7 @@ export const weeklyUpdatesTable = pgTable("weekly_updates", {
   upcomingPlan:   text("upcoming_plan"),
   reminders:      text("reminders"),
   attachmentLink: text("attachment_link"),
+  priority:       notificationPriorityEnum("priority").notNull().default("Normal"),
   status:         weeklyUpdateStatusEnum("status").notNull().default("Draft"),
   teacherName:    text("teacher_name").notNull(),
   createdBy:      text("created_by").notNull(),

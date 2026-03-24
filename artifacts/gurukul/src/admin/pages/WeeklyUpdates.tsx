@@ -10,7 +10,8 @@ import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Status = "Draft" | "Published";
+type Status   = "Draft" | "Published";
+type Priority = "High" | "Normal" | "Low";
 
 type Update = {
   id: number;
@@ -29,6 +30,7 @@ type Update = {
   upcomingPlan: string;
   reminders: string;
   attachmentLink: string;
+  priority: Priority;
   status: Status;
   teacherName: string;
   createdBy: string;
@@ -53,6 +55,7 @@ const BLANK: Omit<Update, "id" | "publishedAt" | "createdAt"> = {
   weekStart: "", weekEnd: "",
   title: "", content: "",
   topicsCovered: "", homework: "", upcomingPlan: "", reminders: "", attachmentLink: "",
+  priority: "Normal",
   status: "Draft", teacherName: "", createdBy: "",
 };
 
@@ -68,6 +71,18 @@ function StatusBadge({ status }: { status: Status }) {
   return status === "Published"
     ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold"><Eye className="w-3 h-3" /> Published</span>
     : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold"><EyeOff className="w-3 h-3" /> Draft</span>;
+}
+
+function PriorityBadge({ priority }: { priority: Priority }) {
+  const cls =
+    priority === "High"   ? "bg-red-100 text-red-700" :
+    priority === "Low"    ? "bg-gray-100 text-gray-500" :
+                            "bg-blue-100 text-blue-700";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>
+      {priority}
+    </span>
+  );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -150,6 +165,7 @@ export default function WeeklyUpdates() {
       topicsCovered: u.topicsCovered, homework: u.homework,
       upcomingPlan: u.upcomingPlan, reminders: u.reminders,
       attachmentLink: u.attachmentLink,
+      priority: u.priority ?? "Normal",
       status: u.status, teacherName: u.teacherName, createdBy: u.createdBy,
     });
     // Populate cascades
@@ -285,8 +301,8 @@ export default function WeeklyUpdates() {
           </div>
         </div>
 
-        {/* Row: Week dates */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Row: Week dates + Priority */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <label className="label">Week Start *</label>
             <input type="date" className="input" value={form.weekStart} onChange={(e) => setField("weekStart", e.target.value)} />
@@ -294,6 +310,14 @@ export default function WeeklyUpdates() {
           <div>
             <label className="label">Week End *</label>
             <input type="date" className="input" value={form.weekEnd} onChange={(e) => setField("weekEnd", e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Priority</label>
+            <select className="input" value={form.priority} onChange={(e) => setField("priority", e.target.value as Priority)}>
+              <option value="High">🔴 High</option>
+              <option value="Normal">🔵 Normal</option>
+              <option value="Low">⚪ Low</option>
+            </select>
           </div>
         </div>
 
@@ -450,6 +474,7 @@ export default function WeeklyUpdates() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <StatusBadge status={u.status} />
+                      <PriorityBadge priority={u.priority ?? "Normal"} />
                       <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">{u.courseName}</span>
                       {u.levelName && <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">{u.levelName}</span>}
                       {u.sectionName && <span className="text-xs text-muted-foreground bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{u.sectionName}</span>}

@@ -15,23 +15,34 @@ router.get("/", async (req, res) => {
       .orderBy(desc(weeklyUpdatesTable.weekStart));
 
     res.json(
-      rows.map((u) => ({
-        id:             u.id,
-        courseName:     u.courseName,
-        levelName:      u.levelName,
-        sectionName:    u.sectionName,
-        weekStart:      u.weekStart,
-        weekEnd:        u.weekEnd,
-        title:          u.title,
-        content:        u.content,
-        topicsCovered:  u.topicsCovered ?? "",
-        homework:       u.homework ?? "",
-        upcomingPlan:   u.upcomingPlan ?? "",
-        reminders:      u.reminders ?? "",
-        attachmentLink: u.attachmentLink ?? "",
-        teacherName:    u.teacherName,
-        publishedAt:    u.publishedAt ? u.publishedAt.toISOString() : null,
-      }))
+      rows.map((u) => {
+        const courseName   = u.courseName  ?? "";
+        const levelName    = u.levelName   ?? "";
+        const sectionName  = u.sectionName ?? "";
+        let audience = "All Students";
+        if (courseName)  audience = `All ${courseName} Students`;
+        if (levelName)   audience = `${courseName} – ${levelName}`;
+        if (sectionName) audience = `${courseName} – ${levelName} – ${sectionName}`;
+        return {
+          id:             u.id,
+          courseName,
+          levelName,
+          sectionName,
+          audience,
+          weekStart:      u.weekStart,
+          weekEnd:        u.weekEnd,
+          title:          u.title,
+          content:        u.content,
+          topicsCovered:  u.topicsCovered ?? "",
+          homework:       u.homework ?? "",
+          upcomingPlan:   u.upcomingPlan ?? "",
+          reminders:      u.reminders ?? "",
+          attachmentLink: u.attachmentLink ?? "",
+          priority:       u.priority ?? "Normal",
+          teacherName:    u.teacherName,
+          publishedAt:    u.publishedAt ? u.publishedAt.toISOString() : null,
+        };
+      })
     );
   } catch (err) {
     req.log.error({ err }, "Failed to fetch public weekly updates");

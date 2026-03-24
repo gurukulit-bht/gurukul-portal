@@ -108,6 +108,7 @@ type WeeklyUpdate = {
   courseName: string;
   levelName: string;
   sectionName: string;
+  audience: string;
   weekStart: string;
   weekEnd: string;
   title: string;
@@ -117,6 +118,7 @@ type WeeklyUpdate = {
   upcomingPlan: string;
   reminders: string;
   attachmentLink: string;
+  priority: "High" | "Normal" | "Low";
   teacherName: string;
 };
 
@@ -344,6 +346,9 @@ function WeeklyUpdatesSection() {
                                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${grad}`}>{u.courseName}</span>
                                   {u.levelName   && <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{u.levelName}</span>}
                                   {u.sectionName && <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{u.sectionName}</span>}
+                                  {u.priority === "High" && (
+                                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">🔴 High Priority</span>
+                                  )}
                                 </div>
                                 <h3 className="font-bold text-secondary text-base leading-snug mb-1">{u.title}</h3>
                                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
