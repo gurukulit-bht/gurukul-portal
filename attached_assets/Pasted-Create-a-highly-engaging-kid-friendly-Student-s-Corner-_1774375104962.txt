@@ -1,0 +1,181 @@
+Create a highly engaging, kid-friendly Student’s Corner for the Bhartiya Hindu Temple Gurukul website. This section should be designed like a fun learning playground with structured courses, gamified progression, quizzes, and rewards.
+
+🌈 Overall Experience
+Bright, colorful, cartoon-style UI
+Simple navigation for kids (ages 5–14)
+Gamified learning (levels, badges, progress bars)
+Minimal text, more visuals and icons
+Use emojis, animations, and playful interactions
+🧩 Course Organization
+
+Organize all courses into two main categories:
+
+🏹 Category 1: Core Learning Adventures
+
+These are foundational courses focused on values, stories, and wisdom.
+
+🏹 1. Ram Quest: The Hero’s Journey
+
+Theme: Courage, Dharma, Right vs Wrong
+
+Chapters:
+
+Birth of Ram
+Ram & Sita
+Vanvas
+Hanuman’s Devotion
+Battle with Ravana
+Return to Ayodhya
+
+Badge: 🏹 Ram Hero
+
+🪔 2. Krishna’s Wisdom Quest
+
+Theme: Life lessons, decision-making, focus
+
+Chapters:
+
+What is Geeta?
+Do Your Duty
+Stay Focused
+Control Your Mind
+Good Choices
+Peace & Happiness
+
+Badge: 🪔 Geeta Star
+
+🐘 3. Ganesha’s Fun Wisdom
+
+Theme: Smart thinking, patience, good habits
+
+Chapters:
+
+Who is Ganesha?
+Think Smart
+Writing the Mahabharata
+Removing Obstacles
+Focus & Patience
+Kindness & Respect
+
+Badge: 🐘 Ganesha Genius
+
+🎉 Category 2: Festival Fun Quests
+
+Fun, story-based courses around Indian festivals.
+
+🏹 4. Victory Quest: The Story of Dussehra
+
+Theme: Victory of good over evil
+
+Chapters:
+
+Ram vs Ravana
+The Battle
+Lessons of Courage
+
+Badge: 🏹 Dharma Warrior
+
+🪔 5. Festival of Lights: Diwali Adventure
+
+Theme: Light, joy, sharing
+
+Chapters:
+
+Return of Ram
+Diyas & Celebration
+Lakshmi Puja
+
+Badge: 🪔 Light Bringer
+
+💃 6. Navratri Power Quest
+
+Theme: Strength, devotion, Maa Durga
+
+Chapters:
+
+Story of Durga
+Nine Forms
+Garba & Celebration
+
+Badge: 🌺 Durga Devotee
+
+🎨 7. Color Blast: The Holi Fun Quest
+
+Theme: Joy, devotion, positivity
+
+Chapters:
+
+Prahlad Story
+Holika Dahan
+Festival of Colors
+
+Badge: 🎨 Color Champion
+
+🎁 8. Bond of Love: Rakhi Celebration Quest
+
+Theme: Family, love, protection
+
+Chapters:
+
+Meaning of Rakhi
+Stories of Bond
+Celebrating Together
+
+Badge: 🎁 Bond Guardian
+
+🎮 Course Mechanics (Apply to ALL Courses)
+
+Each course must follow the same structure:
+
+Per Chapter:
+Short, simple story
+Key lesson/value
+Visual/icon
+Quiz (3–5 MCQs)
+Quiz Rules:
+Instant feedback:
+✅ Correct → “Awesome!”
+❌ Incorrect → “Try again!”
+Minimum passing score: 70%
+Unlock next chapter only after passing
+📊 Progress Tracking
+Show:
+Progress bar (e.g., 3/6 completed)
+Locked 🔒 / Completed ✅ chapters
+Track course completion status
+🏆 Rewards & Certificates
+On Course Completion:
+Show celebration screen 🎉
+Award course-specific badge
+Certificate Includes:
+Student Name
+Course Name
+Badge Title
+Temple Name
+Completion Date
+🌟 Mega Achievements (Gamification)
+🎖️ Festival Master → Complete all festival courses
+🏆 Little Dharmic Champion → Complete all courses
+🤖 Optional Assistant
+
+Include chatbot Narad Ji:
+
+Helps kids navigate courses
+Suggests next steps
+Gives fun facts
+🎨 UI Requirements
+Big colorful cards for courses
+Icons:
+🏹 🪔 🐘 🎨 🎁 💃
+Smooth animations (confetti, stars)
+Mobile-friendly design
+Simple buttons like:
+“Start Adventure”
+“Continue Journey”
+🛠️ Technical Requirements
+Use static/mock data for:
+Courses
+Chapters
+Quizzes
+Store progress in local storage (for demo)
+Modular design for future backend integration

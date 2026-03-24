@@ -623,29 +623,380 @@ const COURSES: Course[] = [
         example: "Say thank you, help clean up, and listen the first time your parents speak. Those are Ganesha-style habits! 💛",
         takeaway: "Respect makes hearts soft. Kindness makes the world shine! ✨",
         quiz: [
-          {
-            question: "What should kids use with parents and teachers? 👂",
-            options: ["Respectful words", "Loud noise", "Ignoring", "Arguing"],
-            correct: 0,
-          },
-          {
-            question: "Kindness means… 💛",
-            options: ["Making others feel happy", "Taking things", "Saying mean words", "Leaving messes"],
-            correct: 0,
-          },
-          {
-            question: "Ganesha is known for being… 🐘",
-            options: ["Rude", "Gentle and loving", "Lazy", "Mean"],
-            correct: 1,
-          },
-          {
-            question: "A respectful child… 🌟",
-            options: ["Listens and helps", "Always shouts", "Never thanks anyone", "Breaks things"],
-            correct: 0,
-          },
+          { question: "What should kids use with parents and teachers? 👂", options: ["Respectful words", "Loud noise", "Ignoring", "Arguing"], correct: 0 },
+          { question: "Kindness means… 💛", options: ["Making others feel happy", "Taking things", "Saying mean words", "Leaving messes"], correct: 0 },
+          { question: "Ganesha is known for being… 🐘", options: ["Rude", "Gentle and loving", "Lazy", "Mean"], correct: 1 },
+          { question: "A respectful child… 🌟", options: ["Listens and helps", "Always shouts", "Never thanks anyone", "Breaks things"], correct: 0 },
         ],
       },
     ],
+  },
+
+  // ── FESTIVAL FUN QUESTS ────────────────────────────────────────────────────
+
+  {
+    id: "victory-quest-dussehra",
+    title: "Victory Quest: Dussehra",
+    emoji: "🏹",
+    gradient: "from-red-500 via-orange-500 to-yellow-400",
+    cardBg: "bg-gradient-to-br from-red-50 to-orange-50",
+    accent: "bg-red-500",
+    textAccent: "text-red-600",
+    description: "Join Ram's greatest battle! 🏹 Learn how good always conquers evil, and why we celebrate Dussehra every year with joy!",
+    badge: "Dharma Warrior",
+    badgeEmoji: "🏹",
+    character: "⚔️",
+    chapters: [
+      {
+        id: "ram-vs-ravana",
+        title: "Ram vs Ravana 😈",
+        emoji: "😈",
+        value: "Good vs Evil",
+        story: `Long ago, the demon king Ravana ruled Lanka with ten heads and twenty arms. He was very powerful — but also very arrogant and cruel. He had kidnapped Sita, the beloved wife of the righteous prince Ram.\n\nRam assembled an amazing army of monkeys and bears, led by the mighty Hanuman. They crossed the ocean on a bridge of floating stones, each stone inscribed with Ram's name. 🪨✨\n\nOn the other side stood Lanka — golden, glittering, but filled with darkness. Ravana thought no one could defeat him. He had defeated gods and kings. He was arrogant and believed his power made him invincible.\n\nBut Ram was not just a warrior — he was Dharma itself. He stood for truth, justice, and love. And when goodness fights evil with a pure heart, goodness always wins! 🌟\n\nThe two armies stood on opposite sides of the battlefield. Ram's army had love and purpose. Ravana's army had only fear and greed. The battle was about to begin!`,
+        example: "In school or at home, when you see someone being unfair or unkind, choose to be like Ram — stand up for what's right! 💪",
+        takeaway: "True power comes from goodness, not from strength alone. Dharma always wins! 🏹",
+        quiz: [
+          { question: "Why did Ram fight Ravana? ⚔️", options: ["To become king of Lanka 👑", "To rescue Sita 💛", "To prove his strength 💪", "To win treasure 💰"], correct: 1 },
+          { question: "What was special about the stones in Ram's bridge? 🪨", options: ["They were made of gold 🌟", "They had 'Ram' written on them 🪨", "They were magical gems 💎", "They were very light 🪶"], correct: 1 },
+          { question: "Why was Ravana powerful but still wrong? 😈", options: ["He had no army ⚔️", "He stole and was cruel 😈", "He was too old 👴", "He had no weapons 🗡️"], correct: 1 },
+          { question: "What does Dharma mean? 🌟", options: ["Money and power 💰", "Doing what is right and just 🌟", "Running away from problems 🏃", "Ignoring others 😶"], correct: 1 },
+        ],
+      },
+      {
+        id: "the-great-battle",
+        title: "The Great Battle ⚔️",
+        emoji: "⚔️",
+        value: "Courage & Perseverance",
+        story: `The battle of Lanka was fierce and lasted many days! Heroes on both sides fought with incredible courage. Hanuman burned Lanka with his flaming tail. Lakshman fought bravely. The monkey warriors proved that even the small and humble can be heroes! 🐒🔥\n\nRavana kept regenerating! Every time Ram cut off a head, a new one grew back. It seemed impossible to defeat him.\n\nBut then something wonderful happened. The wise sage Agastya appeared from the sky and taught Ram a secret prayer — the Aditya Hridayam — a hymn to the Sun God who destroys all darkness and evil. ☀️\n\nRam prayed with full faith and concentration. Then he took his most powerful divine arrow — the Brahmastra — and aimed it with perfect focus at Ravana's chest, where the nectar of immortality was hidden in his navel.\n\nWith a sound like thunder, the arrow flew! 💥 It struck true. Ravana fell. The demon king was defeated.\n\nThe sky rained flowers. Gods cheered from the heavens. Sita was finally free! 🌸🎊`,
+        example: "When a problem seems impossible, don't give up! Like Ram, keep trying, stay focused, and use your best effort! 🎯",
+        takeaway: "True courage is facing hard problems without giving up. Faith and focus make the impossible possible! ⚔️",
+        quiz: [
+          { question: "What did sage Agastya teach Ram? 📖", options: ["How to use a sword ⚔️", "The Aditya Hridayam prayer ☀️", "How to fly 🦅", "A magic spell 🪄"], correct: 1 },
+          { question: "Where was Ravana's immortality hidden? ✨", options: ["In his ten heads 😤", "In his navel 🎯", "In his crown 👑", "In his sword ⚔️"], correct: 1 },
+          { question: "Who proved that small heroes can be brave? 🐒", options: ["Ravana 😈", "The monkey warriors 🐒", "Ravana's sons 👹", "The sea 🌊"], correct: 1 },
+          { question: "What happened in the sky after Ravana was defeated? 🌸", options: ["It rained heavily 🌧️", "Flowers rained from the sky 🌸", "Darkness spread 🌑", "Lightning struck ⚡"], correct: 1 },
+        ],
+      },
+      {
+        id: "lessons-of-courage",
+        title: "Lessons of Courage 🌟",
+        emoji: "🌟",
+        value: "Victory & Celebration",
+        story: `After the battle, the world celebrated! And that celebration became the festival we love — DUSSEHRA! 🎉🏹\n\nEvery year during Dussehra, we burn giant effigies of Ravana, Meghnath (his son), and Kumbhkaran (his brother). BOOM! 💥 The fireworks light up the night sky, and everyone cheers!\n\nBut Dussehra is much more than fireworks. It is a reminder of three powerful lessons:\n\n🌟 Lesson 1: Good ALWAYS wins over evil — no matter how long it takes!\n\n💪 Lesson 2: Evil comes in many forms — it can be anger, jealousy, greed, or lies inside us too. Dussehra reminds us to burn away OUR bad habits just like we burn the effigies!\n\n🙏 Lesson 3: When you stand for truth with a pure heart, the whole universe helps you — just like the gods helped Ram!\n\nSo every Dussehra, as you watch Ravana burn, think: "Which bad habit will I conquer today?" That is the REAL victory! ✨`,
+        example: "Your 'Ravana' could be laziness, dishonesty, or anger. Dussehra is the perfect day to decide to defeat it! 💪",
+        takeaway: "Dussehra teaches us that the real battle is inside us — conquer your bad habits and you will always win! 🌟🏹",
+        quiz: [
+          { question: "What do we burn on Dussehra? 🔥", options: ["Old books 📚", "Effigies of Ravana and his family 🔥", "Lamps 🪔", "Paper boats ⛵"], correct: 1 },
+          { question: "What is the REAL lesson of Dussehra? 💪", options: ["To eat sweets 🍬", "To defeat our own bad habits 💪", "To take a holiday 🏖️", "To get gifts 🎁"], correct: 1 },
+          { question: "What helped Ram win — his heart was full of…? 💛", options: ["Anger and revenge 😡", "Truth and love 💛", "Wealth and gold 💰", "Fear of Ravana 😰"], correct: 1 },
+          { question: "What is Dussehra a reminder of? 🌟", options: ["Good always wins over evil 🌟", "A king's birthday 🎂", "A new year 🎆", "A rain festival 🌧️"], correct: 0 },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "diwali-adventure",
+    title: "Festival of Lights: Diwali",
+    emoji: "🪔",
+    gradient: "from-yellow-400 via-amber-500 to-orange-500",
+    cardBg: "bg-gradient-to-br from-yellow-50 to-amber-50",
+    accent: "bg-yellow-500",
+    textAccent: "text-yellow-600",
+    description: "Discover why we light diyas and celebrate Diwali! 🪔 It's the most joyful festival of lights, love, and happiness!",
+    badge: "Light Bringer",
+    badgeEmoji: "🪔",
+    character: "✨",
+    chapters: [
+      {
+        id: "return-of-ram-diwali",
+        title: "Return of Ram 🏰",
+        emoji: "🏰",
+        value: "Gratitude & Joy",
+        story: `After 14 long years in the forest and the great battle with Ravana, Ram, Sita, and Lakshman finally returned home to Ayodhya! 🎉\n\nThey flew in Ravana's magical flying chariot called Pushpaka Vimana — a palace in the sky that could carry thousands of people! ✈️☁️\n\nAs they descended toward Ayodhya, the people could not contain their joy. The whole kingdom had missed their beloved prince for 14 years. Women wept with happiness, children danced in the streets, and even the flowers bloomed brighter that day! 🌸\n\nBut there was a problem — Ram was returning on the night of Amavasya, the darkest night of the month! The moon had disappeared and the roads were pitch black. How would Ram find his way?\n\nThe people of Ayodhya had a beautiful idea: they lit tiny clay oil lamps — diyas — and placed them along every road, on every rooftop, in every window, and before every door. 🪔🪔🪔\n\nSuddenly, the darkness vanished! Ayodhya shone brighter than the stars! And from the sky, Ram looked down and saw his kingdom glowing like a jewel. He knew he was home! ❤️`,
+        example: "When someone you love returns after a long time, how do you welcome them? The people of Ayodhya showed us — with light, love, and joy! 🪔",
+        takeaway: "Light always conquers darkness. Celebrate the return of goodness with joy! 🏰🌟",
+        quiz: [
+          { question: "What was the name of Ram's flying chariot? ✈️", options: ["Garuda Vimana 🦅", "Pushpaka Vimana ✈️", "Surya Vimana ☀️", "Chandra Vimana 🌙"], correct: 1 },
+          { question: "Why was it dark when Ram returned to Ayodhya? 🌑", options: ["There was a storm 🌧️", "It was the night of Amavasya (no moon) 🌑", "The sun had set early ☀️", "They arrived very late 🕛"], correct: 1 },
+          { question: "How did people welcome Ram? 🪔", options: ["With fireworks only 🎆", "With oil lamp diyas 🪔", "With a big feast 🍽️", "With garlands 🌸"], correct: 1 },
+          { question: "After how many years did Ram return? 🔢", options: ["7 years", "10 years", "12 years", "14 years"], correct: 3 },
+        ],
+      },
+      {
+        id: "diyas-and-celebration",
+        title: "Diyas & Celebration 🎆",
+        emoji: "🎆",
+        value: "Light, Joy & Sharing",
+        story: `Diwali is a five-day festival full of fun and love! Let's learn what each day means! 🌟\n\n🌑 Day 1 — Dhanteras: We clean our homes and buy new things. This day honors Goddess Lakshmi and Lord Dhanvantari (the doctor of gods!). Buying gold or silver brings good luck! 💰\n\n🌒 Day 2 — Choti Diwali: We start lighting diyas and cleaning ourselves too! In many stories, Lord Krishna defeated the demon Narakasura on this day, freeing 16,000 people! 🏹\n\n🌕 Day 3 — Diwali Main: The biggest night! 🎉 Homes glow with thousands of diyas, rangoli patterns decorate doorsteps, sweets are shared with everyone, and the sky explodes with colorful fireworks! 🎇✨\n\n🌘 Day 4 — Govardhan Puja: We thank God for protecting us, just like Krishna lifted Govardhan mountain to protect the villagers from a storm! ⛰️\n\n🌑 Day 5 — Bhai Dooj: Brothers and sisters celebrate their bond of love! Sisters pray for their brothers' safety and brothers promise to protect their sisters! 🥰\n\nEvery lamp on Diwali says: "Darkness cannot last. Light will always return!" 🪔`,
+        example: "On Diwali, share sweets with neighbors, help decorate diyas, and make a beautiful rangoli. Sharing is the real celebration! 🎁",
+        takeaway: "Diwali teaches us that light, love, and sharing make life beautiful! Every diya we light spreads happiness! 🎆",
+        quiz: [
+          { question: "How many days does Diwali celebration last? 🕯️", options: ["2 days", "3 days", "5 days", "7 days"], correct: 2 },
+          { question: "What do we celebrate on Dhanteras? 💰", options: ["Lord Shiva's birthday 🙏", "Goddess Lakshmi and cleanliness 💰", "The harvest 🌾", "Ram's wedding 💛"], correct: 1 },
+          { question: "What is Bhai Dooj about? 🥰", options: ["Friends celebrating 🤝", "Brothers and sisters' love 🥰", "Teachers and students 📚", "Parents and children 👨‍👧"], correct: 1 },
+          { question: "What does every lit diya on Diwali say? 🪔", options: ["Stay in darkness 🌑", "Light conquers darkness 🪔", "Only fire is powerful 🔥", "Sweets are important 🍬"], correct: 1 },
+        ],
+      },
+      {
+        id: "lakshmi-puja",
+        title: "Lakshmi Puja 🌸",
+        emoji: "🌸",
+        value: "Gratitude & Prosperity",
+        story: `On the main night of Diwali, we welcome Goddess Lakshmi — the beautiful goddess of wealth, love, and well-being! 🌸✨\n\nLakshmi is not just about money. She brings:\n💰 Dhana Lakshmi — abundance and wealth\n🌾 Dhanya Lakshmi — health and food\n📚 Vidya Lakshmi — knowledge and wisdom\n💪 Veera Lakshmi — courage and strength\n❤️ Santana Lakshmi — love and family\n🏆 Vijaya Lakshmi — victory and success\n🌊 Gaja Lakshmi — power and prosperity\n🙏 Adi Lakshmi — divine grace\n\nThat means TRUE wealth is not just money — it is good health, wisdom, courage, love, and success!\n\nOn Diwali night, families clean every corner of the house (Lakshmi loves clean, bright places!) 🧹, draw beautiful rangoli at the entrance 🎨, light diyas in every room, and perform puja with flowers, sweets, and prayers. 🙏\n\nThen families sit together, share sweets, exchange gifts, and thank God for everything they have. The light inside our hearts — gratitude — is the most beautiful diya of all! 🪔💛`,
+        example: "This Diwali, write a list of 10 things you are grateful for. Gratitude is the best wealth! 📝💛",
+        takeaway: "True wealth is gratitude, love, knowledge, and health. Lakshmi blesses those with pure and grateful hearts! 🌸🪔",
+        quiz: [
+          { question: "Which goddess do we welcome on Diwali night? 🌸", options: ["Saraswati 📚", "Durga 💪", "Lakshmi 🌸", "Parvati 🏔️"], correct: 2 },
+          { question: "Lakshmi brings how many types of wealth? 🔢", options: ["3 types", "5 types", "7 types", "8 types"], correct: 3 },
+          { question: "Why do we clean our homes before Diwali? 🧹", options: ["For exercise 💪", "Because Lakshmi loves clean bright places 🧹", "To find lost things 🔍", "Because it's a rule 📋"], correct: 1 },
+          { question: "What is the most beautiful 'diya' we can light? 💛", options: ["A gold diya 🥇", "An oil diya 🪔", "Gratitude in our hearts 💛", "A candle 🕯️"], correct: 2 },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "navratri-power-quest",
+    title: "Navratri Power Quest",
+    emoji: "💃",
+    gradient: "from-pink-500 via-fuchsia-500 to-purple-600",
+    cardBg: "bg-gradient-to-br from-pink-50 to-purple-50",
+    accent: "bg-pink-500",
+    textAccent: "text-pink-600",
+    description: "Celebrate Maa Durga's power! 💃 9 nights of dance, devotion, and the story of how Goddess Durga defeated the demon Mahishasura!",
+    badge: "Durga Devotee",
+    badgeEmoji: "🌺",
+    character: "🔱",
+    chapters: [
+      {
+        id: "story-of-durga",
+        title: "Story of Durga 🔱",
+        emoji: "🔱",
+        value: "Strength & Courage",
+        story: `Long ago, a powerful buffalo-demon named Mahishasura terrorized the three worlds. He had a powerful boon: no man or god could defeat him! He chased the gods out of heaven and declared himself king of the universe. 😤\n\nThe gods were desperate. They gathered together and prayed with all their love and energy. From their combined divine light, a blazing, golden form began to emerge — GODDESS DURGA! 🌟\n\nDurga was magnificent. She had 8 arms, each holding a different weapon gifted by the gods:\n🌊 Lord Varuna gave her a conch shell\n🔱 Lord Shiva gave her a trident\n💥 Lord Vishnu gave her a spinning disc (Sudarshana Chakra)\n🌙 Chandra gave her a bow and arrows\n⚡ Lord Indra gave her his thunderbolt\n\nRiding a magnificent lion 🦁, Durga went to battle. The demon laughed — a woman? Against him? But Durga did not shake. She fought with divine grace, power, and focus.\n\nAfter 9 days and 9 nights of fierce battle, Durga defeated Mahishasura! The universe celebrated! This 9-day celebration is NAVRATRI! 💃🎊`,
+        example: "Just like Durga never gave up no matter how scary the demon seemed, you should never give up on hard problems! 💪",
+        takeaway: "True strength is calm, focused, and never gives up. Maa Durga shows us that courage has no limits! 🔱",
+        quiz: [
+          { question: "Why couldn't the gods defeat Mahishasura? 😤", options: ["He was invisible 👻", "He had a boon — no man or god could defeat him 😤", "He hid underground 🌍", "He was too fast 💨"], correct: 1 },
+          { question: "How many arms does Goddess Durga have? 🌟", options: ["4 arms", "6 arms", "8 arms", "10 arms"], correct: 2 },
+          { question: "What animal does Durga ride? 🦁", options: ["Elephant 🐘", "Horse 🐴", "Lion 🦁", "Tiger 🐯"], correct: 2 },
+          { question: "How long did Durga's battle with Mahishasura last? ⚔️", options: ["1 day", "3 days and 3 nights", "9 days and 9 nights", "1 month"], correct: 2 },
+        ],
+      },
+      {
+        id: "nine-forms-navratri",
+        title: "Nine Forms of Durga 🌺",
+        emoji: "🌺",
+        value: "Wisdom & Devotion",
+        story: `During the 9 days of Navratri, we honor 9 different forms of Maa Durga — called the Navadurga. Each form has special powers and lessons for us! 🌟\n\n1️⃣ Shailputri — Daughter of the Himalayas 🏔️ — teaches stability and groundedness\n2️⃣ Brahmacharini — The devoted seeker 🙏 — teaches discipline and focus\n3️⃣ Chandraghanta — Bell of the moon 🌙 — teaches courage and bravery\n4️⃣ Kushmanda — The cosmic creator 🌍 — teaches creativity and energy\n5️⃣ Skandamata — Mother of Skanda 👶 — teaches selfless love and care\n6️⃣ Katyayani — The fierce warrior ⚔️ — teaches justice and strength\n7️⃣ Kalaratri — Destroyer of darkness 🌑 — teaches fearlessness\n8️⃣ Mahagauri — Pure and radiant ⚪ — teaches peace and forgiveness\n9️⃣ Siddhidatri — Giver of wisdom 📖 — teaches knowledge and enlightenment\n\nEach form of Durga represents a quality we can develop in ourselves! When we worship Durga, we are also praying to become strong, wise, loving, and brave — just like her! 🌺`,
+        example: "Which form of Durga do you want to be like? Pick one quality — courage, focus, love, or wisdom — and practice it this week! 💪",
+        takeaway: "Goddess Durga has 9 forms, each teaching us a different superpower! Navratri is the time to grow our inner strength! 🌺",
+        quiz: [
+          { question: "How many forms of Durga do we worship during Navratri? 🔢", options: ["3 forms", "6 forms", "9 forms", "12 forms"], correct: 2 },
+          { question: "Shailputri is the daughter of…? 🏔️", options: ["The ocean 🌊", "The Himalayas 🏔️", "The clouds ☁️", "The forest 🌳"], correct: 1 },
+          { question: "Which form of Durga teaches fearlessness? 🌑", options: ["Brahmacharini 🙏", "Kushmanda 🌍", "Kalaratri 🌑", "Mahagauri ⚪"], correct: 2 },
+          { question: "When we worship Durga's 9 forms, we are really praying to become…? 💪", options: ["Rich and famous 💰", "Strong, wise, loving, and brave 💪", "Tall and beautiful 💅", "Lazy and comfortable 😴"], correct: 1 },
+        ],
+      },
+      {
+        id: "garba-celebration",
+        title: "Garba & Celebration 🎶",
+        emoji: "🎶",
+        value: "Joy, Community & Culture",
+        story: `Navratri is the most colorful and joyful festival of dance! Every night for 9 nights, people dress in beautiful traditional clothes and dance the GARBA and DANDIYA RAAS! 💃🕺\n\nGarba is a circular dance where everyone moves together, clapping and spinning, their colorful clothes swirling like flowers! The word "Garba" comes from the Sanskrit "Garbha Deep" — a lamp inside a pot with holes — symbolizing the divine light inside every being! 🪔\n\nDandiya Raas is played with decorated sticks. The rhythmic click-clack of sticks, the swirling colors, and the joyful music create a magical night! The beats represent the battle dance of Durga defeating Mahishasura! ⚔️💃\n\nWhat makes Navratri special is that EVERYONE dances together — old and young, rich and poor. It reminds us that we are all part of one big community, one big family! 👨‍👩‍👧‍👦\n\nThe traditional colors worn each day are also meaningful — red for strength, blue for peace, yellow for happiness, green for growth, orange for courage, white for peace, pink for hope, purple for ambition, and sky blue for joy! 🌈\n\nNavratri teaches us: celebrate life, stay connected to culture, and keep the divine spark dancing inside you! 🌟`,
+        example: "Ask a family member to teach you a simple Garba step this Navratri! Dancing together creates beautiful memories! 💃",
+        takeaway: "Garba celebrates our unity, our culture, and the divine light inside every one of us! Dance with joy! 🎶🌺",
+        quiz: [
+          { question: "What does 'Garba' come from in Sanskrit? 🪔", options: ["A type of food 🍱", "Garbha Deep — a lit lamp in a pot 🪔", "A warrior's dance ⚔️", "A mountain 🏔️"], correct: 1 },
+          { question: "What does Dandiya Raas represent? ⚔️", options: ["A farming dance 🌾", "The battle dance of Durga 💃⚔️", "A rain ceremony 🌧️", "A wedding celebration 💍"], correct: 1 },
+          { question: "What is special about Navratri dancing? 👨‍👩‍👧‍👦", options: ["Only women dance 💃", "Only priests can dance 🙏", "Everyone dances together — old, young, rich, poor 👨‍👩‍👧‍👦", "Only children can dance 👶"], correct: 2 },
+          { question: "The red color worn during Navratri represents…? 💪", options: ["Happiness 😊", "Strength and power 💪", "Peace and calm 😌", "Wealth 💰"], correct: 1 },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "holi-fun-quest",
+    title: "Color Blast: The Holi Fun Quest",
+    emoji: "🎨",
+    gradient: "from-pink-400 via-purple-400 to-blue-500",
+    cardBg: "bg-gradient-to-br from-pink-50 to-blue-50",
+    accent: "bg-pink-500",
+    textAccent: "text-pink-600",
+    description: "Get ready for the most colorful festival! 🎨 Learn the amazing story behind Holi and why we celebrate with colors, joy, and love!",
+    badge: "Color Champion",
+    badgeEmoji: "🎨",
+    character: "🌈",
+    chapters: [
+      {
+        id: "prahlad-story",
+        title: "Prahlad's Story 🙏",
+        emoji: "🙏",
+        value: "Devotion & Faith",
+        story: `The story of Holi begins with a little boy named Prahlad — one of the bravest devotees of Lord Vishnu! 🌟\n\nPrahlad's father was King Hiranyakashipu — a terrible demon king who believed he was the most powerful being in the universe. He had received a special boon: he could not be killed by man or animal, inside or outside, by day or night, on earth or in sky, by any weapon! He commanded everyone to worship HIM — not God!\n\nBut little Prahlad refused! With gentle eyes and a pure heart, the young boy said: "God is everywhere. I can only worship the one true Lord Vishnu!" 🙏\n\nHiranyakashipu was furious. He tried to kill his own son many times:\n🐘 He threw Prahlad in front of elephants — but Prahlad chanted Lord Vishnu's name and was unharmed!\n🐍 He threw Prahlad into a pit of snakes — but they would not hurt him!\n🔥 He poisoned him, pushed him off cliffs, threw him in fires — but Prahlad's devotion protected him every time!\n\nPrahlad never stopped smiling and chanting. His faith was stronger than any demon's power! 🌟\n\nThis story teaches us: when your heart is pure and you believe in what is right, no force can truly harm you!`,
+        example: "Have you ever stood up for what's right even when it was scary? That's Prahlad's courage — and it lives in you too! 💪",
+        takeaway: "True faith and devotion protect us. Never give up on what you believe is right, no matter what! 🙏",
+        quiz: [
+          { question: "Who was Prahlad's father? 😈", options: ["Lord Vishnu 🌟", "King Hiranyakashipu 😈", "Lord Shiva 🔱", "King Dashrath 👑"], correct: 1 },
+          { question: "What did Hiranyakashipu command everyone to do? 😤", options: ["Worship Lord Vishnu 🙏", "Worship HIM instead of God 😤", "Stop all festivals 🚫", "Build bigger temples 🛕"], correct: 1 },
+          { question: "What did Prahlad do when thrown in fires and pits? 🙏", options: ["He cried and begged 😢", "He chanted Lord Vishnu's name and stayed unharmed 🙏", "He fought back ⚔️", "He ran away 🏃"], correct: 1 },
+          { question: "What does Prahlad's story teach us? 🌟", options: ["Be scary and powerful 💪", "Pure faith is stronger than any force 🌟", "Never trust anyone 😤", "Power wins everything 👑"], correct: 1 },
+        ],
+      },
+      {
+        id: "holika-dahan",
+        title: "Holika Dahan 🔥",
+        emoji: "🔥",
+        value: "Truth Always Wins",
+        story: `Hiranyakashipu had a sister named Holika. She had a magical fireproof cloak — a special garment that could protect her from any fire! 🔥\n\nHiranyakashipu had an evil plan. He ordered Holika to sit in a huge bonfire with little Prahlad on her lap! "My fireproof cloak will protect me," said Holika, "and the boy will burn!" 😈\n\nThe bonfire was lit. People watched in horror. Prahlad closed his eyes and chanted Lord Vishnu's name with all his heart: "Narayan... Narayan... Narayan..." 🙏\n\nThen something MIRACULOUS happened! 🌟\n\nThe magical cloak flew off Holika and covered Prahlad instead! Holika, who used her power for evil, burned away. But Prahlad, protected by his pure devotion, walked out of the fire unharmed and smiling!\n\nThe people cheered! Good had defeated evil once again!\n\nThat night became HOLIKA DAHAN — the burning of Holika. Every year, on the night before Holi, we light bonfires to celebrate the victory of truth over evil, of goodness over cruelty! 🔥🌟\n\nThe fire reminds us: burn away your bad habits, your jealousy, your anger — and step out pure and smiling like Prahlad! 🌺`,
+        example: "If someone tries to make you do something wrong, be like Prahlad — say no gently but firmly, and trust in doing what's right! 💪",
+        takeaway: "When you use power to harm others, it comes back to hurt you. Truth and goodness always protect the innocent! 🔥🌟",
+        quiz: [
+          { question: "Who was Holika? 🔥", options: ["Prahlad's mother 💕", "Hiranyakashipu's sister 🔥", "A goddess 🌸", "A demon queen 😈"], correct: 1 },
+          { question: "What was special about Holika's cloak? 🧥", options: ["It was made of gold 🥇", "It was fireproof — fire couldn't burn it 🧥", "It made her invisible 👻", "It was very soft 🌸"], correct: 1 },
+          { question: "What happened to Holika's magic cloak in the fire? 🌟", options: ["It got bigger 📏", "It burned first 🔥", "It flew off and covered Prahlad 🌟", "It disappeared 🌫️"], correct: 2 },
+          { question: "What does Holika Dahan teach us? 🌟", options: ["Fire is dangerous 🔥", "Truth and goodness always win 🌟", "Magic cloaks are useful 🧥", "Demons are powerful 😈"], correct: 1 },
+        ],
+      },
+      {
+        id: "festival-of-colors",
+        title: "Festival of Colors 🌈",
+        emoji: "🌈",
+        value: "Joy, Unity & Positivity",
+        story: `The morning after Holika Dahan, the real magic begins — HOLI! 🎨🌈\n\nEveryone comes outside with packets of colorful powder (called "gulal") and water guns (pichkaris)! Yellow, pink, green, blue, purple — colors fly EVERYWHERE! 🌈💦\n\nHoli is also connected to Lord Krishna's playful love! As a young boy in Vrindavan, Krishna noticed that his beloved Radha had a beautiful fair complexion while he was dark blue (from the blessing/curse of the serpent Kaliya). Young Krishna teased his mother: "Why is Radha so fair and I am dark?" \n\nHis mother smiled and said: "Go! Color her face any color you like!" 💛\n\nSo Krishna ran to Radha and playfully put color on her face, and Radha colored Krishna back, and soon all the friends were playing with colors! That joyful play became the tradition of Holi! 🦚💕\n\nHoli teaches us:\n🌈 All colors are beautiful — just like all people are beautiful!\n💕 Joy is found in play, love, and togetherness!\n🌟 Forgive past differences and start fresh — Holi is a time for new beginnings!\n🙏 Even Lord Krishna celebrated joy — happiness is divine!\n\nSo this Holi, throw colors with love — and remember, the most beautiful color is the kindness in your heart! 💛`,
+        example: "This Holi, give a hug to someone you haven't spoken to in a while. Forgiveness is the best color of all! 🌈💕",
+        takeaway: "Holi celebrates joy, unity, love, and new beginnings. Life is more beautiful when shared with colors and kindness! 🎨",
+        quiz: [
+          { question: "What is 'gulal'? 🎨", options: ["A type of sweet 🍬", "Colorful powder used in Holi 🎨", "A water gun 💦", "A dance 💃"], correct: 1 },
+          { question: "Which young Lord started the tradition of playing with colors? 🦚", options: ["Ram 🏹", "Ganesha 🐘", "Krishna 🦚", "Hanuman 🐒"], correct: 2 },
+          { question: "Why did Krishna put color on Radha's face? 💛", options: ["To scare her 😱", "Because he was angry 😤", "In playful love and fun 💛", "As a punishment 😤"], correct: 2 },
+          { question: "What does Holi remind us to do? 🌈", options: ["Stay indoors 🏠", "Forgive, have joy, and start fresh 🌈", "Be quiet and serious 😶", "Avoid everyone 😤"], correct: 1 },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "rakhi-bond-quest",
+    title: "Bond of Love: Rakhi Quest",
+    emoji: "🎁",
+    gradient: "from-rose-400 via-red-400 to-pink-500",
+    cardBg: "bg-gradient-to-br from-rose-50 to-pink-50",
+    accent: "bg-rose-500",
+    textAccent: "text-rose-600",
+    description: "Celebrate the most beautiful bond of love! 🎁 Discover the stories and meaning behind Raksha Bandhan — the festival of brothers and sisters!",
+    badge: "Bond Guardian",
+    badgeEmoji: "🎁",
+    character: "🪡",
+    chapters: [
+      {
+        id: "meaning-of-rakhi",
+        title: "Meaning of Rakhi 💕",
+        emoji: "💕",
+        value: "Love & Protection",
+        story: `"Raksha" means protection. "Bandhan" means bond. So Raksha Bandhan means "the bond of protection" — and it is one of the most loving festivals in Hindu tradition! 💕\n\nOn this special day, a sister ties a beautiful thread called Rakhi on her brother's wrist. This thread is not just cotton and silk — it is woven with prayers, love, and trust! 🪡\n\nThe sister prays: "May my brother always be protected, healthy, and happy. May he live a long and wonderful life!" 🙏\n\nThe brother promises: "I will always protect my sister, care for her, and stand by her side!" ❤️\n\nThe Rakhi thread is a symbol of this sacred promise. Even kings bowed to its power! History tells us that when Queen Karnawati of Chittor was in danger, she sent a Rakhi to the Mughal Emperor Humayun. He accepted it as his sister's thread and came to protect her kingdom — because the bond of Rakhi was so deeply respected! 🌟\n\nRaksha Bandhan is not just for siblings. It represents any bond of love and protection — between friends, cousins, even between a student and teacher! The thread connects hearts across any distance! 💕`,
+        example: "Does your brother or sister do something kind for you? This Rakhi, tell them: 'Thank you for always being there!' 💕",
+        takeaway: "Rakha Bandhan teaches us that the strongest bonds are not made of gold but of love, trust, and care! 💕🪡",
+        quiz: [
+          { question: "What does 'Raksha Bandhan' mean? 💕", options: ["Festival of lights 🪔", "Bond of protection 💕", "Festival of colors 🎨", "Harvest celebration 🌾"], correct: 1 },
+          { question: "Who ties the Rakhi thread? 🪡", options: ["Parents 👨‍👩", "Brother 👦", "Sister 👧", "Teacher 📚"], correct: 2 },
+          { question: "What does the brother promise on Raksha Bandhan? ❤️", options: ["To buy expensive gifts 🎁", "To protect and care for his sister ❤️", "To win a competition 🏆", "To travel far away ✈️"], correct: 1 },
+          { question: "Emperor Humayun responded to a Rakhi from Queen Karnawati by…? 🌟", options: ["Ignoring it 😤", "Sending gifts 🎁", "Coming to protect her kingdom 🌟", "Starting a war ⚔️"], correct: 2 },
+        ],
+      },
+      {
+        id: "stories-of-bond",
+        title: "Stories of Bond 🌟",
+        emoji: "🌟",
+        value: "Faith, Loyalty & Gratitude",
+        story: `The Rakhi bond appears in many beautiful stories from our tradition! Let's discover some! 🌟\n\n🔱 Krishna & Draupadi: Once, Lord Krishna cut his finger while cutting sugarcane. Draupadi — who was like a sister to him — immediately tore a strip from her beautiful sari and tied it around his wound. Touched by her love, Krishna promised: "Whenever you need me, I will be there!" Years later, when Draupadi was humiliated at the Kauravas' court, Krishna came to her aid — fulfilling his promise! The bond of love repays love! 💕\n\n🌊 Indra & Sachi: In the heavens, when the gods were about to face a terrible demon in battle, Goddess Sachi (Indra's wife) tied a sacred thread on Lord Indra's wrist. With this thread's protection and her prayers, Indra went to battle and was victorious! 🏆\n\n🐚 Yama & Yamuna: Lord Yama (god of death) and his sister Yamuna (the river goddess) have a special bond. Their reunion gave rise to Bhai Dooj — the sister-brother festival after Diwali! 🌊\n\nThese stories show us: the bond of love and care between siblings and close friends is sacred, powerful, and everlasting! In our tradition, this bond is honored and protected forever! 🌟`,
+        example: "Think of one person who always has your back — a sibling, cousin, or friend. Write them a note saying how much their support means to you! 💕",
+        takeaway: "The stories of Rakhi show that love and loyalty create bonds stronger than anything in the universe! 🌟",
+        quiz: [
+          { question: "What did Draupadi do when Krishna cut his finger? 💕", options: ["She cried 😢", "She tore her sari and tied it as a bandage 💕", "She ran away 🏃", "She called a doctor 👨‍⚕️"], correct: 1 },
+          { question: "What did Krishna promise Draupadi when she tied the cloth? 🌟", options: ["He'd buy her gifts 🎁", "He'd be there whenever she needed him 🌟", "He'd never see her again 😤", "He'd fight everyone ⚔️"], correct: 1 },
+          { question: "What is Bhai Dooj related to? 🌊", options: ["Lord Ganesha 🐘", "The bond between Yama and Yamuna 🌊", "Lord Vishnu 🌟", "The Pandavas ⚔️"], correct: 1 },
+          { question: "What do these stories teach about sibling bonds? 💕", options: ["Siblings always fight 😤", "Bonds of love are sacred and powerful 💕", "Siblings grow apart always 😢", "Only money connects people 💰"], correct: 1 },
+        ],
+      },
+      {
+        id: "celebrating-together",
+        title: "Celebrating Together 🎀",
+        emoji: "🎀",
+        value: "Family & Community Love",
+        story: `Raksha Bandhan is one of the most joyful family occasions! Every family celebrates it in their own beautiful way — but the love is always the same! 💕\n\nOn the day of Raksha Bandhan:\n\n🌅 Morning: Sisters wake up early, take a bath, wear new clothes, and prepare the puja thali — a beautiful plate with:\n🪡 The Rakhi thread\n🔴 Roli (red vermilion powder)\n🌾 Akshat (sacred rice grains)\n🪔 A lit diya\n🍬 Sweets (mithai)\n\n🙏 The Ritual: The sister performs aarti (circular prayer with the lamp) for her brother's long life. Then she puts a tikka (red dot) on his forehead, ties the Rakhi on his wrist, feeds him sweets, and prays for his health and happiness! ❤️\n\n🎁 Brother's Gift: The brother gives a gift to his sister — but the most important "gift" is his promise to always protect and care for her!\n\n👨‍👩‍👧‍👦 Family Feast: After the ceremony, the whole family sits together, eats special food, shares memories, and celebrates their love!\n\nNo matter how far apart siblings live — in different cities or different countries — Rakhi is the thread that keeps hearts connected forever! 🪡💕\n\nRemember: You don't need to be related by blood to celebrate this bond. Any close, caring relationship is worth honoring with love! 🌟`,
+        example: "Help your sister (or a close friend) put together a Rakhi puja thali this year. The preparation is part of the celebration! 🎀",
+        takeaway: "Raksha Bandhan reminds us: family bonds are sacred. Celebrate love, make promises, and keep them always! 🎀💕",
+        quiz: [
+          { question: "What is a 'puja thali'? 🪡", options: ["A type of food 🍱", "A plate with Rakhi, sweets, and prayer items 🪡", "A special dance 💃", "A type of diya 🪔"], correct: 1 },
+          { question: "What is the most important 'gift' a brother gives on Raksha Bandhan? 🌟", options: ["Gold jewelry 💍", "His promise to protect and care for his sister 🌟", "Expensive clothes 👗", "Money 💰"], correct: 1 },
+          { question: "Can Raksha Bandhan be celebrated with close friends, not just siblings? 💕", options: ["No, only between blood siblings 😤", "Yes! Any caring bond can be honored 💕", "Only adults can celebrate 👴", "Only girls celebrate it 👧"], correct: 1 },
+          { question: "What keeps sibling hearts connected even across great distances? 🪡", options: ["Phones and messages 📱", "The Rakhi thread and the love it represents 🪡", "Money transfers 💰", "Annual trips ✈️"], correct: 1 },
+        ],
+      },
+    ],
+  },
+];
+
+// ─── Category definitions ─────────────────────────────────────────────────────
+
+type Category = {
+  id: string;
+  title: string;
+  emoji: string;
+  description: string;
+  gradient: string;
+  courseIds: string[];
+};
+
+const CATEGORIES: Category[] = [
+  {
+    id: "core-adventures",
+    title: "Core Learning Adventures",
+    emoji: "🏹",
+    description: "Foundational courses on values, stories & timeless wisdom",
+    gradient: "from-orange-400 to-amber-500",
+    courseIds: ["know-your-ram", "geeta-gyan", "ganesha-fun-wisdom"],
+  },
+  {
+    id: "festival-quests",
+    title: "Festival Fun Quests",
+    emoji: "🎉",
+    description: "Fun story-based courses around India's vibrant festivals",
+    gradient: "from-pink-500 to-purple-600",
+    courseIds: ["victory-quest-dussehra", "diwali-adventure", "navratri-power-quest", "holi-fun-quest", "rakhi-bond-quest"],
+  },
+];
+
+// ─── Mega-achievement definitions ─────────────────────────────────────────────
+
+type MegaAchievement = {
+  id: string;
+  title: string;
+  emoji: string;
+  description: string;
+  requiredCourseIds: string[];
+  color: string;
+};
+
+const MEGA_ACHIEVEMENTS: MegaAchievement[] = [
+  {
+    id: "festival-master",
+    title: "Festival Master",
+    emoji: "🎖️",
+    description: "Complete all 5 Festival Fun Quests",
+    requiredCourseIds: ["victory-quest-dussehra", "diwali-adventure", "navratri-power-quest", "holi-fun-quest", "rakhi-bond-quest"],
+    color: "from-pink-500 to-purple-600",
+  },
+  {
+    id: "little-dharmic-champion",
+    title: "Little Dharmic Champion",
+    emoji: "🏆",
+    description: "Complete ALL 8 courses — the ultimate achievement!",
+    requiredCourseIds: ["know-your-ram", "geeta-gyan", "ganesha-fun-wisdom", "victory-quest-dussehra", "diwali-adventure", "navratri-power-quest", "holi-fun-quest", "rakhi-bond-quest"],
+    color: "from-yellow-400 to-orange-500",
   },
 ];
 
@@ -1653,46 +2004,147 @@ export default function StudentsCorner() {
           )}
         </div>
 
-        {/* Course cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 max-w-7xl mx-auto mb-10">
-          {COURSES.map((course, i) => {
-            const prog = getProgress(course.id);
-            const pct = Math.round((prog.completed.length / course.chapters.length) * 100);
-            return (
+        {/* Category sections */}
+        {CATEGORIES.map((cat, catIdx) => {
+          const catCourses = COURSES.filter((c) => cat.courseIds.includes(c.id));
+          return (
+            <div key={cat.id} className="mb-12 text-left max-w-7xl mx-auto">
+              {/* Category header */}
               <motion.div
-                key={course.id}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.15, type: "spring", bounce: 0.3 }}
-                whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                className="bg-white rounded-3xl shadow-xl border border-white overflow-hidden cursor-pointer"
-                onClick={() => handleStartCourse(course)}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 + catIdx * 0.15 }}
+                className={`inline-flex items-center gap-3 bg-gradient-to-r ${cat.gradient} text-white px-6 py-3 rounded-2xl shadow-lg mb-5`}
               >
-                {/* Card header */}
-                <div className={`h-32 bg-gradient-to-br ${course.gradient} flex items-center justify-center relative overflow-hidden`}>
-                  <div className="absolute inset-0 opacity-20">
-                    {[...Array(6)].map((_, j) => (
-                      <div key={j} className="absolute w-16 h-16 rounded-full bg-white/30"
-                        style={{ left: `${j * 20}%`, top: `${(j % 3) * 30}%` }} />
-                    ))}
-                  </div>
-                  <span className="text-7xl drop-shadow-lg relative z-10">{course.emoji}</span>
-                </div>
-
-                <div className="p-5">
-                  <h2 className="text-xl font-black text-secondary mb-1">{course.title}</h2>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-4">{course.description}</p>
-
-                  <button className={`w-full py-3 rounded-2xl text-white font-black text-base bg-gradient-to-r ${course.gradient} shadow-lg hover:shadow-xl transition-shadow`}>
-                    Start Adventure! 🚀
-                  </button>
+                <span className="text-2xl">{cat.emoji}</span>
+                <div>
+                  <p className="font-black text-lg leading-tight">{cat.title}</p>
+                  <p className="text-white/80 text-xs font-medium">{cat.description}</p>
                 </div>
               </motion.div>
-            );
-          })}
-        </div>
 
-        {/* Fun facts strip */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {catCourses.map((course, i) => {
+                  const prog = getProgress(course.id);
+                  const completed = prog.completed.length;
+                  const total = course.chapters.length;
+                  const pct = Math.round((completed / total) * 100);
+                  const isFinished = pct === 100;
+                  return (
+                    <motion.div
+                      key={course.id}
+                      initial={{ opacity: 0, y: 40 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 + catIdx * 0.1 + i * 0.1, type: "spring", bounce: 0.3 }}
+                      whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                      className="bg-white rounded-3xl shadow-xl border border-white/80 overflow-hidden cursor-pointer"
+                      onClick={() => handleStartCourse(course)}
+                    >
+                      {/* Card header */}
+                      <div className={`h-28 bg-gradient-to-br ${course.gradient} flex items-center justify-center relative overflow-hidden`}>
+                        <div className="absolute inset-0 opacity-20">
+                          {[...Array(5)].map((_, j) => (
+                            <div key={j} className="absolute w-14 h-14 rounded-full bg-white/30"
+                              style={{ left: `${j * 22}%`, top: `${(j % 3) * 30}%` }} />
+                          ))}
+                        </div>
+                        <span className="text-6xl drop-shadow-lg relative z-10">{course.emoji}</span>
+                        {isFinished && (
+                          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-black px-2 py-1 rounded-full shadow">
+                            ✅ Done!
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-5">
+                        <h2 className="text-lg font-black text-secondary mb-1">{course.title}</h2>
+                        <p className="text-gray-500 text-xs leading-relaxed mb-3">{course.description}</p>
+
+                        {/* Mini progress bar */}
+                        <div className="mb-1 flex items-center gap-2">
+                          <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full bg-gradient-to-r ${course.gradient} transition-all`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-gray-400 shrink-0">{completed}/{total}</span>
+                        </div>
+                        <p className={`text-xs font-semibold mb-4 ${course.textAccent}`}>
+                          {pct === 0 ? "Not started yet 🚀" : pct === 100 ? `${course.badgeEmoji} ${course.badge} Earned!` : `${pct}% complete 💪`}
+                        </p>
+
+                        <button className={`w-full py-3 rounded-2xl text-white font-black text-sm bg-gradient-to-r ${course.gradient} shadow-md hover:shadow-lg transition-shadow`}>
+                          {pct === 0 ? "Start Adventure! 🚀" : pct === 100 ? "View Certificate 🏆" : "Continue Journey! ⚡"}
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* ── Mega Achievements ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="max-w-2xl mx-auto mb-12"
+        >
+          <div className="text-center mb-5">
+            <span className="text-3xl">🏆</span>
+            <h2 className="text-2xl font-black text-secondary mt-1">Mega Achievements</h2>
+            <p className="text-gray-500 text-sm">Complete multiple courses to unlock these special awards!</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {MEGA_ACHIEVEMENTS.map((ach) => {
+              const earned = ach.requiredCourseIds.every((cid) => {
+                const c = COURSES.find((x) => x.id === cid);
+                if (!c) return false;
+                return getProgress(cid).completed.length === c.chapters.length;
+              });
+              const doneCount = ach.requiredCourseIds.filter((cid) => {
+                const c = COURSES.find((x) => x.id === cid);
+                if (!c) return false;
+                return getProgress(cid).completed.length === c.chapters.length;
+              }).length;
+              const pct = Math.round((doneCount / ach.requiredCourseIds.length) * 100);
+              return (
+                <div
+                  key={ach.id}
+                  className={`relative rounded-3xl border-2 p-5 shadow-lg transition-all ${
+                    earned
+                      ? "bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400"
+                      : "bg-white border-gray-200 opacity-80"
+                  }`}
+                >
+                  {earned && (
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="absolute -top-3 -right-3 text-3xl"
+                    >✨</motion.div>
+                  )}
+                  <div className="text-4xl mb-2">{earned ? ach.emoji : "🔒"}</div>
+                  <h3 className="font-black text-secondary text-base mb-1">{ach.title}</h3>
+                  <p className="text-gray-500 text-xs mb-3">{ach.description}</p>
+                  <div className="bg-gray-100 rounded-full h-2 overflow-hidden mb-1">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${ach.color} transition-all`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 font-semibold">
+                    {doneCount}/{ach.requiredCourseIds.length} courses complete
+                    {earned && " 🎉"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
       </div>
       <NaradMini />
     </div>
