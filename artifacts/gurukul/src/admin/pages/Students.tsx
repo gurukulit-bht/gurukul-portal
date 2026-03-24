@@ -386,6 +386,7 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   // ── Temple member (required) ──
+  const [membershipPath, setMembershipPath] = useState<"existing" | "new" | null>(null);
   const [linkedMember,   setLinkedMember]   = useState<LinkedMember | null>(null);
   const [memberSearch,   setMemberSearch]   = useState("");
   const [memberLooking,  setMemberLooking]  = useState(false);
@@ -418,6 +419,26 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
     adminApi.students.meta().then((d) => setMeta(d as Meta)).finally(() => setLoading(false));
   }, []);
 
+  function resetMemberPath() {
+    setMembershipPath(null);
+    setLinkedMember(null);
+    setMemberSearch("");
+    setMemberNotFound(false);
+    setNewMemberName("");
+    setNewMemberPhone("");
+    setNewMemberEmail("");
+  }
+
+  function selectNewPath() {
+    setMembershipPath("new");
+    // Pre-populate from father's info (primary) filled in so far
+    setNewMemberName(fatherName.trim() || "");
+    setNewMemberPhone(fatherPhone.trim() || "");
+    setNewMemberEmail(fatherEmail.trim() || "");
+    setMemberNotFound(false);
+    setLinkedMember(null);
+  }
+
   async function lookupMember() {
     const val = memberSearch.trim();
     if (!val) { toast.error("Enter a phone number or email to search"); return; }
@@ -430,9 +451,9 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
       toast.success(`Member found: ${m.name ?? val}`);
     } catch {
       setMemberNotFound(true);
-      // Pre-fill the "create" fields with father's info if entered
+      // Pre-fill the create fields with father's info + searched value
       setNewMemberName(fatherName.trim() || "");
-      setNewMemberPhone(fatherPhone.trim() || val);
+      setNewMemberPhone(fatherPhone.trim() || (val.includes("@") ? "" : val));
       setNewMemberEmail(fatherEmail.trim() || (val.includes("@") ? val : ""));
     } finally {
       setMemberLooking(false);
@@ -440,20 +461,21 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   }
 
   async function createAndLinkMember() {
-    if (!newMemberName.trim()) { toast.error("Member name is required"); return; }
+    if (!newMemberName.trim()) { toast.error("Parent/member name is required"); return; }
     setCreatingMember(true);
     try {
+      const isExisting = membershipPath === "existing";
       const m = await adminApi.members.create({
-        name:  newMemberName.trim(),
-        phone: newMemberPhone.trim() || null,
-        email: newMemberEmail.trim() || null,
-        isExistingMember: true,
+        name:             newMemberName.trim(),
+        phone:            newMemberPhone.trim() || null,
+        email:            newMemberEmail.trim() || null,
+        isExistingMember: isExisting,
       });
       setLinkedMember({ id: m.id, name: newMemberName.trim(), phone: newMemberPhone.trim() || null, email: newMemberEmail.trim() || null });
       setMemberNotFound(false);
-      toast.success("Member created and linked!");
+      toast.success(isExisting ? "Member record created and linked!" : "Parent Membership created and linked!");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create member");
+      toast.error(err instanceof Error ? err.message : "Failed to create membership record");
     } finally {
       setCreatingMember(false);
     }
@@ -525,18 +547,54 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
                   <span className="text-sm font-bold text-secondary uppercase tracking-wide">Temple Membership</span>
                   <span className="ml-auto text-xs font-semibold text-red-600 uppercase">Required</span>
                 </div>
+
+                {/* ── Linked: show confirmation card ── */}
                 {linkedMember ? (
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="flex items-start justify-between p-3 bg-green-50 border border-green-200 rounded-xl gap-3">
                     <div>
                       <p className="font-semibold text-green-800 text-sm">{linkedMember.name ?? "Unknown"}</p>
-                      <p className="text-xs text-green-700">{[linkedMember.phone, linkedMember.email].filter(Boolean).join(" · ")}</p>
+                      <p className="text-xs text-green-700 mt-0.5">{[linkedMember.phone, linkedMember.email].filter(Boolean).join(" · ")}</p>
+                      <p className="text-xs text-green-600 mt-1">
+                        {membershipPath === "new" ? "New Parent Membership created" : "Linked to existing temple member"}
+                      </p>
                     </div>
-                    <button type="button" onClick={() => { setLinkedMember(null); setMemberNotFound(false); setMemberSearch(""); }}
-                      className="text-xs text-red-500 hover:text-red-700 underline ml-3">Change</button>
+                    <button type="button" onClick={resetMemberPath}
+                      className="text-xs text-red-500 hover:text-red-700 underline shrink-0 mt-0.5">Change</button>
                   </div>
-                ) : (
+
+                ) : membershipPath === null ? (
+                  /* ── Step 1: choose path ── */
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground mb-3">Is this family already a registered temple member?</p>
+                    <button type="button" onClick={() => setMembershipPath("existing")}
+                      className="w-full flex items-center gap-3 px-4 py-3 border-2 border-border rounded-xl hover:border-primary hover:bg-primary/5 text-left transition-colors group">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20">
+                        <Users className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-secondary">Yes — Existing Temple Member</p>
+                        <p className="text-xs text-muted-foreground">Search for their existing member record</p>
+                      </div>
+                    </button>
+                    <button type="button" onClick={selectNewPath}
+                      className="w-full flex items-center gap-3 px-4 py-3 border-2 border-border rounded-xl hover:border-amber-500 hover:bg-amber-50 text-left transition-colors group">
+                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 group-hover:bg-amber-200">
+                        <UserPlus className="w-4 h-4 text-amber-700" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-secondary">No — Not a Temple Member</p>
+                        <p className="text-xs text-muted-foreground">A Parent Membership record will be created automatically</p>
+                      </div>
+                    </button>
+                  </div>
+
+                ) : membershipPath === "existing" ? (
+                  /* ── Step 2a: search for existing member ── */
                   <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">Every student must be linked to a temple member record. Search by phone number or email address.</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <button type="button" onClick={resetMemberPath} className="text-xs text-primary hover:underline">← Back</button>
+                      <span className="text-xs text-muted-foreground">Search existing temple member by phone or email</span>
+                    </div>
                     <div className="flex gap-2">
                       <input
                         value={memberSearch}
@@ -544,28 +602,60 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
                         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); lookupMember(); } }}
                         placeholder="Phone or email address"
                         className={inputCls}
+                        autoFocus
                       />
                       <button type="button" onClick={lookupMember} disabled={memberLooking}
-                        className="shrink-0 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 flex items-center gap-1">
+                        className="shrink-0 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 flex items-center gap-1.5">
                         {memberLooking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                         Find
                       </button>
                     </div>
                     {memberNotFound && (
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
-                        <p className="text-xs font-semibold text-amber-800">No member found for that contact. Create a new member record:</p>
+                        <p className="text-xs font-semibold text-amber-800">No member found. Confirm details to create a member record:</p>
                         <div className="space-y-2">
-                          <input value={newMemberName} onChange={e => setNewMemberName(e.target.value)} placeholder="Full name *" className={inputCls} />
-                          <input value={newMemberPhone} onChange={e => setNewMemberPhone(e.target.value)} placeholder="Phone number" className={inputCls} />
+                          <input value={newMemberName}  onChange={e => setNewMemberName(e.target.value)}  placeholder="Full name *" className={inputCls} />
+                          <input value={newMemberPhone} onChange={e => setNewMemberPhone(e.target.value)} placeholder="Phone number"  className={inputCls} />
                           <input value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} placeholder="Email address" className={inputCls} />
                         </div>
                         <button type="button" onClick={createAndLinkMember} disabled={creatingMember}
-                          className="w-full py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60 flex items-center justify-center gap-2">
-                          {creatingMember ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                          Create Member &amp; Link
+                          className="w-full py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 flex items-center justify-center gap-2">
+                          {creatingMember && <Loader2 className="w-4 h-4 animate-spin" />}
+                          Create Member Record &amp; Link
                         </button>
                       </div>
                     )}
+                  </div>
+
+                ) : (
+                  /* ── Step 2b: create parent membership from father's info ── */
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <button type="button" onClick={resetMemberPath} className="text-xs text-primary hover:underline">← Back</button>
+                      <span className="text-xs text-muted-foreground">Parent Membership — pre-filled from father's info</span>
+                    </div>
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                      <p className="text-xs text-amber-800">A <strong>Parent Membership</strong> record will be created with the information below (primarily from the father's details). Fill in the Parent Information section below first, or enter the details here directly.</p>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-xs font-medium text-amber-900 block mb-1">Parent / Guardian Name <span className="text-red-500">*</span></label>
+                          <input value={newMemberName}  onChange={e => setNewMemberName(e.target.value)}  placeholder="Full name (from father's info)" className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-amber-900 block mb-1">Phone Number</label>
+                          <input value={newMemberPhone} onChange={e => setNewMemberPhone(e.target.value)} placeholder="Phone number" className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-amber-900 block mb-1">Email Address</label>
+                          <input value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} placeholder="Email address" className={inputCls} />
+                        </div>
+                      </div>
+                      <button type="button" onClick={createAndLinkMember} disabled={creatingMember || !newMemberName.trim()}
+                        className="w-full py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60 flex items-center justify-center gap-2 font-medium">
+                        {creatingMember && <Loader2 className="w-4 h-4 animate-spin" />}
+                        Create Parent Membership &amp; Continue
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
