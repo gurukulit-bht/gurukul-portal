@@ -8,7 +8,7 @@ import {
   teachersTable,
   teacherAssignmentsTable,
 } from "@workspace/db/schema";
-import { eq, desc, and, or } from "drizzle-orm";
+import { eq, desc, and, or, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 

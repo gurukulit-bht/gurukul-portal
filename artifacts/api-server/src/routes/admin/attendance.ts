@@ -77,7 +77,7 @@ router.get("/levels", async (req, res) => {
       )
     : levels;
 
-  return res.json(filtered.map(({ courseId: _c, levelNumber: _n, ...rest }) => rest));
+  return res.json(filtered.map(({ levelNumber: _n, ...rest }) => rest));
 });
 
 // GET /api/admin/attendance/history?levelId=X

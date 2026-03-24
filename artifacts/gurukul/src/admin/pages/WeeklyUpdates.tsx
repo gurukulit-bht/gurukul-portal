@@ -30,10 +30,8 @@ type Update = {
   createdAt: string | null;
 };
 
-type CourseOpt  = { id: number; name: string };
-type LevelOpt   = { id: number; courseId: number; name: string };
-type SectionOpt = { id: number; levelId: number; name: string };
-type FormMeta   = { courses: CourseOpt[]; levels: LevelOpt[]; sections: SectionOpt[] };
+type RawLevel   = { id: number; className: string; schedule: string; courseName: string; courseId: number };
+type SectionOpt = { id: number; sectionName: string; schedule: string };
 
 type Notice = {
   id: number;
@@ -227,10 +225,10 @@ export default function WeeklyUpdates() {
     }
   }
 
-  const [updates, setUpdates] = useState<Update[]>([]);
-  const [meta, setMeta]       = useState<FormMeta>({ courses: [], levels: [], sections: [] });
-  const [loading, setLoading] = useState(true);
-  const [posting, setPosting] = useState(false);
+  const [updates, setUpdates]   = useState<Update[]>([]);
+  const [allLevels, setAllLevels] = useState<RawLevel[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [posting, setPosting]   = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
   const [editText, setEditText]     = useState("");
   const [editSaving, setEditSaving] = useState(false);
@@ -244,33 +242,46 @@ export default function WeeklyUpdates() {
   const [levelName,   setLevelName]   = useState("");
   const [sectionId,   setSectionId]   = useState<number | null>(null);
   const [sectionName, setSectionName] = useState("");
+  const [dynamicSections,   setDynamicSections]   = useState<SectionOpt[]>([]);
+  const [loadingSections,   setLoadingSections]   = useState(false);
 
-  const filteredLevels   = meta.levels.filter(l => l.courseId === courseId);
-  const filteredSections = meta.sections.filter(s => s.levelId === levelId);
+  // Derive course options and filtered levels from the flat level list (same as Attendance tab)
+  const courseOptions = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const l of allLevels) {
+      if (!seen.has(l.courseId)) seen.set(l.courseId, l.courseName);
+    }
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allLevels]);
 
-  const courseLocked  = meta.courses.length === 1;
-  const levelLocked   = filteredLevels.length === 1;
-  const sectionLocked = filteredSections.length === 1;
+  const levelsForCourse = allLevels.filter(l => l.courseId === courseId);
 
+  const courseLocked  = courseOptions.length === 1;
+  const levelLocked   = levelsForCourse.length === 1;
+  const sectionLocked = dynamicSections.length === 1;
+
+  // Load updates + levels (same /attendance/levels endpoint as Attendance tab)
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rows, m] = await Promise.all([
+      const [rows, levels] = await Promise.all([
         adminApi.weeklyUpdates.list() as Promise<Update[]>,
-        adminApi.weeklyUpdates.formMeta() as Promise<FormMeta>,
+        adminApi.courses.levels() as Promise<RawLevel[]>,
       ]);
       setUpdates(rows);
-      setMeta(m);
+      setAllLevels(levels);
 
-      // Auto-cascade selection when only one option per tier
-      if (m.courses.length === 1) {
-        const c = m.courses[0];
-        setCourseId(c.id); setCourseName(c.name);
-        const lvls = m.levels.filter(l => l.courseId === c.id);
+      // Auto-cascade when teacher has only one course or level
+      const uniqueCourses = [...new Map(levels.map(l => [l.courseId, l.courseName])).entries()];
+      if (uniqueCourses.length === 1) {
+        const [cId, cName] = uniqueCourses[0];
+        setCourseId(cId); setCourseName(cName);
+        const lvls = levels.filter(l => l.courseId === cId);
         if (lvls.length === 1) {
-          setLevelId(lvls[0].id); setLevelName(lvls[0].name);
-          const secs = m.sections.filter(s => s.levelId === lvls[0].id);
-          if (secs.length === 1) { setSectionId(secs[0].id); setSectionName(secs[0].name); }
+          setLevelId(lvls[0].id); setLevelName(lvls[0].className);
+          // sections will load via useEffect below
         }
       }
     } catch {
@@ -281,6 +292,22 @@ export default function WeeklyUpdates() {
   }, [isAdmin]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch sections dynamically when level changes — same as Attendance tab
+  useEffect(() => {
+    setDynamicSections([]);
+    setSectionId(null); setSectionName("");
+    if (!levelId) return;
+    setLoadingSections(true);
+    adminApi.courses.levelSections(levelId)
+      .then(data => {
+        const s = data as SectionOpt[];
+        setDynamicSections(s);
+        if (s.length === 1) { setSectionId(s[0].id); setSectionName(s[0].sectionName); }
+      })
+      .catch(() => setDynamicSections([]))
+      .finally(() => setLoadingSections(false));
+  }, [levelId]);
 
   async function handlePost() {
     if (!message.trim()) { toast.error("Please write a message"); return; }
@@ -454,13 +481,12 @@ export default function WeeklyUpdates() {
                       onChange={e => {
                         const id = e.target.value ? Number(e.target.value) : null;
                         setCourseId(id);
-                        setCourseName(meta.courses.find(c => c.id === id)?.name ?? "");
+                        setCourseName(courseOptions.find(c => c.id === id)?.name ?? "");
                         setLevelId(null); setLevelName("");
-                        setSectionId(null); setSectionName("");
                       }}
                     >
                       <option value="">Course…</option>
-                      {meta.courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {courseOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
                 </div>
@@ -479,13 +505,12 @@ export default function WeeklyUpdates() {
                       onChange={e => {
                         const id = e.target.value ? Number(e.target.value) : null;
                         setLevelId(id);
-                        setLevelName(filteredLevels.find(l => l.id === id)?.name ?? "");
-                        setSectionId(null); setSectionName("");
+                        setLevelName(levelsForCourse.find(l => l.id === id)?.className ?? "");
                       }}
-                      disabled={!courseId || filteredLevels.length === 0}
+                      disabled={!courseId || levelsForCourse.length === 0}
                     >
                       <option value="">Level…</option>
-                      {filteredLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      {levelsForCourse.map(l => <option key={l.id} value={l.id}>{l.className}</option>)}
                     </select>
                   )}
                 </div>
@@ -504,12 +529,12 @@ export default function WeeklyUpdates() {
                       onChange={e => {
                         const id = e.target.value ? Number(e.target.value) : null;
                         setSectionId(id);
-                        setSectionName(filteredSections.find(s => s.id === id)?.name ?? "");
+                        setSectionName(dynamicSections.find(s => s.id === id)?.sectionName ?? "");
                       }}
-                      disabled={!levelId || filteredSections.length === 0}
+                      disabled={!levelId || loadingSections || dynamicSections.length === 0}
                     >
-                      <option value="">All</option>
-                      {filteredSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      <option value="">{loadingSections ? "Loading…" : "All sections"}</option>
+                      {dynamicSections.map(s => <option key={s.id} value={s.id}>{s.sectionName}</option>)}
                     </select>
                   )}
                 </div>
