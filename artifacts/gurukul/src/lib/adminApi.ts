@@ -46,7 +46,11 @@ export const adminApi = {
     list:          () => request<unknown[]>("GET", "/students"),
     meta:          () => request<unknown>("GET", "/students/meta"),
     register:      (data: unknown) => request("POST", "/students", data),
+    update:        (code: string, data: unknown) => request("PATCH", `/students/${code}`, data),
+    setStatus:     (code: string, isActive: boolean) => request("PATCH", `/students/${code}/status`, { isActive }),
     remove:        (code: string) => request("DELETE", `/students/${code}`),
+    bulkSetStatus: (codes: string[], isActive: boolean) => request("PATCH", "/students/bulk/status", { codes, isActive }),
+    bulkDelete:    (codes: string[]) => request("DELETE", "/students/bulk", { codes }),
     assignSection: (enrollmentId: number, sectionId: number | null) =>
       request("PATCH", `/students/enrollments/${enrollmentId}/section`, { sectionId }),
   },

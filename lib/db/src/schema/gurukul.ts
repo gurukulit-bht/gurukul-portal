@@ -182,6 +182,7 @@ export const studentsTable = pgTable("students", {
   dob: text("dob"),                        // Date of birth e.g. "2015-06-10"
   grade: text("grade"),                    // School grade e.g. "4th"
   isNewStudent: boolean("is_new_student").default(true),
+  isActive: boolean("is_active").notNull().default(true),
   curriculumYear: text("curriculum_year"),  // e.g. "2027-2028"
   // Member linkage
   memberId: integer("member_id").references(() => membersTable.id),

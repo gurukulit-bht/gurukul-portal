@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { adminApi } from "@/lib/adminApi";
 import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import {
   Search, Download, ChevronUp, ChevronDown, Filter, Loader2,
   X, Plus, Trash2, UserPlus, BookOpen, GraduationCap, Users,
+  Pencil, ChevronLeft, ChevronRight, UserX, UserCheck, AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,34 +14,342 @@ import { canAccess } from "../rbac";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Student = {
-  id: string; name: string; curriculumYear: string; course: string; level: string;
-  section: string; timing: string; enrollDate: string;
+type Enrollment = {
+  enrollmentId: number | null;
+  course: string;
+  courseIcon: string;
+  level: string;
+  levelNum: number;
+  section: string;
+  timing: string;
+  enrollDate: string;
+  enrollStatus: string;
   paymentStatus: "Paid" | "Pending" | "Overdue";
-  amountDue: number; amountPaid: number; paymentMethod: string; receiptId: string;
+  amountDue: number;
+  amountPaid: number;
+  paymentMethod: string;
+  receiptId: string;
 };
 
-type MetaSection  = { id: number; sectionName: string; schedule: string };
-type MetaLevel    = { id: number; levelNumber: number; className: string; sections: MetaSection[] };
-type MetaCourse   = { id: number; name: string; icon: string; levels: MetaLevel[] };
-type Meta         = { nextCode: string; courses: MetaCourse[] };
-
-type EnrollmentDraft = {
-  key: number;
-  courseId: number | "";
-  levelId:  number | "";
-  sectionId: number | "";
-  amountDue: string;
+type Student = {
+  id: string;
+  studentDbId: number;
+  name: string;
+  dob: string;
+  grade: string;
+  curriculumYear: string;
+  isNewStudent: boolean;
+  isActive: boolean;
+  motherName: string;
+  motherPhone: string;
+  motherEmail: string;
+  fatherName: string;
+  fatherPhone: string;
+  fatherEmail: string;
+  address: string;
+  enrollments: Enrollment[];
+  // aggregated helpers
+  courses: string[];
+  primaryCourse: string;
+  primaryLevel: string;
+  primarySection: string;
+  totalPaid: number;
+  totalDue: number;
+  worstPayStatus: "Paid" | "Pending" | "Overdue";
+  parentPhone: string;
 };
 
-const GRADES = ["Kindergarten","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
+type RawRow = Record<string, unknown>;
 
-const coursesList    = ["All","Hindi","Dharma","Telugu","Tamil","Sanskrit","Gujarati"];
-const paymentStatuses = ["All","Paid","Pending","Overdue"];
-const levels         = ["All","Level 1","Level 2","Level 3","Level 4","Level 5","Level 6","Level 7"];
-type SortKey = keyof Student;
+const PAGE_SIZE = 100;
 
-// ─── Registration Panel ───────────────────────────────────────────────────────
+const PAYMENT_RANK: Record<string, number> = { Overdue: 3, Pending: 2, Paid: 1 };
+
+function groupRows(raw: RawRow[]): Student[] {
+  const map = new Map<string, Student>();
+  for (const r of raw) {
+    const code = r.id as string;
+    if (!map.has(code)) {
+      map.set(code, {
+        id: code,
+        studentDbId: r.studentDbId as number,
+        name: r.name as string,
+        dob: r.dob as string ?? "",
+        grade: r.grade as string ?? "",
+        curriculumYear: r.curriculumYear as string ?? "",
+        isNewStudent: r.isNewStudent as boolean ?? true,
+        isActive: r.isActive as boolean ?? true,
+        motherName: r.motherName as string ?? "",
+        motherPhone: r.motherPhone as string ?? "",
+        motherEmail: r.motherEmail as string ?? "",
+        fatherName: r.fatherName as string ?? "",
+        fatherPhone: r.fatherPhone as string ?? "",
+        fatherEmail: r.fatherEmail as string ?? "",
+        address: r.address as string ?? "",
+        enrollments: [],
+        courses: [],
+        primaryCourse: "",
+        primaryLevel: "",
+        primarySection: "",
+        totalPaid: 0,
+        totalDue: 0,
+        worstPayStatus: "Paid",
+        parentPhone: "",
+      });
+    }
+    const s = map.get(code)!;
+    if (r.enrollmentId) {
+      const enr: Enrollment = {
+        enrollmentId:  r.enrollmentId as number,
+        course:        r.course as string ?? "",
+        courseIcon:    r.courseIcon as string ?? "",
+        level:         r.level as string ?? "",
+        levelNum:      r.levelNum as number ?? 0,
+        section:       r.section as string ?? "",
+        timing:        r.timing as string ?? "",
+        enrollDate:    r.enrollDate as string ?? "",
+        enrollStatus:  r.enrollStatus as string ?? "Enrolled",
+        paymentStatus: r.paymentStatus as "Paid"|"Pending"|"Overdue" ?? "Pending",
+        amountDue:     r.amountDue as number ?? 0,
+        amountPaid:    r.amountPaid as number ?? 0,
+        paymentMethod: r.paymentMethod as string ?? "-",
+        receiptId:     r.receiptId as string ?? "-",
+      };
+      s.enrollments.push(enr);
+    }
+  }
+
+  // compute aggregated fields
+  for (const s of map.values()) {
+    s.courses = [...new Set(s.enrollments.map(e => e.course).filter(Boolean))];
+    s.primaryCourse  = s.enrollments[0]?.course ?? "";
+    s.primaryLevel   = s.enrollments[0]?.level ?? "";
+    s.primarySection = s.enrollments[0]?.section ?? "";
+    s.totalPaid = s.enrollments.reduce((a, e) => a + e.amountPaid, 0);
+    s.totalDue  = s.enrollments.reduce((a, e) => a + e.amountDue, 0);
+    let worst = 1;
+    for (const e of s.enrollments) worst = Math.max(worst, PAYMENT_RANK[e.paymentStatus] ?? 1);
+    s.worstPayStatus = worst === 3 ? "Overdue" : worst === 2 ? "Pending" : "Paid";
+    s.parentPhone = s.motherPhone || s.fatherPhone;
+  }
+
+  return Array.from(map.values());
+}
+
+// ─── Confirm Dialog ───────────────────────────────────────────────────────────
+
+function ConfirmDialog({
+  title, message, confirmLabel, danger, onConfirm, onCancel, loading,
+}: {
+  title: string; message: string; confirmLabel: string; danger?: boolean;
+  onConfirm: () => void; onCancel: () => void; loading?: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-border">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 ${danger ? "bg-red-100" : "bg-amber-100"}`}>
+          <AlertTriangle className={`w-5 h-5 ${danger ? "text-red-600" : "text-amber-600"}`} />
+        </div>
+        <h3 className="text-base font-bold text-secondary mb-2">{title}</h3>
+        <p className="text-sm text-muted-foreground mb-6">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <Button variant="outline" onClick={onCancel} disabled={loading}>Cancel</Button>
+          <Button
+            onClick={onConfirm}
+            disabled={loading}
+            className={danger ? "bg-red-600 hover:bg-red-700 text-white" : ""}
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Student Panel ────────────────────────────────────────────────────────
+
+function EditStudentPanel({
+  student, onClose, onSaved, curriculumYears,
+}: {
+  student: Student;
+  onClose: () => void;
+  onSaved: () => void;
+  curriculumYears: string[];
+}) {
+  const nameParts = student.name.split(" ");
+  const [firstName,    setFirstName]    = useState(nameParts[0] ?? "");
+  const [lastName,     setLastName]     = useState(nameParts.slice(1).join(" "));
+  const [dob,          setDob]          = useState(student.dob);
+  const [grade,        setGrade]        = useState(student.grade);
+  const [curricYear,   setCurricYear]   = useState(student.curriculumYear);
+  const [motherName,   setMotherName]   = useState(student.motherName);
+  const [motherPhone,  setMotherPhone]  = useState(student.motherPhone);
+  const [motherEmail,  setMotherEmail]  = useState(student.motherEmail);
+  const [fatherName,   setFatherName]   = useState(student.fatherName);
+  const [fatherPhone,  setFatherPhone]  = useState(student.fatherPhone);
+  const [fatherEmail,  setFatherEmail]  = useState(student.fatherEmail);
+  const [address,      setAddress]      = useState(student.address);
+  const [saving,       setSaving]       = useState(false);
+
+  const GRADES = ["Kindergarten","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
+  const inputCls  = "w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white";
+  const selectCls = "w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white";
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!firstName.trim()) { toast.error("First name is required"); return; }
+    setSaving(true);
+    try {
+      await adminApi.students.update(student.id, {
+        firstName: firstName.trim(),
+        lastName:  lastName.trim(),
+        dob, grade, curriculumYear: curricYear,
+        motherName, motherPhone, motherEmail,
+        fatherName, fatherPhone, fatherEmail,
+        address,
+      });
+      toast.success(`${firstName} ${lastName} updated`);
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-secondary text-white shrink-0">
+          <div className="flex items-center gap-2">
+            <Pencil className="w-4 h-4" />
+            <div>
+              <h2 className="font-bold text-sm">Edit Student</h2>
+              <p className="text-white/70 text-xs">{student.id}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+
+        <form onSubmit={handleSave} className="flex-1 flex flex-col">
+          <div className="flex-1 p-6 space-y-5 overflow-y-auto">
+
+            {/* Student Info */}
+            <div>
+              <p className="text-xs font-bold text-secondary uppercase tracking-wide border-b border-border pb-2 mb-4">Student Information</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">First Name <span className="text-red-500">*</span></label>
+                  <input required value={firstName} onChange={e => setFirstName(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Last Name</label>
+                  <input value={lastName} onChange={e => setLastName(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Date of Birth</label>
+                  <input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">School Grade</label>
+                  <select value={grade} onChange={e => setGrade(e.target.value)} className={selectCls}>
+                    <option value="">— Select —</option>
+                    {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Curriculum Year</label>
+                  <select value={curricYear} onChange={e => setCurricYear(e.target.value)} className={selectCls}>
+                    {curriculumYears.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Mother */}
+            <div className="p-4 rounded-xl bg-pink-50 border border-pink-100 space-y-3">
+              <p className="text-xs font-bold text-pink-700 uppercase tracking-wide">Mother</p>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Full Name</label>
+                <input value={motherName} onChange={e => setMotherName(e.target.value)} placeholder="Mother's full name" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Phone</label>
+                  <input type="tel" value={motherPhone} onChange={e => setMotherPhone(e.target.value)} placeholder="(614) 555-0100" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Email</label>
+                  <input type="email" value={motherEmail} onChange={e => setMotherEmail(e.target.value)} placeholder="mom@email.com" className={inputCls} />
+                </div>
+              </div>
+            </div>
+
+            {/* Father */}
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 space-y-3">
+              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Father</p>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Full Name</label>
+                <input value={fatherName} onChange={e => setFatherName(e.target.value)} placeholder="Father's full name" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Phone</label>
+                  <input type="tel" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)} placeholder="(614) 555-0101" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Email</label>
+                  <input type="email" value={fatherEmail} onChange={e => setFatherEmail(e.target.value)} placeholder="dad@email.com" className={inputCls} />
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Home Address</label>
+              <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City, State ZIP" className={inputCls} />
+            </div>
+
+            {/* Enrollments (read-only) */}
+            {student.enrollments.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-secondary uppercase tracking-wide border-b border-border pb-2 mb-3">Enrollments</p>
+                <div className="space-y-2">
+                  {student.enrollments.map((e, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2 border border-border">
+                      <div>
+                        <span className="font-semibold text-secondary">{e.courseIcon} {e.course}</span>
+                        <span className="text-muted-foreground ml-2">{e.level}</span>
+                        {e.section && <span className="text-muted-foreground ml-1">· {e.section}</span>}
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${e.paymentStatus === "Paid" ? "bg-green-100 text-green-700" : e.paymentStatus === "Overdue" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                        ${e.amountPaid} paid
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="px-6 py-4 border-t border-border flex gap-3 justify-end bg-gray-50 shrink-0">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Register Student Panel (unchanged logic, kept for quick access) ───────────
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
@@ -53,28 +362,23 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-function SectionLabel({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-2 py-2 border-b border-border mb-4">
-      <span className="text-primary">{icon}</span>
-      <span className="text-sm font-bold text-secondary uppercase tracking-wide">{title}</span>
-    </div>
-  );
-}
+type EnrollmentDraft = { key: number; courseId: number | ""; levelId: number | ""; sectionId: number | ""; amountDue: string; };
+type MetaSection  = { id: number; sectionName: string; schedule: string };
+type MetaLevel    = { id: number; levelNumber: number; className: string; sections: MetaSection[] };
+type MetaCourse   = { id: number; name: string; icon: string; levels: MetaLevel[] };
+type Meta         = { nextCode: string; courses: MetaCourse[] };
 
 function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; onRegistered: () => void }) {
   const { curriculumYearsLong, activeCurriculumYearLong } = usePortalSettings();
-  const [meta, setMeta]       = useState<Meta | null>(null);
+  const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
-
   const [firstName,  setFirstName]  = useState("");
   const [lastName,   setLastName]   = useState("");
   const [dob,        setDob]        = useState("");
   const [grade,      setGrade]      = useState("");
   const [curricYear, setCurricYear] = useState(() => activeCurriculumYearLong || "2027-2028");
   const [isNew,      setIsNew]      = useState(true);
-
   const [motherName,  setMotherName]  = useState("");
   const [motherPhone, setMotherPhone] = useState("");
   const [motherEmail, setMotherEmail] = useState("");
@@ -82,11 +386,11 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   const [fatherPhone, setFatherPhone] = useState("");
   const [fatherEmail, setFatherEmail] = useState("");
   const [address,     setAddress]     = useState("");
-
-  const [enrollments, setEnrollments] = useState<EnrollmentDraft[]>([
-    { key: 0, courseId: "", levelId: "", sectionId: "", amountDue: "35.00" },
-  ]);
+  const [enrollments, setEnrollments] = useState<EnrollmentDraft[]>([{ key: 0, courseId: "", levelId: "", sectionId: "", amountDue: "35.00" }]);
   const [draftKey, setDraftKey] = useState(1);
+  const GRADES = ["Kindergarten","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
+  const inputCls  = "w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white";
+  const selectCls = "w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white";
 
   useEffect(() => {
     adminApi.students.meta().then((d) => setMeta(d as Meta)).finally(() => setLoading(false));
@@ -96,107 +400,67 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
     setEnrollments(prev => [...prev, { key: draftKey, courseId: "", levelId: "", sectionId: "", amountDue: "35.00" }]);
     setDraftKey(k => k + 1);
   }
-
-  function removeEnrollment(key: number) {
-    setEnrollments(prev => prev.filter(e => e.key !== key));
-  }
-
+  function removeEnrollment(key: number) { setEnrollments(prev => prev.filter(e => e.key !== key)); }
   function updateEnrollment(key: number, patch: Partial<EnrollmentDraft>) {
     setEnrollments(prev => prev.map(e => {
       if (e.key !== key) return e;
-      const updated = { ...e, ...patch };
-      if (patch.courseId !== undefined) { updated.levelId = ""; updated.sectionId = ""; }
-      if (patch.levelId  !== undefined) { updated.sectionId = ""; }
-      return updated;
+      const u = { ...e, ...patch };
+      if (patch.courseId !== undefined) { u.levelId = ""; u.sectionId = ""; }
+      if (patch.levelId  !== undefined) { u.sectionId = ""; }
+      return u;
     }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) { toast.error("Student first and last name are required"); return; }
-
-    const validEnrollments = enrollments.filter(e => e.courseId && e.levelId);
+    if (!firstName.trim() || !lastName.trim()) { toast.error("First and last name required"); return; }
+    const valid = enrollments.filter(e => e.courseId && e.levelId);
     setSaving(true);
     try {
       await adminApi.students.register({
-        firstName:      firstName.trim(),
-        lastName:       lastName.trim(),
-        dob:            dob || undefined,
-        grade:          grade || undefined,
-        curriculumYear: curricYear || undefined,
-        isNewStudent:   isNew,
-        motherName:  motherName.trim() || undefined,
-        motherPhone: motherPhone.trim() || undefined,
-        motherEmail: motherEmail.trim() || undefined,
-        fatherName:  fatherName.trim() || undefined,
-        fatherPhone: fatherPhone.trim() || undefined,
-        fatherEmail: fatherEmail.trim() || undefined,
-        address:     address.trim() || undefined,
-        enrollments: validEnrollments.map(e => ({
-          courseLevelId: Number(e.levelId),
-          sectionId:     e.sectionId ? Number(e.sectionId) : null,
-          amountDue:     e.amountDue || "35.00",
-          enrollDate:    new Date().toISOString().slice(0, 10),
-        })),
+        firstName: firstName.trim(), lastName: lastName.trim(),
+        dob: dob || undefined, grade: grade || undefined,
+        curriculumYear: curricYear || undefined, isNewStudent: isNew,
+        motherName: motherName.trim() || undefined, motherPhone: motherPhone.trim() || undefined, motherEmail: motherEmail.trim() || undefined,
+        fatherName: fatherName.trim() || undefined, fatherPhone: fatherPhone.trim() || undefined, fatherEmail: fatherEmail.trim() || undefined,
+        address: address.trim() || undefined,
+        enrollments: valid.map(e => ({ courseLevelId: Number(e.levelId), sectionId: e.sectionId ? Number(e.sectionId) : null, amountDue: e.amountDue || "35.00", enrollDate: new Date().toISOString().slice(0, 10) })),
       });
-      toast.success(`${firstName} ${lastName} registered successfully!`);
+      toast.success(`${firstName} ${lastName} registered!`);
       onRegistered();
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
-
-  const inputCls = "w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white";
-  const selectCls = "w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-xl bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
-
-        {/* Header */}
         <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-secondary text-white shrink-0">
-          <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
-            <h2 className="font-bold text-lg">Register New Student</h2>
-          </div>
+          <div className="flex items-center gap-2"><UserPlus className="w-5 h-5" /><h2 className="font-bold text-lg">Register New Student</h2></div>
           <button onClick={onClose} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
+          <div className="flex-1 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-
-              {/* Student Code badge */}
               {meta?.nextCode && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-primary/8 rounded-xl border border-primary/20">
-                  <span className="text-xs text-muted-foreground">Student ID will be assigned:</span>
+                  <span className="text-xs text-muted-foreground">Student ID will be:</span>
                   <span className="font-mono font-bold text-primary text-sm">{meta.nextCode}</span>
                 </div>
               )}
-
-              {/* ── Section 1: Student ── */}
               <div>
-                <SectionLabel icon={<GraduationCap className="w-4 h-4" />} title="Student Information" />
+                <div className="flex items-center gap-2 py-2 border-b border-border mb-4"><GraduationCap className="w-4 h-4 text-primary" /><span className="text-sm font-bold text-secondary uppercase tracking-wide">Student Information</span></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="First Name" required>
-                    <input required value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="e.g. Arjun" className={inputCls} />
-                  </Field>
-                  <Field label="Last Name" required>
-                    <input required value={lastName} onChange={e => setLastName(e.target.value)} placeholder="e.g. Sharma" className={inputCls} />
-                  </Field>
-                  <Field label="Date of Birth">
-                    <input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} />
-                  </Field>
+                  <Field label="First Name" required><input required value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="e.g. Arjun" className={inputCls} /></Field>
+                  <Field label="Last Name" required><input required value={lastName} onChange={e => setLastName(e.target.value)} placeholder="e.g. Sharma" className={inputCls} /></Field>
+                  <Field label="Date of Birth"><input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} /></Field>
                   <Field label="School Grade">
                     <select value={grade} onChange={e => setGrade(e.target.value)} className={selectCls}>
-                      <option value="">— Select grade —</option>
+                      <option value="">— Select —</option>
                       {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </Field>
@@ -205,166 +469,90 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
                       {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </Field>
-                </div>
-                <div className="mt-4">
                   <Field label="Enrollment Type">
-                    <div className="flex gap-3 mt-1">
+                    <div className="flex gap-2 mt-1">
                       {[true, false].map(v => (
-                        <button
-                          key={String(v)}
-                          type="button"
-                          onClick={() => setIsNew(v)}
-                          className={`flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${isNew === v ? "border-primary bg-primary text-white" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                        >
-                          {v ? "New Student" : "Returning Student"}
+                        <button key={String(v)} type="button" onClick={() => setIsNew(v)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${isNew === v ? "border-primary bg-primary text-white" : "border-border text-muted-foreground hover:border-primary/40"}`}>
+                          {v ? "New" : "Returning"}
                         </button>
                       ))}
                     </div>
                   </Field>
                 </div>
               </div>
-
-              {/* ── Section 2: Parents ── */}
               <div>
-                <SectionLabel icon={<Users className="w-4 h-4" />} title="Parent / Guardian Information" />
-
+                <div className="flex items-center gap-2 py-2 border-b border-border mb-4"><Users className="w-4 h-4 text-primary" /><span className="text-sm font-bold text-secondary uppercase tracking-wide">Parent / Guardian</span></div>
                 <div className="space-y-4">
-                  {/* Mother */}
                   <div className="p-4 rounded-xl bg-pink-50 border border-pink-100 space-y-3">
                     <p className="text-xs font-bold text-pink-700 uppercase tracking-wide">Mother</p>
-                    <div className="grid grid-cols-1 gap-3">
-                      <Field label="Full Name">
-                        <input value={motherName} onChange={e => setMotherName(e.target.value)} placeholder="Mother's full name" className={inputCls} />
-                      </Field>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Phone">
-                          <input type="tel" value={motherPhone} onChange={e => setMotherPhone(e.target.value)} placeholder="(614) 555-0100" className={inputCls} />
-                        </Field>
-                        <Field label="Email">
-                          <input type="email" value={motherEmail} onChange={e => setMotherEmail(e.target.value)} placeholder="mom@email.com" className={inputCls} />
-                        </Field>
-                      </div>
+                    <Field label="Full Name"><input value={motherName} onChange={e => setMotherName(e.target.value)} placeholder="Mother's full name" className={inputCls} /></Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Phone"><input type="tel" value={motherPhone} onChange={e => setMotherPhone(e.target.value)} placeholder="(614) 555-0100" className={inputCls} /></Field>
+                      <Field label="Email"><input type="email" value={motherEmail} onChange={e => setMotherEmail(e.target.value)} placeholder="mom@email.com" className={inputCls} /></Field>
                     </div>
                   </div>
-
-                  {/* Father */}
                   <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 space-y-3">
                     <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Father</p>
-                    <div className="grid grid-cols-1 gap-3">
-                      <Field label="Full Name">
-                        <input value={fatherName} onChange={e => setFatherName(e.target.value)} placeholder="Father's full name" className={inputCls} />
-                      </Field>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Phone">
-                          <input type="tel" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)} placeholder="(614) 555-0101" className={inputCls} />
-                        </Field>
-                        <Field label="Email">
-                          <input type="email" value={fatherEmail} onChange={e => setFatherEmail(e.target.value)} placeholder="dad@email.com" className={inputCls} />
-                        </Field>
-                      </div>
+                    <Field label="Full Name"><input value={fatherName} onChange={e => setFatherName(e.target.value)} placeholder="Father's full name" className={inputCls} /></Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Phone"><input type="tel" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)} placeholder="(614) 555-0101" className={inputCls} /></Field>
+                      <Field label="Email"><input type="email" value={fatherEmail} onChange={e => setFatherEmail(e.target.value)} placeholder="dad@email.com" className={inputCls} /></Field>
                     </div>
                   </div>
-
-                  {/* Address */}
-                  <Field label="Home Address">
-                    <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City, State ZIP" className={inputCls} />
-                  </Field>
+                  <Field label="Home Address"><input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City, State ZIP" className={inputCls} /></Field>
                 </div>
               </div>
-
-              {/* ── Section 3: Enrollments ── */}
               <div>
-                <SectionLabel icon={<BookOpen className="w-4 h-4" />} title="Course Enrollment" />
-
+                <div className="flex items-center gap-2 py-2 border-b border-border mb-4"><BookOpen className="w-4 h-4 text-primary" /><span className="text-sm font-bold text-secondary uppercase tracking-wide">Course Enrollment</span></div>
                 <div className="space-y-3">
                   {enrollments.map((enr, idx) => {
-                    const selectedCourse = meta?.courses.find(c => c.id === enr.courseId) ?? null;
-                    const selectedLevel  = selectedCourse?.levels.find(l => l.id === enr.levelId) ?? null;
+                    const sc = meta?.courses.find(c => c.id === enr.courseId) ?? null;
+                    const sl = sc?.levels.find(l => l.id === enr.levelId) ?? null;
                     return (
-                      <div key={enr.key} className="p-4 rounded-xl border border-border bg-gray-50 space-y-3 relative">
-                        <div className="flex items-center justify-between mb-1">
+                      <div key={enr.key} className="p-4 rounded-xl border border-border bg-gray-50 space-y-3">
+                        <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-secondary">Course {idx + 1}</span>
-                          {enrollments.length > 1 && (
-                            <button type="button" onClick={() => removeEnrollment(enr.key)} className="text-red-400 hover:text-red-600">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          {enrollments.length > 1 && <button type="button" onClick={() => removeEnrollment(enr.key)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>}
                         </div>
-
                         <Field label="Course">
-                          <select
-                            value={enr.courseId}
-                            onChange={e => updateEnrollment(enr.key, { courseId: e.target.value ? Number(e.target.value) : "" })}
-                            className={selectCls}
-                          >
+                          <select value={enr.courseId} onChange={e => updateEnrollment(enr.key, { courseId: e.target.value ? Number(e.target.value) : "" })} className={selectCls}>
                             <option value="">— Select course —</option>
-                            {meta?.courses.map(c => (
-                              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                            ))}
+                            {meta?.courses.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                           </select>
                         </Field>
-
-                        {selectedCourse && (
+                        {sc && (
                           <Field label="Level">
-                            <select
-                              value={enr.levelId}
-                              onChange={e => updateEnrollment(enr.key, { levelId: e.target.value ? Number(e.target.value) : "" })}
-                              className={selectCls}
-                            >
+                            <select value={enr.levelId} onChange={e => updateEnrollment(enr.key, { levelId: e.target.value ? Number(e.target.value) : "" })} className={selectCls}>
                               <option value="">— Select level —</option>
-                              {selectedCourse.levels.map(l => (
-                                <option key={l.id} value={l.id}>Level {l.levelNumber} — {l.className}</option>
-                              ))}
+                              {sc.levels.map(l => <option key={l.id} value={l.id}>Level {l.levelNumber} — {l.className}</option>)}
                             </select>
                           </Field>
                         )}
-
-                        {selectedLevel && selectedLevel.sections.length > 0 && (
-                          <Field label="Section / Time Slot">
-                            <select
-                              value={enr.sectionId}
-                              onChange={e => updateEnrollment(enr.key, { sectionId: e.target.value ? Number(e.target.value) : "" })}
-                              className={selectCls}
-                            >
+                        {sl && sl.sections.length > 0 && (
+                          <Field label="Section">
+                            <select value={enr.sectionId} onChange={e => updateEnrollment(enr.key, { sectionId: e.target.value ? Number(e.target.value) : "" })} className={selectCls}>
                               <option value="">— Unassigned —</option>
-                              {selectedLevel.sections.map(s => (
-                                <option key={s.id} value={s.id}>
-                                  {s.sectionName}{s.schedule ? ` · ${s.schedule}` : ""}
-                                </option>
-                              ))}
+                              {sl.sections.map(s => <option key={s.id} value={s.id}>{s.sectionName}{s.schedule ? ` · ${s.schedule}` : ""}</option>)}
                             </select>
                           </Field>
                         )}
-
-                        <Field label="Registration Fee ($)">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={enr.amountDue}
-                            onChange={e => updateEnrollment(enr.key, { amountDue: e.target.value })}
-                            className={`${inputCls} w-32`}
-                          />
+                        <Field label="Fee ($)">
+                          <input type="number" min="0" step="0.01" value={enr.amountDue} onChange={e => updateEnrollment(enr.key, { amountDue: e.target.value })} className={`${inputCls} w-32`} />
                         </Field>
                       </div>
                     );
                   })}
-
-                  <button
-                    type="button"
-                    onClick={addEnrollment}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-primary/30 text-primary text-sm font-medium hover:border-primary/60 hover:bg-primary/5 transition-colors"
-                  >
+                  <button type="button" onClick={addEnrollment}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-primary/30 text-primary text-sm font-medium hover:border-primary/60 hover:bg-primary/5 transition-colors">
                     <Plus className="w-4 h-4" /> Add Another Course
                   </button>
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-border flex gap-3 justify-end bg-gray-50 shrink-0">
               <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-              <Button type="submit" disabled={saving} className="flex items-center gap-2">
+              <Button type="submit" disabled={saving} className="gap-2">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                 {saving ? "Registering…" : "Register Student"}
               </Button>
@@ -378,238 +566,616 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+type SortKey = "id" | "name" | "grade" | "primaryCourse" | "primaryLevel" | "totalPaid" | "worstPayStatus" | "isActive";
+
 export default function Students() {
   const { user } = useAuth();
   const isAdmin = user ? canAccess(user.role, "dashboard") : false;
-
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]             = useState("");
-  const [filterCourse, setFilterCourse] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [filterLevel,  setFilterLevel]  = useState("All");
   const { curriculumYearsLong, activeCurriculumYearLong } = usePortalSettings();
-  const [filterCurricYear, setFilterCurricYear] = useState("2027-2028");
 
-  useEffect(() => {
-    if (activeCurriculumYearLong) setFilterCurricYear(activeCurriculumYearLong);
-  }, [activeCurriculumYearLong]);
-  const [sortKey, setSortKey]           = useState<SortKey>("id");
-  const [sortAsc, setSortAsc]   = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+  // ── data
+  const [rawStudents, setRawStudents] = useState<Student[]>([]);
+  const [loading, setLoading]         = useState(true);
+
+  // ── search & filters (operate on full dataset)
+  const [search,          setSearch]          = useState("");
+  const [filterCourse,    setFilterCourse]    = useState("All");
+  const [filterLevel,     setFilterLevel]     = useState("All");
+  const [filterSection,   setFilterSection]   = useState("All");
+  const [filterPayStatus, setFilterPayStatus] = useState("All");
+  const [filterActive,    setFilterActive]    = useState("All");
+  const [filterCurricYear,setFilterCurricYear]= useState("All");
+  const [showFilters,     setShowFilters]     = useState(false);
+
+  // ── sort
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortAsc, setSortAsc] = useState(true);
+
+  // ── pagination
+  const [page, setPage]         = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+
+  // ── selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // ── panels / dialogs
+  const [editStudent,   setEditStudent]   = useState<Student | null>(null);
+  const [showRegister,  setShowRegister]  = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmInactive, setConfirmInactive] = useState(false);
+  const [confirmActive,   setConfirmActive]   = useState(false);
+  const [actionLoading,   setActionLoading]   = useState(false);
+
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const loadStudents = useCallback(() => {
     setLoading(true);
-    adminApi.students.list().then((d) => setStudents(d as Student[])).finally(() => setLoading(false));
+    adminApi.students.list()
+      .then((d) => setRawStudents(groupRows(d as RawRow[])))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
+  useEffect(() => { if (activeCurriculumYearLong && filterCurricYear === "All") setFilterCurricYear(activeCurriculumYearLong); }, [activeCurriculumYearLong]);
 
+  // ── dynamic filter options from data
+  const allCourses  = useMemo(() => ["All", ...Array.from(new Set(rawStudents.flatMap(s => s.courses))).sort()], [rawStudents]);
+  const allLevels   = useMemo(() => {
+    const nums = Array.from(new Set(rawStudents.flatMap(s => s.enrollments.map(e => e.levelNum)))).filter(Boolean).sort((a,b) => a-b);
+    return ["All", ...nums.map(n => `Level ${n}`)];
+  }, [rawStudents]);
+  const allSections = useMemo(() => {
+    const secs = Array.from(new Set(rawStudents.flatMap(s => s.enrollments.map(e => e.section)).filter(Boolean))).sort();
+    return ["All", ...secs];
+  }, [rawStudents]);
+
+  // ── filtered + sorted (entire dataset, no pagination yet)
   const filtered = useMemo(() => {
-    let data = students.filter((s) =>
-      (filterCourse === "All" || s.course === filterCourse) &&
-      (filterStatus === "All" || s.paymentStatus === filterStatus) &&
-      (filterLevel === "All" || s.level === filterLevel) &&
-      (filterCurricYear === "All" || s.curriculumYear === filterCurricYear) &&
-      (s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.id.toLowerCase().includes(search.toLowerCase()))
-    );
+    const q = search.toLowerCase();
+    let data = rawStudents.filter(s => {
+      if (filterCourse !== "All"     && !s.courses.includes(filterCourse)) return false;
+      if (filterLevel  !== "All"     && !s.enrollments.some(e => e.level === filterLevel)) return false;
+      if (filterSection !== "All"    && !s.enrollments.some(e => e.section === filterSection)) return false;
+      if (filterPayStatus !== "All"  && s.worstPayStatus !== filterPayStatus) return false;
+      if (filterActive !== "All"     && String(s.isActive) !== (filterActive === "Active" ? "true" : "false")) return false;
+      if (filterCurricYear !== "All" && s.curriculumYear !== filterCurricYear) return false;
+      if (q && !(
+        s.name.toLowerCase().includes(q) ||
+        s.id.toLowerCase().includes(q) ||
+        s.motherName.toLowerCase().includes(q) ||
+        s.fatherName.toLowerCase().includes(q) ||
+        s.motherPhone.includes(q) ||
+        s.fatherPhone.includes(q) ||
+        s.grade.toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
     data = [...data].sort((a, b) => {
       const av = a[sortKey]; const bv = b[sortKey];
+      if (av === bv) return 0;
       if (av < bv) return sortAsc ? -1 : 1;
-      if (av > bv) return sortAsc ? 1 : -1;
-      return 0;
+      return sortAsc ? 1 : -1;
     });
     return data;
-  }, [students, search, filterCourse, filterStatus, filterLevel, filterCurricYear, sortKey, sortAsc]);
+  }, [rawStudents, search, filterCourse, filterLevel, filterSection, filterPayStatus, filterActive, filterCurricYear, sortKey, sortAsc]);
 
-  const totalPaid    = filtered.filter((s) => s.paymentStatus === "Paid").reduce((a, s) => a + s.amountPaid, 0);
-  const totalPending = filtered.filter((s) => s.paymentStatus !== "Paid").reduce((a, s) => a + (s.amountDue - s.amountPaid), 0);
-  const totalOverdue = filtered.filter((s) => s.paymentStatus === "Overdue").length;
+  // reset page when filters change
+  useEffect(() => { setPage(1); setPageInput("1"); }, [search, filterCourse, filterLevel, filterSection, filterPayStatus, filterActive, filterCurricYear]);
+
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageIds     = new Set(paginated.map(s => s.id));
+  const allPageSelected = paginated.length > 0 && paginated.every(s => selected.has(s.id));
+  const somePageSelected = paginated.some(s => selected.has(s.id));
+  const selectedArray = Array.from(selected);
 
   function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortAsc((a) => !a);
+    if (sortKey === key) setSortAsc(a => !a);
     else { setSortKey(key); setSortAsc(true); }
   }
 
   function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return null;
-    return sortAsc ? <ChevronUp className="w-3 h-3 inline ml-1" /> : <ChevronDown className="w-3 h-3 inline ml-1" />;
+    if (sortKey !== k) return <span className="opacity-0 ml-1">↑</span>;
+    return sortAsc
+      ? <ChevronUp className="w-3 h-3 inline ml-1 text-primary" />
+      : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />;
+  }
+
+  function toggleSelectAll() {
+    if (allPageSelected) {
+      setSelected(prev => { const n = new Set(prev); pageIds.forEach(id => n.delete(id)); return n; });
+    } else {
+      setSelected(prev => { const n = new Set(prev); paginated.forEach(s => n.add(s.id)); return n; });
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function goToPage(p: number) {
+    const clamped = Math.max(1, Math.min(totalPages, p));
+    setPage(clamped);
+    setPageInput(String(clamped));
+    tableRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── Bulk operations
+  async function doBulkSetStatus(isActive: boolean) {
+    setActionLoading(true);
+    try {
+      await adminApi.students.bulkSetStatus(selectedArray, isActive);
+      toast.success(`${selectedArray.length} student(s) marked ${isActive ? "active" : "inactive"}`);
+      setSelected(new Set());
+      loadStudents();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setActionLoading(false);
+      setConfirmInactive(false);
+      setConfirmActive(false);
+    }
+  }
+
+  async function doBulkDelete() {
+    setActionLoading(true);
+    try {
+      await adminApi.students.bulkDelete(selectedArray);
+      toast.success(`${selectedArray.length} student(s) deleted`);
+      setSelected(new Set());
+      loadStudents();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setActionLoading(false);
+      setConfirmDelete(false);
+    }
   }
 
   function exportCSV() {
-    const headers = ["Student ID","Name","Curriculum Year","Course","Level","Section","Timing","Enroll Date","Payment Status","Amount Due","Amount Paid","Method","Receipt ID"];
-    const rows = filtered.map((s) => [s.id,s.name,s.curriculumYear,s.course,s.level,s.section,s.timing,s.enrollDate,s.paymentStatus,s.amountDue,s.amountPaid,s.paymentMethod,s.receiptId]);
-    const csv = [headers,...rows].map((r) => r.join(",")).join("\n");
+    const headers = ["Student ID","Name","Grade","Curriculum Year","Status","Course(s)","Parent Phone","Payment Status","Total Paid","Mother Name","Mother Email","Father Name","Father Email","Address"];
+    const rows = filtered.map(s => [
+      s.id, s.name, s.grade, s.curriculumYear, s.isActive ? "Active" : "Inactive",
+      s.courses.join("; "),
+      s.parentPhone,
+      s.worstPayStatus,
+      s.totalPaid.toFixed(2),
+      s.motherName, s.motherEmail, s.fatherName, s.fatherEmail, s.address,
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gurukul-students.csv"; a.click();
   }
 
-  const statusBadge: Record<string, string> = {
-    Paid: "bg-green-100 text-green-700", Pending: "bg-orange-100 text-orange-700", Overdue: "bg-red-100 text-red-700",
-  };
+  const statusBadge = { Paid: "bg-green-100 text-green-700", Pending: "bg-orange-100 text-orange-700", Overdue: "bg-red-100 text-red-700" };
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
-  }
+  const activeFilterCount = [
+    filterCourse !== "All", filterLevel !== "All", filterSection !== "All",
+    filterPayStatus !== "All", filterActive !== "All",
+    filterCurricYear !== "All" && filterCurricYear !== activeCurriculumYearLong,
+  ].filter(Boolean).length;
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="flex flex-col h-full space-y-3">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div>
           <h2 className="text-xl font-bold text-secondary">Students & Payments</h2>
-          <p className="text-sm text-muted-foreground">{filtered.length} student{filtered.length !== 1 ? "s" : ""} shown</p>
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} student{filtered.length !== 1 ? "s" : ""} found
+            {filtered.length !== rawStudents.length && ` · ${rawStudents.length} total`}
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isAdmin && (
-            <Button onClick={() => setShowRegister(true)} className="gap-2 rounded-xl">
-              <UserPlus className="w-4 h-4" /> Register Student
+            <Button onClick={() => setShowRegister(true)} size="sm" className="gap-1.5 rounded-xl text-xs h-9">
+              <UserPlus className="w-3.5 h-3.5" /> Register
             </Button>
           )}
-          <Button variant="outline" onClick={exportCSV} className="gap-2 rounded-xl">
-            <Download className="w-4 h-4" /> Export CSV
+          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 rounded-xl text-xs h-9">
+            <Download className="w-3.5 h-3.5" /> Export CSV
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-4 rounded-2xl border border-border">
-          <div className="text-2xl font-bold text-secondary">{filtered.length}</div>
-          <div className="text-xs text-muted-foreground mt-1">Total Students</div>
+      {/* ── Summary (2 cards only) ── */}
+      <div className="grid grid-cols-2 gap-3 shrink-0">
+        <div className="bg-white p-3 rounded-xl border border-border flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <div className="text-xl font-bold text-secondary leading-none">{filtered.length}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">Students (filtered)</div>
+          </div>
         </div>
-        <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
-          <div className="text-2xl font-bold text-green-700">${totalPaid.toLocaleString()}</div>
-          <div className="text-xs text-green-600 mt-1">Total Collected</div>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
-          <div className="text-2xl font-bold text-orange-700">${totalPending.toLocaleString()}</div>
-          <div className="text-xs text-orange-600 mt-1">Pending Amount</div>
-        </div>
-        <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
-          <div className="text-2xl font-bold text-red-700">{totalOverdue}</div>
-          <div className="text-xs text-red-600 mt-1">Overdue Accounts</div>
+        <div className="bg-white p-3 rounded-xl border border-border flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+            <span className="text-green-700 text-sm font-bold">$</span>
+          </div>
+          <div>
+            <div className="text-xl font-bold text-green-700 leading-none">
+              ${filtered.reduce((a, s) => a + s.totalPaid, 0).toLocaleString()}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">Total Collected</div>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* ── Search + Filters toggle ── */}
+      <div className="flex gap-2 shrink-0">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search by name, parent, or ID..." className="pl-9 rounded-xl" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            placeholder="Search name, ID, parent name or phone…"
+            className="pl-9 rounded-xl h-9 text-sm"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-secondary">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-        <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2 rounded-xl shrink-0">
-          <Filter className="w-4 h-4" /> Filters
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(f => !f)}
+          className={`gap-1.5 rounded-xl h-9 text-xs shrink-0 ${activeFilterCount > 0 ? "border-primary text-primary bg-primary/5" : ""}`}
+        >
+          <Filter className="w-3.5 h-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">{activeFilterCount}</span>
+          )}
         </Button>
       </div>
 
+      {/* ── Filter Panel ── */}
       {showFilters && (
-        <div className="bg-white rounded-2xl border border-border p-4 flex flex-wrap gap-x-6 gap-y-4">
-          {/* Curriculum Year — select dropdown (25 years) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Curriculum Year</label>
-            <select
-              value={filterCurricYear}
-              onChange={e => setFilterCurricYear(e.target.value)}
-              className="text-sm border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary bg-white min-w-36"
-            >
-              <option value="All">All Years</option>
-              {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
+        <div className="bg-white rounded-xl border border-border p-4 space-y-3 shrink-0">
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
+            {/* Curriculum Year */}
+            <div className="space-y-1.5 shrink-0">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Year</label>
+              <select
+                value={filterCurricYear}
+                onChange={e => setFilterCurricYear(e.target.value)}
+                className="text-xs border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-primary bg-white min-w-32"
+              >
+                <option value="All">All Years</option>
+                {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
 
-          {/* Course */}
-          <div className="space-y-1.5 min-w-32">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</label>
-            <div className="flex flex-wrap gap-1">
-              {coursesList.map((c) => (
-                <button key={c} onClick={() => setFilterCourse(c)} className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${filterCourse === c ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>{c}</button>
-              ))}
+            {/* Status */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Status</label>
+              <div className="flex gap-1">
+                {["All","Active","Inactive"].map(s => (
+                  <button key={s} onClick={() => setFilterActive(s)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filterActive === s ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Course */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Course</label>
+              <div className="flex flex-wrap gap-1">
+                {allCourses.map(c => (
+                  <button key={c} onClick={() => setFilterCourse(c)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filterCourse === c ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Level */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Level</label>
+              <div className="flex flex-wrap gap-1">
+                {allLevels.map(l => (
+                  <button key={l} onClick={() => setFilterLevel(l)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filterLevel === l ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>
+                    {l === "All" ? "All" : l.replace("Level ", "L")}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Section */}
+            {allSections.length > 1 && (
+              <div className="space-y-1.5 shrink-0">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Section</label>
+                <select
+                  value={filterSection}
+                  onChange={e => setFilterSection(e.target.value)}
+                  className="text-xs border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-primary bg-white min-w-32"
+                >
+                  {allSections.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Payment Status */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Payment</label>
+              <div className="flex flex-wrap gap-1">
+                {["All","Paid","Pending","Overdue"].map(p => (
+                  <button key={p} onClick={() => setFilterPayStatus(p)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filterPayStatus === p ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Payment Status */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Payment Status</label>
-            <div className="flex flex-wrap gap-1">
-              {paymentStatuses.map((s) => (
-                <button key={s} onClick={() => setFilterStatus(s)} className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${filterStatus === s ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>{s}</button>
-              ))}
+          {activeFilterCount > 0 && (
+            <div className="pt-1 border-t border-border">
+              <button
+                onClick={() => { setFilterCourse("All"); setFilterLevel("All"); setFilterSection("All"); setFilterPayStatus("All"); setFilterActive("All"); setFilterCurricYear(activeCurriculumYearLong || "All"); }}
+                className="text-xs text-red-500 hover:text-red-700 font-medium"
+              >
+                Clear all filters
+              </button>
             </div>
-          </div>
-
-          {/* Level */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Level</label>
-            <div className="flex flex-wrap gap-1">
-              {levels.map((l) => (
-                <button key={l} onClick={() => setFilterLevel(l)} className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${filterLevel === l ? "bg-primary text-white" : "bg-gray-100 text-muted-foreground hover:bg-gray-200"}`}>{l}</button>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-border">
+      {/* ── Bulk Actions Bar ── */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-primary/5 border border-primary/20 rounded-xl shrink-0 flex-wrap">
+          <span className="text-sm font-semibold text-primary mr-2">{selected.size} selected</span>
+          <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs rounded-lg text-green-700 border-green-300 hover:bg-green-50"
+            onClick={() => setConfirmActive(true)}>
+            <UserCheck className="w-3.5 h-3.5" /> Mark Active
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs rounded-lg text-amber-700 border-amber-300 hover:bg-amber-50"
+            onClick={() => setConfirmInactive(true)}>
+            <UserX className="w-3.5 h-3.5" /> Mark Inactive
+          </Button>
+          {isAdmin && (
+            <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs rounded-lg text-red-600 border-red-300 hover:bg-red-50"
+              onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="w-3.5 h-3.5" /> Delete Selected
+            </Button>
+          )}
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-secondary">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── Table ── */}
+      <div className="bg-white rounded-2xl border border-border overflow-hidden flex flex-col flex-1 min-h-0">
+        <div ref={tableRef} className="overflow-auto" style={{ maxHeight: "calc(100vh - 340px)", minHeight: 320 }}>
+          <table className="w-full text-xs border-collapse">
+            <thead className="sticky top-0 z-10 bg-gray-50 border-b border-border shadow-sm">
               <tr>
+                {/* Checkbox */}
+                <th className="px-3 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+                    onChange={toggleSelectAll}
+                    className="rounded"
+                  />
+                </th>
                 {[
-                  { label: "Student ID", key: "id" as SortKey },
-                  { label: "Student Name", key: "name" as SortKey },
-                  { label: "Course", key: "course" as SortKey },
-                  { label: "Level", key: "level" as SortKey },
-                  { label: "Section", key: "section" as SortKey },
-                  { label: "Timing", key: "timing" as SortKey },
-                  { label: "Enroll Date", key: "enrollDate" as SortKey },
-                  { label: "Status", key: "paymentStatus" as SortKey },
-                  { label: "Due", key: "amountDue" as SortKey },
-                  { label: "Paid", key: "amountPaid" as SortKey },
-                  { label: "Method", key: "paymentMethod" as SortKey },
-                  { label: "Receipt", key: "receiptId" as SortKey },
+                  { label: "ID",      key: "id"           as SortKey, w: "w-16"  },
+                  { label: "Name",    key: "name"         as SortKey, w: "w-36"  },
+                  { label: "Grade",   key: "grade"        as SortKey, w: "w-16"  },
+                  { label: "Course",  key: "primaryCourse"as SortKey, w: "w-40"  },
+                  { label: "Level",   key: "primaryLevel" as SortKey, w: "w-16"  },
+                  { label: "Section",                                  w: "w-24", noSort: true },
+                  { label: "Parent Phone",                             w: "w-28", noSort: true },
+                  { label: "Payment", key: "worstPayStatus"as SortKey,w: "w-20"  },
+                  { label: "Paid",    key: "totalPaid"    as SortKey, w: "w-16"  },
+                  { label: "Method",                                   w: "w-20", noSort: true },
+                  { label: "Status",  key: "isActive"     as SortKey, w: "w-20"  },
+                  { label: "",                                         w: "w-16", noSort: true },
                 ].map((col) => (
-                  <th key={col.key} onClick={() => toggleSort(col.key)}
-                    className="text-left font-semibold text-muted-foreground px-4 py-3 whitespace-nowrap cursor-pointer hover:text-secondary transition-colors select-none">
-                    {col.label}<SortIcon k={col.key} />
+                  <th
+                    key={col.label || "actions"}
+                    className={`text-left font-semibold text-muted-foreground px-3 py-2.5 whitespace-nowrap select-none ${col.w} ${!col.noSort && col.key ? "cursor-pointer hover:text-secondary transition-colors" : ""}`}
+                    onClick={() => !col.noSort && col.key && toggleSort(col.key as SortKey)}
+                  >
+                    {col.label}
+                    {!col.noSort && col.key && <SortIcon k={col.key as SortKey} />}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
-                <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">
-                  No students found.{isAdmin && <> <button onClick={() => setShowRegister(true)} className="text-primary hover:underline ml-1">Register one?</button></>}
-                </td></tr>
-              )}
-              {filtered.map((s) => (
-                <tr key={`${s.id}-${s.course}`} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.id}</td>
-                  <td className="px-4 py-3 font-medium text-secondary whitespace-nowrap">{s.name}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-xs font-medium">{s.course}</span></td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.level}</td>
-                  <td className="px-4 py-3 text-xs whitespace-nowrap">
-                    {s.section
-                      ? <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] font-medium border border-blue-100">{s.section}</span>
-                      : <span className="text-muted-foreground">—</span>}
+              {paginated.length === 0 && (
+                <tr>
+                  <td colSpan={12} className="text-center py-16 text-muted-foreground text-sm">
+                    No students found.
+                    {isAdmin && <> <button onClick={() => setShowRegister(true)} className="text-primary hover:underline ml-1">Register one?</button></>}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.timing}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{s.enrollDate}</td>
-                  <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge[s.paymentStatus]}`}>{s.paymentStatus}</span></td>
-                  <td className="px-4 py-3 text-xs font-medium">${s.amountDue}</td>
-                  <td className="px-4 py-3 text-xs font-medium text-green-700">${s.amountPaid}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{s.paymentMethod}</td>
-                  <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{s.receiptId}</td>
+                </tr>
+              )}
+              {paginated.map((s) => (
+                <tr
+                  key={s.id}
+                  className={`border-b border-border/50 transition-colors ${selected.has(s.id) ? "bg-primary/5" : "hover:bg-gray-50"} ${!s.isActive ? "opacity-60" : ""}`}
+                >
+                  <td className="px-3 py-2">
+                    <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggleSelect(s.id)} className="rounded" />
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground whitespace-nowrap">{s.id}</td>
+                  <td className="px-3 py-2 font-medium text-secondary whitespace-nowrap max-w-[140px] truncate" title={s.name}>{s.name}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{s.grade || "—"}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {s.courses.length === 0 ? <span className="text-muted-foreground">—</span> : s.courses.map(c => (
+                        <span key={c} className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[11px] font-medium whitespace-nowrap">{c}</span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                    {s.enrollments.length === 0 ? "—" : s.enrollments.length === 1
+                      ? s.primaryLevel
+                      : <span title={s.enrollments.map(e=>e.level).join(", ")}>{s.primaryLevel}{s.enrollments.length > 1 ? <span className="ml-1 text-[10px] text-muted-foreground">+{s.enrollments.length-1}</span> : null}</span>
+                    }
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {s.primarySection
+                      ? <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] font-medium border border-blue-100">{s.primarySection}</span>
+                      : <span className="text-muted-foreground">—</span>
+                    }
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                    {s.parentPhone || <span className="text-muted-foreground/50">—</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${statusBadge[s.worstPayStatus]}`}>
+                      {s.worstPayStatus}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 font-medium text-green-700 whitespace-nowrap">${s.totalPaid.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                    {s.enrollments[0]?.paymentMethod !== "-" ? s.enrollments[0]?.paymentMethod : "—"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                      {s.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1">
+                      <button
+                        title="Edit student"
+                        onClick={() => setEditStudent(s)}
+                        className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-secondary transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        title={s.isActive ? "Mark inactive" : "Mark active"}
+                        onClick={async () => {
+                          try {
+                            await adminApi.students.setStatus(s.id, !s.isActive);
+                            toast.success(`${s.name} marked ${!s.isActive ? "active" : "inactive"}`);
+                            loadStudents();
+                          } catch { toast.error("Failed to update status"); }
+                        }}
+                        className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-secondary transition-colors"
+                      >
+                        {s.isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                      </button>
+                      {isAdmin && (
+                        <button
+                          title="Delete student"
+                          onClick={() => { setSelected(new Set([s.id])); setConfirmDelete(true); }}
+                          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {/* ── Pagination ── */}
+        <div className="px-4 py-3 border-t border-border flex items-center justify-between gap-3 bg-gray-50 shrink-0 flex-wrap gap-y-2">
+          <p className="text-xs text-muted-foreground">
+            Showing {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+            {selected.size > 0 && <span className="ml-2 text-primary font-medium">· {selected.size} selected</span>}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-secondary hover:border-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-muted-foreground">Page</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={pageInput}
+                onChange={e => setPageInput(e.target.value)}
+                onBlur={() => goToPage(parseInt(pageInput) || 1)}
+                onKeyDown={e => e.key === "Enter" && goToPage(parseInt(pageInput) || 1)}
+                className="w-12 text-center border border-border rounded-lg px-1 py-1 focus:outline-none focus:border-primary text-xs"
+              />
+              <span className="text-muted-foreground">of {totalPages}</span>
+            </div>
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages}
+              className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-secondary hover:border-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* ── Panels & Dialogs ── */}
       {showRegister && (
-        <RegisterStudentPanel
-          onClose={() => setShowRegister(false)}
-          onRegistered={() => { setShowRegister(false); loadStudents(); }}
+        <RegisterStudentPanel onClose={() => setShowRegister(false)} onRegistered={() => { setShowRegister(false); loadStudents(); }} />
+      )}
+
+      {editStudent && (
+        <EditStudentPanel
+          student={editStudent}
+          curriculumYears={curriculumYearsLong}
+          onClose={() => setEditStudent(null)}
+          onSaved={() => { setEditStudent(null); loadStudents(); }}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          danger
+          title={`Delete ${selected.size} Student${selected.size !== 1 ? "s" : ""}?`}
+          message={`This will permanently remove ${selected.size} student record${selected.size !== 1 ? "s" : ""} including all enrollments, attendance, and payment data. This cannot be undone.`}
+          confirmLabel={`Delete ${selected.size} Student${selected.size !== 1 ? "s" : ""}`}
+          loading={actionLoading}
+          onConfirm={doBulkDelete}
+          onCancel={() => { setConfirmDelete(false); if (selected.size === 1) setSelected(new Set()); }}
+        />
+      )}
+
+      {confirmInactive && (
+        <ConfirmDialog
+          title={`Mark ${selected.size} Student${selected.size !== 1 ? "s" : ""} Inactive?`}
+          message={`These students will be marked inactive. They will remain in the system but appear dimmed in the list. You can reactivate them at any time.`}
+          confirmLabel="Mark Inactive"
+          loading={actionLoading}
+          onConfirm={() => doBulkSetStatus(false)}
+          onCancel={() => setConfirmInactive(false)}
+        />
+      )}
+
+      {confirmActive && (
+        <ConfirmDialog
+          title={`Mark ${selected.size} Student${selected.size !== 1 ? "s" : ""} Active?`}
+          message={`These students will be marked active and will appear normally in all views.`}
+          confirmLabel="Mark Active"
+          loading={actionLoading}
+          onConfirm={() => doBulkSetStatus(true)}
+          onCancel={() => setConfirmActive(false)}
         />
       )}
     </div>
