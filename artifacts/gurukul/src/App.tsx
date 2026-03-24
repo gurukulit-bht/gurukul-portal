@@ -11,7 +11,6 @@ import Home from "@/pages/Home";
 import About from "@/pages/About";
 import Courses from "@/pages/Courses";
 import Announcements from "@/pages/Announcements";
-import WeeklyUpdates from "@/pages/WeeklyUpdates";
 import Calendar from "@/pages/Calendar";
 import ParentsPortal from "@/pages/ParentsPortal";
 import Contact from "@/pages/Contact";
@@ -56,7 +55,6 @@ function Router() {
             <Route path="/announcements" component={Announcements} />
             <Route path="/calendar" component={Calendar} />
             <Route path="/parents" component={ParentsPortal} />
-            <Route path="/weekly-updates" component={WeeklyUpdates} />
             <Route path="/register" component={Register} />
             <Route path="/students-corner" component={StudentsCorner} />
             <Route path="/contact" component={Contact} />

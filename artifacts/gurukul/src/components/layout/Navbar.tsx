@@ -9,7 +9,6 @@ const navLinks = [
   { href: "/about", label: "About Us" },
   { href: "/courses", label: "Courses" },
   { href: "/parents", label: "Parents Portal" },
-  { href: "/weekly-updates", label: "Weekly Updates" },
   { href: "/students-corner", label: "🎉 Student's Corner" },
   { href: "/announcements", label: "Announcements" },
   { href: "/contact", label: "Contact Us" },

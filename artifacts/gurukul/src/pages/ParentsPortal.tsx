@@ -1,11 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { CaptchaGate } from "@/components/CaptchaGate";
 import {
   BookOpen, Globe, Heart, Users, Star, Lightbulb,
   CheckCircle2, ArrowRight, Music, Palette, Mic,
-  Scroll, Sparkles, ShieldCheck, ChevronDown,
+  Scroll, Sparkles, ShieldCheck, ChevronDown, Lock, Phone,
+  Calendar, ChevronUp, User, FileText, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +100,312 @@ type Testimonial = {
   quote: string;
   avatarColor: string;
 };
+
+// ─── Weekly Updates types ─────────────────────────────────────────────────────
+
+type WeeklyUpdate = {
+  id: number;
+  courseName: string;
+  levelName: string;
+  sectionName: string;
+  weekStart: string;
+  weekEnd: string;
+  title: string;
+  content: string;
+  topicsCovered: string;
+  homework: string;
+  upcomingPlan: string;
+  reminders: string;
+  attachmentLink: string;
+  teacherName: string;
+};
+
+function fmtDate(d: string) {
+  const [y, m, day] = d.split("-");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[parseInt(m)-1]} ${parseInt(day)}, ${y}`;
+}
+
+const COURSE_COLORS: Record<string, string> = {
+  default:  "from-primary to-accent",
+  Hindi:    "from-orange-500 to-amber-400",
+  Sanskrit: "from-amber-600 to-yellow-400",
+  Dharma:   "from-rose-600 to-pink-400",
+  Telugu:   "from-violet-600 to-purple-400",
+  Tamil:    "from-sky-600 to-blue-400",
+  Gujarati: "from-green-600 to-emerald-400",
+};
+
+function getCourseGrad(name: string) {
+  const key = Object.keys(COURSE_COLORS).find((k) => name.toLowerCase().includes(k.toLowerCase()));
+  return COURSE_COLORS[key ?? "default"];
+}
+
+// ─── Gated Weekly Updates section ────────────────────────────────────────────
+
+type GatePhase = "locked" | "captcha" | "phone" | "unlocked";
+
+function WeeklyUpdatesSection() {
+  const [phase, setPhase]         = useState<GatePhase>("locked");
+  const [phone, setPhone]         = useState("");
+  const [phoneErr, setPhoneErr]   = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [memberName, setMemberName] = useState("");
+  const [updates, setUpdates]     = useState<WeeklyUpdate[]>([]);
+  const [loadingUpdates, setLoadingUpdates] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [filterCourse, setFilterCourse] = useState("");
+
+  async function verifyPhone() {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      setPhoneErr("Please enter a valid 10-digit phone number.");
+      return;
+    }
+    setVerifying(true);
+    setPhoneErr("");
+    try {
+      const res  = await fetch("/api/admin/members/lookup", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ emailOrPhone: phone.trim() }),
+      });
+      if (!res.ok) throw new Error("not found");
+      const data = await res.json();
+      setMemberName(data.name ?? "");
+      await fetchUpdates();
+      setPhase("unlocked");
+    } catch {
+      setPhoneErr("We couldn't find a member with that phone number. Please check and try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function fetchUpdates() {
+    setLoadingUpdates(true);
+    try {
+      const res  = await fetch("/api/weekly-updates");
+      const data = await res.json();
+      setUpdates(Array.isArray(data) ? data : []);
+    } catch {
+      setUpdates([]);
+    } finally {
+      setLoadingUpdates(false);
+    }
+  }
+
+  const uniqueCourses = Array.from(new Set(updates.map((u) => u.courseName))).filter(Boolean);
+  const displayed = filterCourse ? updates.filter((u) => u.courseName === filterCourse) : updates;
+
+  return (
+    <section className="py-20 px-4 bg-gradient-to-b from-white to-amber-50/40">
+      <div className="max-w-4xl mx-auto">
+        {/* Section header */}
+        <div className="text-center mb-10">
+          <p className="text-primary font-semibold uppercase tracking-widest text-sm mb-3">Member Access</p>
+          <h2 className="text-3xl sm:text-4xl font-display font-bold text-secondary">Weekly Class Updates</h2>
+          <p className="text-muted-foreground mt-3 max-w-xl mx-auto text-sm">
+            Stay informed about what your child is learning — class highlights, homework, and upcoming plans,
+            posted every week by our teachers.
+          </p>
+        </div>
+
+        <AnimatePresence mode="wait">
+
+          {/* ── LOCKED ── */}
+          {phase === "locked" && (
+            <motion.div key="locked" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="max-w-sm mx-auto">
+              <div className="bg-white rounded-3xl border-2 border-dashed border-amber-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-secondary to-secondary/80 px-8 py-8 text-center">
+                  <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Lock className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-white mb-1">Members Only</h3>
+                  <p className="text-white/60 text-sm">Verify your temple membership to view class updates.</p>
+                </div>
+                <div className="px-8 py-6 space-y-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" /><span>Weekly class summaries from teachers</span></div>
+                  <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" /><span>Homework & upcoming topics</span></div>
+                  <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" /><span>Important class reminders</span></div>
+                </div>
+                <div className="px-8 pb-7">
+                  <Button className="w-full" onClick={() => setPhase("captcha")}>
+                    Access Class Updates <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── CAPTCHA ── */}
+          {phase === "captcha" && (
+            <motion.div key="captcha" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <CaptchaGate
+                subtitle="Solve the quick puzzle to continue."
+                onVerified={() => setPhase("phone")}
+              />
+            </motion.div>
+          )}
+
+          {/* ── PHONE VERIFY ── */}
+          {phase === "phone" && (
+            <motion.div key="phone" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="max-w-sm mx-auto">
+              <div className="bg-white rounded-3xl border border-border shadow-md overflow-hidden">
+                <div className="bg-secondary px-8 py-7 text-center">
+                  <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Phone className="w-7 h-7 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-white">Verify Membership</h3>
+                  <p className="text-white/60 text-sm mt-1">Enter the phone number registered with your temple membership.</p>
+                </div>
+                <div className="px-8 py-7 space-y-5">
+                  <div>
+                    <label className="text-sm font-semibold text-secondary block mb-2">Registered Phone Number</label>
+                    <input
+                      type="tel"
+                      className="w-full border border-border rounded-xl px-4 py-3 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                      placeholder="(614) 555-0100"
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setPhoneErr(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && verifyPhone()}
+                      autoFocus
+                    />
+                    {phoneErr && <p className="text-sm text-red-500 text-center mt-2 font-medium">{phoneErr}</p>}
+                  </div>
+                  <Button className="w-full" onClick={verifyPhone} disabled={verifying || !phone.trim()}>
+                    {verifying ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Verifying…</> : <>Verify &amp; View Updates <ArrowRight className="ml-2 w-4 h-4" /></>}
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">Not a member yet?{" "}
+                    <Link href="/register" className="text-primary underline underline-offset-2">Register your child</Link> to become one.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── UNLOCKED ── */}
+          {phase === "unlocked" && (
+            <motion.div key="unlocked" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              {/* Welcome bar */}
+              <div className="flex items-center justify-between flex-wrap gap-3 mb-6 bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
+                <div className="flex items-center gap-2 text-green-700 text-sm font-semibold">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  {memberName ? `Welcome, ${memberName}!` : "Membership verified"} — showing class updates for your family.
+                </div>
+                <button className="text-xs text-muted-foreground underline underline-offset-2 hover:text-secondary transition-colors"
+                  onClick={() => { setPhase("locked"); setPhone(""); setPhoneErr(""); setMemberName(""); }}>
+                  Sign out
+                </button>
+              </div>
+
+              {loadingUpdates ? (
+                <div className="flex justify-center items-center py-16 text-muted-foreground">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />Loading updates…
+                </div>
+              ) : updates.length === 0 ? (
+                <div className="text-center py-16">
+                  <FileText className="w-14 h-14 mx-auto text-gray-200 mb-4" />
+                  <p className="text-lg font-semibold text-secondary mb-1">No updates yet</p>
+                  <p className="text-sm text-muted-foreground">Weekly updates will appear here as teachers publish them each week.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Filter bar */}
+                  {uniqueCourses.length > 1 && (
+                    <div className="flex items-center gap-3 mb-5 flex-wrap">
+                      <span className="text-sm font-medium text-muted-foreground">Filter by course:</span>
+                      {["", ...uniqueCourses].map((c) => (
+                        <button key={c || "all"} onClick={() => setFilterCourse(c)}
+                          className={cn("px-3 py-1 rounded-full text-sm font-medium border transition-all",
+                            filterCourse === c ? "bg-primary text-white border-primary" : "bg-white border-border text-muted-foreground hover:border-primary/50")}>
+                          {c || "All Courses"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Update cards */}
+                  <div className="space-y-3">
+                    {displayed.map((u, i) => {
+                      const expanded = expandedId === u.id;
+                      const grad = getCourseGrad(u.courseName);
+                      return (
+                        <motion.div key={u.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.04 }}
+                          className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                          <div className={`h-1.5 bg-gradient-to-r ${grad}`} />
+                          <button className="w-full text-left px-5 py-4" onClick={() => setExpandedId(expanded ? null : u.id)}>
+                            <div className="flex items-start gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap gap-2 mb-1.5">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${grad}`}>{u.courseName}</span>
+                                  {u.levelName   && <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{u.levelName}</span>}
+                                  {u.sectionName && <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{u.sectionName}</span>}
+                                </div>
+                                <h3 className="font-bold text-secondary text-base leading-snug mb-1">{u.title}</h3>
+                                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{fmtDate(u.weekStart)} – {fmtDate(u.weekEnd)}</span>
+                                  {u.teacherName && <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" />{u.teacherName}</span>}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-muted-foreground mt-1">
+                                {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                              </div>
+                            </div>
+                          </button>
+
+                          <AnimatePresence>
+                            {expanded && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
+                                <div className="border-t border-border px-5 py-5 bg-amber-50/40 space-y-4">
+                                  <UpdateSection label="Class Highlights" text={u.content} />
+                                  {u.topicsCovered && <UpdateSection label="Topics Covered" text={u.topicsCovered} />}
+                                  {u.homework     && <UpdateSection label="Homework" text={u.homework} highlight="yellow" />}
+                                  {u.upcomingPlan && <UpdateSection label="Upcoming Plan" text={u.upcomingPlan} />}
+                                  {u.reminders    && <UpdateSection label="Reminders" text={u.reminders} highlight="rose" />}
+                                  {u.attachmentLink && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Reference / Attachment</p>
+                                      <a href={u.attachmentLink} target="_blank" rel="noopener noreferrer"
+                                        className="text-sm text-primary underline underline-offset-2 break-all"
+                                        onClick={(e) => e.stopPropagation()}>
+                                        {u.attachmentLink}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </section>
+  );
+}
+
+function UpdateSection({ label, text, highlight }: { label: string; text: string; highlight?: "yellow" | "rose" }) {
+  const cls = highlight === "yellow" ? "bg-yellow-50 border-l-4 border-yellow-400 pl-4 rounded-r-xl py-2"
+            : highlight === "rose"   ? "bg-rose-50 border-l-4 border-rose-400 pl-4 rounded-r-xl py-2"
+            : "";
+  return (
+    <div className={cls}>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-sm text-secondary whitespace-pre-wrap leading-relaxed">{text}</p>
+    </div>
+  );
+}
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -452,6 +760,9 @@ export default function ParentsPortal() {
           </div>
         </section>
       )}
+
+      {/* ── WEEKLY UPDATES ───────────────────────────────────────────── */}
+      <WeeklyUpdatesSection />
 
       {/* ── CTA BANNER ───────────────────────────────────────────────── */}
       <section className="py-20 px-4 bg-gradient-to-br from-secondary via-secondary to-secondary/90 text-white relative overflow-hidden">
