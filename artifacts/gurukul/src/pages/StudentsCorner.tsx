@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { ChevronRight, Lock, CheckCircle2, Star, Trophy, Download, RotateCcw, Home, ArrowLeft, Sparkles } from "lucide-react";
+import { ChevronRight, Lock, CheckCircle2, Star, Trophy, Download, RotateCcw, Home, ArrowLeft, Sparkles, Copy, Check, ExternalLink } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -571,76 +571,325 @@ function NaradMini() {
   );
 }
 
+// ─── Canvas badge helper ──────────────────────────────────────────────────────
+
+function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+
+function buildBadgeCanvas(course: Course, name: string, date: string): HTMLCanvasElement {
+  const S = 1200;
+  const canvas = document.createElement("canvas");
+  canvas.width = S; canvas.height = S;
+  const ctx = canvas.getContext("2d")!;
+
+  const isRam = course.id === "know-your-ram";
+  const c1 = isRam ? "#f97316" : "#7c3aed";
+  const c2 = isRam ? "#fb923c" : "#8b5cf6";
+  const c3 = isRam ? "#fbbf24" : "#6366f1";
+  const cDark = isRam ? "#c2410c" : "#5b21b6";
+  const cGold = "#f59e0b";
+
+  // ── Background gradient ──
+  const bgGrad = ctx.createLinearGradient(0, 0, S, S);
+  bgGrad.addColorStop(0, c1); bgGrad.addColorStop(0.55, c2); bgGrad.addColorStop(1, c3);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, S, S);
+
+  // Decorative translucent circles
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  [[-60,-60,380],[S+60,-60,300],[S+60,S+60,400],[-60,S+60,350],[S/2,S/2,500]].forEach(([cx,cy,r]) => {
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  });
+
+  // ── White card ──
+  const M = 64, R = 48;
+  ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 32; ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "rgba(255,255,255,0.96)";
+  rrect(ctx, M, M, S-M*2, S-M*2, R); ctx.fill();
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // ── Header band inside card ──
+  const hH = 148;
+  ctx.save();
+  rrect(ctx, M, M, S-M*2, hH, R); ctx.clip();
+  const hGrad = ctx.createLinearGradient(0, M, 0, M+hH);
+  hGrad.addColorStop(0, c1); hGrad.addColorStop(1, c2);
+  ctx.fillStyle = hGrad; ctx.fillRect(M, M, S-M*2, hH);
+  ctx.restore();
+
+  // Header shimmer strip
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fillRect(M, M, S-M*2, 4);
+
+  // Temple name in header
+  ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,0.88)";
+  ctx.font = `bold 26px 'Georgia', serif`;
+  ctx.fillText("Bhartiya Hindu Temple Gurukul", S/2, M+48);
+  ctx.font = `22px 'Georgia', serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.fillText("Student's Corner  •  Certificate of Achievement", S/2, M+90);
+
+  // ── Gold border on card ──
+  ctx.strokeStyle = cGold; ctx.lineWidth = 4;
+  rrect(ctx, M, M, S-M*2, S-M*2, R); ctx.stroke();
+  // Inner dashed frame
+  ctx.strokeStyle = isRam ? "#fde68a" : "#ddd6fe"; ctx.lineWidth = 2;
+  ctx.setLineDash([10, 7]);
+  rrect(ctx, M+14, M+14, S-M*2-28, S-M*2-28, R-8); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Trophy & course emoji ──
+  ctx.font = `90px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',serif`;
+  ctx.fillText("🏆", S/2 - 58, M + hH + 110);
+  ctx.fillText(course.emoji, S/2 + 58, M + hH + 110);
+
+  // ── "CERTIFICATE OF ACHIEVEMENT" ──
+  ctx.font = `bold 52px 'Georgia', serif`; ctx.fillStyle = cDark;
+  ctx.fillText("Certificate of Achievement", S/2, M + hH + 175);
+
+  // Gold divider
+  const divY = M + hH + 198;
+  const divGrad = ctx.createLinearGradient(M+80, divY, S-M-80, divY);
+  divGrad.addColorStop(0, "transparent"); divGrad.addColorStop(0.3, cGold);
+  divGrad.addColorStop(0.7, cGold); divGrad.addColorStop(1, "transparent");
+  ctx.strokeStyle = divGrad; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(M+80, divY); ctx.lineTo(S-M-80, divY); ctx.stroke();
+
+  // ── "This certifies that" ──
+  ctx.font = `italic 30px 'Georgia', serif`; ctx.fillStyle = "#9ca3af";
+  ctx.fillText("This certifies that", S/2, M + hH + 255);
+
+  // ── Student name ──
+  const displayName = name || "Little Champion";
+  const nameFontSize = displayName.length > 22 ? 56 : displayName.length > 16 ? 64 : 72;
+  ctx.font = `bold ${nameFontSize}px 'Georgia', serif`; ctx.fillStyle = isRam ? "#d97706" : "#6d28d9";
+  ctx.fillText(displayName, S/2, M + hH + 340);
+
+  // Underline below name
+  const nameW = Math.min(ctx.measureText(displayName).width + 40, S - M*2 - 80);
+  const ulY = M + hH + 358;
+  ctx.strokeStyle = isRam ? "#fbbf24" : "#a78bfa"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(S/2 - nameW/2, ulY); ctx.lineTo(S/2 + nameW/2, ulY); ctx.stroke();
+
+  // ── "has successfully completed" ──
+  ctx.font = `italic 30px 'Georgia', serif`; ctx.fillStyle = "#9ca3af";
+  ctx.fillText("has successfully completed", S/2, M + hH + 418);
+
+  // ── Course name ──
+  ctx.font = `bold 48px 'Georgia', serif`; ctx.fillStyle = cDark;
+  ctx.fillText(course.title, S/2, M + hH + 490);
+
+  // ── Badge pill ──
+  const pillW = 360, pillH = 60, pillX = S/2-pillW/2, pillY = M+hH+520;
+  const pillGrad = ctx.createLinearGradient(pillX, 0, pillX+pillW, 0);
+  pillGrad.addColorStop(0, c1); pillGrad.addColorStop(1, c3);
+  ctx.fillStyle = pillGrad;
+  rrect(ctx, pillX, pillY, pillW, pillH, pillH/2); ctx.fill();
+  ctx.font = `bold 28px 'Georgia', serif`; ctx.fillStyle = "white";
+  ctx.fillText(`${course.badgeEmoji}  ${course.badge}  ${course.badgeEmoji}`, S/2, pillY + 41);
+
+  // ── Stats row ──
+  const statsY = M + hH + 640;
+  ctx.font = `22px 'Georgia', serif`; ctx.fillStyle = "#6b7280";
+  ctx.fillText(`All ${course.chapters.length} chapters completed  •  All quizzes passed  •  Score ≥ 70%`, S/2, statsY);
+
+  // ── Completion date ──
+  ctx.font = `24px 'Georgia', serif`; ctx.fillStyle = "#9ca3af";
+  ctx.fillText(`Completed on ${date}`, S/2, statsY + 50);
+
+  // ── Footer divider ──
+  const ftY = S - M - 88;
+  const ftGrad = ctx.createLinearGradient(M+60, ftY, S-M-60, ftY);
+  ftGrad.addColorStop(0,"transparent"); ftGrad.addColorStop(0.3,cGold);
+  ftGrad.addColorStop(0.7,cGold); ftGrad.addColorStop(1,"transparent");
+  ctx.strokeStyle = ftGrad; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(M+60, ftY); ctx.lineTo(S-M-60, ftY); ctx.stroke();
+
+  // ── Verified footer ──
+  ctx.font = `bold 24px 'Georgia', serif`; ctx.fillStyle = c1;
+  ctx.fillText("✓ Verified by Bhartiya Hindu Temple Gurukul — Powell, OH", S/2, S - M - 44);
+
+  return canvas;
+}
+
+// ── Social SVG icons ──
+function LinkedInIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    </svg>
+  );
+}
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  );
+}
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+    </svg>
+  );
+}
+
 // ─── Certificate Component ────────────────────────────────────────────────────
 
 function Certificate({ course, studentName }: { course: Course; studentName: string }) {
-  const certRef = useRef<HTMLDivElement>(null);
+  const [badgeUrl, setBadgeUrl]   = useState<string | null>(null);
+  const [copied, setCopied]       = useState(false);
+  const [igTip, setIgTip]         = useState(false);
   const date = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
+  const siteUrl  = encodeURIComponent("https://gurukul.bhtohio.org/students-corner");
+  const caption  = `🎉 I just earned the "${course.badge}" ${course.badgeEmoji} badge by completing "${course.title}" at Bhartiya Hindu Temple Gurukul's Student's Corner! All quizzes passed. 🌟 #HinduKids #Gurukul #BHTGurukul #Learning #CertificateOfAchievement`;
+  const liText   = encodeURIComponent(caption);
+  const fbUrl    = `https://www.facebook.com/sharer/sharer.php?u=${siteUrl}&quote=${encodeURIComponent(caption)}`;
+  const liUrl    = `https://www.linkedin.com/sharing/share-offsite/?url=${siteUrl}&summary=${liText}`;
+
+  useEffect(() => {
+    const canvas = buildBadgeCanvas(course, studentName, date);
+    setBadgeUrl(canvas.toDataURL("image/png", 1.0));
+  }, [course, studentName]);
+
   function handleDownload() {
-    if (!certRef.current) return;
-    const cert = certRef.current;
-    const canvas = document.createElement("canvas");
-    canvas.width = cert.offsetWidth * 2;
-    canvas.height = cert.offsetHeight * 2;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.scale(2, 2);
-    ctx.fillStyle = "#fffbeb";
-    ctx.fillRect(0, 0, cert.offsetWidth, cert.offsetHeight);
-    ctx.font = "bold 24px serif";
-    ctx.fillStyle = "#7c3aed";
-    ctx.textAlign = "center";
-    ctx.fillText("🎉 Certificate of Completion 🎉", cert.offsetWidth / 2, 60);
-    ctx.font = "20px serif";
-    ctx.fillStyle = "#1f2937";
-    ctx.fillText("This certifies that", cert.offsetWidth / 2, 110);
-    ctx.font = "bold 30px serif";
-    ctx.fillStyle = "#d97706";
-    ctx.fillText(studentName || "Little Champion", cert.offsetWidth / 2, 155);
-    ctx.font = "18px serif";
-    ctx.fillStyle = "#1f2937";
-    ctx.fillText("has successfully completed", cert.offsetWidth / 2, 195);
-    ctx.font = "bold 22px serif";
-    ctx.fillStyle = "#7c3aed";
-    ctx.fillText(`${course.emoji} ${course.title}`, cert.offsetWidth / 2, 235);
-    ctx.font = "16px serif";
-    ctx.fillStyle = "#6b7280";
-    ctx.fillText(`${course.badgeEmoji} Badge: ${course.badge}`, cert.offsetWidth / 2, 275);
-    ctx.fillText(`Bhartiya Hindu Temple Gurukul`, cert.offsetWidth / 2, 310);
-    ctx.fillText(date, cert.offsetWidth / 2, 340);
-    const link = document.createElement("a");
-    link.download = `${course.title.replace(/\s+/g, "_")}_Certificate.png`;
-    link.href = canvas.toDataURL();
-    link.click();
+    if (!badgeUrl) return;
+    const a = document.createElement("a");
+    a.download = `${course.title.replace(/\s+/g, "_")}_Badge.png`;
+    a.href = badgeUrl;
+    a.click();
+  }
+
+  function handleInstagram() {
+    handleDownload();
+    setIgTip(true);
+    setTimeout(() => setIgTip(false), 6000);
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(caption).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
   }
 
   return (
-    <div
-      ref={certRef}
-      className="bg-gradient-to-br from-amber-50 to-yellow-50 border-4 border-yellow-400 rounded-3xl p-8 max-w-md mx-auto text-center shadow-2xl relative overflow-hidden"
-    >
-      <div className="absolute inset-2 border-2 border-yellow-300 border-dashed rounded-2xl pointer-events-none" />
-      <div className="text-5xl mb-3">🏆</div>
-      <h2 className="text-xl font-bold text-purple-700 mb-1">Certificate of Completion</h2>
-      <p className="text-gray-500 text-sm mb-4">This certifies that</p>
-      <p className="text-3xl font-bold text-amber-600 mb-2">{studentName || "Little Champion"}</p>
-      <p className="text-gray-600 text-sm mb-2">has successfully completed</p>
-      <p className="text-2xl font-bold text-purple-700 mb-1">{course.emoji} {course.title}</p>
-      <div className="inline-block bg-purple-100 text-purple-700 px-4 py-1 rounded-full text-sm font-bold mb-4">
-        {course.badgeEmoji} {course.badge}
+    <div className="w-full max-w-lg mx-auto space-y-5">
+
+      {/* Badge preview */}
+      <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-yellow-300">
+        {badgeUrl ? (
+          <img src={badgeUrl} alt="Achievement badge" className="w-full block" />
+        ) : (
+          <div className="h-64 flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}>
+              <Star className="w-10 h-10 text-amber-400" />
+            </motion.div>
+          </div>
+        )}
+        <div className="absolute top-3 right-3">
+          <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+            ✓ Verified
+          </span>
+        </div>
       </div>
-      <div className="border-t border-yellow-300 pt-4 mt-2">
-        <p className="text-xs text-gray-500 font-semibold">Bhartiya Hindu Temple Gurukul</p>
-        <p className="text-xs text-gray-400">{date}</p>
+
+      {/* Caption to copy */}
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">📋 Caption to Copy</p>
+          <button
+            onClick={handleCopy}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors ${copied ? "bg-green-500 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+          >
+            {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
+          </button>
+        </div>
+        <p className="text-xs text-gray-600 leading-relaxed">{caption}</p>
       </div>
-      <button
-        onClick={handleDownload}
-        className="mt-4 flex items-center gap-2 mx-auto bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-2xl text-sm transition-colors shadow-lg"
-      >
-        <Download className="w-4 h-4" />
-        Download Certificate
-      </button>
+
+      {/* Share buttons */}
+      <div>
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center mb-3">
+          🌍 Share Your Achievement
+        </p>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          {/* LinkedIn */}
+          <a
+            href={liUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-[#0A66C2] hover:bg-[#004182] text-white font-bold px-4 py-3 rounded-2xl text-sm transition-colors shadow-md"
+          >
+            <LinkedInIcon /> LinkedIn <ExternalLink className="w-3 h-3 opacity-70" />
+          </a>
+          {/* Facebook */}
+          <a
+            href={fbUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#0e5fc0] text-white font-bold px-4 py-3 rounded-2xl text-sm transition-colors shadow-md"
+          >
+            <FacebookIcon /> Facebook <ExternalLink className="w-3 h-3 opacity-70" />
+          </a>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Instagram */}
+          <button
+            onClick={handleInstagram}
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#f9a825] via-[#e91e8c] to-[#6b2fa0] text-white font-bold px-4 py-3 rounded-2xl text-sm transition-opacity hover:opacity-90 shadow-md"
+          >
+            <InstagramIcon /> Instagram
+          </button>
+          {/* Download */}
+          <button
+            onClick={handleDownload}
+            disabled={!badgeUrl}
+            className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-900 disabled:bg-gray-400 text-white font-bold px-4 py-3 rounded-2xl text-sm transition-colors shadow-md"
+          >
+            <Download className="w-4 h-4" /> Download PNG
+          </button>
+        </div>
+      </div>
+
+      {/* Instagram tip banner */}
+      <AnimatePresence>
+        {igTip && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-2xl p-4 text-sm text-gray-700"
+          >
+            <p className="font-bold text-pink-600 mb-1">📱 Instagram Steps:</p>
+            <ol className="list-decimal list-inside space-y-0.5 text-xs leading-relaxed">
+              <li>Your badge image was just downloaded</li>
+              <li>Open Instagram on your phone</li>
+              <li>Tap <strong>+</strong> → Post or Story → select the downloaded image</li>
+              <li>Paste the caption (tap Copy Caption above first!)</li>
+              <li>Share and celebrate! 🎉</li>
+            </ol>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Size note */}
+      <p className="text-center text-xs text-gray-400">
+        1200 × 1200 px  •  Optimised for LinkedIn, Facebook & Instagram
+      </p>
     </div>
   );
 }
