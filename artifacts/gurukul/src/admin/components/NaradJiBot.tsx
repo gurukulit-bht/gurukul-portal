@@ -9,12 +9,12 @@ const KB: KBEntry[] = [
   {
     keywords: ["login", "sign in", "sign-in", "password", "pin", "auth", "access", "locked", "forgot", "log in"],
     response:
-      "🔐 Login & Authentication\n\nAdmins log in with email + password.\nTeachers & Assistants log in with phone number + 4-digit PIN.\n\nWrong PIN 5 times? The account locks for 15 minutes automatically. Admins can reset a teacher's PIN instantly from User Management.",
+      "🔐 Login & Authentication\n\nAdmins log in with email + password.\nTeachers & Assistants log in with phone number + PIN.\n\nWrong PIN 5 times? The account locks for 15 minutes automatically. Admins can reset a teacher's PIN instantly from User Management.",
   },
   {
     keywords: ["reset pin", "forgot pin", "teacher pin", "change pin", "new pin"],
     response:
-      "🔑 Resetting a Teacher's PIN\n\n1. Go to User Management in the sidebar\n2. Find the teacher in the list\n3. Click Reset PIN\n4. A new 4-digit PIN is generated — share it securely with the teacher\n\nThe old PIN is immediately invalidated. Teachers can change their own PIN from Settings after logging in.",
+      "🔑 Resetting a Teacher's PIN\n\n1. Go to User Management in the sidebar\n2. Find the teacher in the list\n3. Click Reset PIN\n4. A new PIN is generated — share it securely with the teacher\n\nThe old PIN is immediately invalidated. Teachers can change their own PIN from Settings after logging in.",
   },
   {
     keywords: ["dashboard", "overview", "home page", "stats", "statistics", "summary", "count"],
@@ -104,17 +104,17 @@ const KB: KBEntry[] = [
   {
     keywords: ["settings", "change password", "update password", "account settings"],
     response:
-      "⚙️ Settings\n\nAdmins — change your login password under Change Password.\nTeachers/Assistants — change your 4-digit PIN under Change PIN.\n\nIf you forget your credentials entirely, ask the Admin to reset them from User Management.",
+      "⚙️ Settings\n\nAdmins — change your login password under Change Password.\nTeachers/Assistants — change your PIN under Change PIN.\n\nIf you forget your credentials entirely, ask the Admin to reset them from User Management.",
   },
   {
     keywords: ["parent portal", "what can parents see", "parents section", "public portal", "member verification"],
     response:
-      "🏠 Parent Portal\n\nParents visit the public website at /parents-portal.\n\nTo access Weekly Class Updates they must:\n1. Solve a captcha\n2. Enter their registered temple membership phone number\n3. If found, they get full access to all published updates\n\nOnly Published updates are visible. High Priority updates show a 🔴 badge.",
+      "🏠 Parent Portal\n\nParents visit the public website at /parents.\n\nTo access Weekly Class Updates they must:\n1. Solve a captcha\n2. Enter their registered temple membership phone number\n3. If found, they get full access to all published updates\n\nOnly Published updates are visible. High Priority updates show a 🔴 badge.",
   },
   {
     keywords: ["teacher login", "how teacher login", "how teacher signs in", "teacher access"],
     response:
-      "📱 Teacher Login\n\nTeachers visit /admin/login and enter:\n1. Their registered 10-digit phone number\n2. Their 4-digit PIN (provided by the Admin from User Management)\n\nThe form automatically detects phone input and switches to PIN mode. Teachers land on Courses & Classes after signing in.",
+      "📱 Teacher Login\n\nTeachers visit /admin/login and enter:\n1. Their registered 10-digit phone number\n2. Their PIN (provided by the Admin from User Management)\n\nTeachers land on Courses & Classes after signing in.",
   },
   {
     keywords: ["courses classes", "my classes", "my sections", "assigned course", "teacher view"],

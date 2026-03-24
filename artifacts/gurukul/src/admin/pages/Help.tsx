@@ -357,7 +357,7 @@ const SECTIONS: SpecSection[] = [
     roles: ["all"],
     color: "from-orange-500 to-orange-700",
     overview:
-      "The Parent Portal is the public-facing section of the Gurukul website at /parents-portal. It gives enrolled families access to Weekly Class Updates after verifying their temple membership via phone number.",
+      "The Parent Portal is the public-facing section of the Gurukul website at /parents. It gives enrolled families access to Weekly Class Updates after verifying their temple membership via phone number.",
     steps: [
       { heading: "Parent accesses the portal", detail: "Parents visit the website and click 'Parents Portal' in the navigation. They see a general overview page with Gurukul information." },
       { heading: "Access Weekly Updates", detail: "Parents click the 'View Weekly Updates' button to enter the gated section." },
