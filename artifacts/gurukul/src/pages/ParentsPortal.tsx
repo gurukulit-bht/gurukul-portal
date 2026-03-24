@@ -179,7 +179,7 @@ function WeeklyUpdatesSection() {
       if (!res.ok) throw new Error("not found");
       const data = await res.json();
       setMemberName(data.name ?? "");
-      await Promise.all([fetchUpdates(), fetchAdminMessages()]);
+      await Promise.all([fetchUpdates(phone.trim()), fetchAdminMessages()]);
       setPhase("unlocked");
     } catch {
       setPhoneErr("We couldn't find a member with that phone number. Please check and try again.");
@@ -188,10 +188,13 @@ function WeeklyUpdatesSection() {
     }
   }
 
-  async function fetchUpdates() {
+  async function fetchUpdates(verifiedPhone?: string) {
     setLoadingUpdates(true);
     try {
-      const res  = await fetch("/api/weekly-updates");
+      const url = verifiedPhone
+        ? `/api/weekly-updates?phone=${encodeURIComponent(verifiedPhone)}`
+        : "/api/weekly-updates";
+      const res  = await fetch(url);
       const data = await res.json();
       setUpdates(Array.isArray(data) ? data : []);
     } catch {
