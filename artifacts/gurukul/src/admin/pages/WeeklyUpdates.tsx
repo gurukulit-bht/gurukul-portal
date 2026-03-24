@@ -71,10 +71,13 @@ export default function WeeklyUpdates() {
   const [sectionId,  setSectionId]  = useState<number | null>(null);
   const [sectionName, setSectionName] = useState("");
 
-  const courseLocked = !isAdmin && meta.courses.length === 1;
-
   const filteredLevels   = meta.levels.filter(l => l.courseId === courseId);
   const filteredSections = meta.sections.filter(s => s.levelId === levelId);
+
+  // A dropdown is "locked" (shows as a label) when there's exactly one option
+  const courseLocked  = meta.courses.length === 1;
+  const levelLocked   = filteredLevels.length === 1;
+  const sectionLocked = filteredSections.length === 1;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,10 +89,25 @@ export default function WeeklyUpdates() {
       setUpdates(rows);
       setMeta(m);
 
-      // Auto-select single assigned course
-      if (!isAdmin && m.courses.length === 1) {
-        setCourseId(m.courses[0].id);
-        setCourseName(m.courses[0].name);
+      // ── Full cascade auto-selection ──
+      if (m.courses.length === 1) {
+        const c = m.courses[0];
+        setCourseId(c.id);
+        setCourseName(c.name);
+
+        // Auto-select level if only one for this course
+        const lvls = m.levels.filter(l => l.courseId === c.id);
+        if (lvls.length === 1) {
+          setLevelId(lvls[0].id);
+          setLevelName(lvls[0].name);
+
+          // Auto-select section if only one for this level
+          const secs = m.sections.filter(s => s.levelId === lvls[0].id);
+          if (secs.length === 1) {
+            setSectionId(secs[0].id);
+            setSectionName(secs[0].name);
+          }
+        }
       }
     } catch {
       toast.error("Failed to load updates");
@@ -99,17 +117,6 @@ export default function WeeklyUpdates() {
   }, [isAdmin]);
 
   useEffect(() => { load(); }, [load]);
-
-  // Reset level/section when course changes
-  useEffect(() => {
-    setLevelId(null); setLevelName("");
-    setSectionId(null); setSectionName("");
-  }, [courseId]);
-
-  // Reset section when level changes
-  useEffect(() => {
-    setSectionId(null); setSectionName("");
-  }, [levelId]);
 
   async function handlePost() {
     if (!message.trim()) { toast.error("Please write a message"); return; }
@@ -236,6 +243,9 @@ export default function WeeklyUpdates() {
                     const id = e.target.value ? Number(e.target.value) : null;
                     setCourseId(id);
                     setCourseName(meta.courses.find(c => c.id === id)?.name ?? "");
+                    // Reset downstream
+                    setLevelId(null); setLevelName("");
+                    setSectionId(null); setSectionName("");
                   }}
                 >
                   <option value="">Course…</option>
@@ -246,38 +256,56 @@ export default function WeeklyUpdates() {
 
             {/* Level */}
             <div className="flex flex-col gap-1 min-w-[120px]">
-              <label className="text-xs font-medium text-muted-foreground">Level</label>
-              <select
-                className="input text-sm h-9 px-3"
-                value={levelId ?? ""}
-                onChange={e => {
-                  const id = e.target.value ? Number(e.target.value) : null;
-                  setLevelId(id);
-                  setLevelName(filteredLevels.find(l => l.id === id)?.name ?? "");
-                }}
-                disabled={!courseId || filteredLevels.length === 0}
-              >
-                <option value="">Level…</option>
-                {filteredLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Level {levelLocked && <Lock className="w-3 h-3" />}
+              </label>
+              {levelLocked ? (
+                <div className="input h-9 px-3 flex items-center text-sm bg-gray-50 text-secondary font-medium">
+                  {levelName}
+                </div>
+              ) : (
+                <select
+                  className="input text-sm h-9 px-3"
+                  value={levelId ?? ""}
+                  onChange={e => {
+                    const id = e.target.value ? Number(e.target.value) : null;
+                    setLevelId(id);
+                    setLevelName(filteredLevels.find(l => l.id === id)?.name ?? "");
+                    // Reset downstream
+                    setSectionId(null); setSectionName("");
+                  }}
+                  disabled={!courseId || filteredLevels.length === 0}
+                >
+                  <option value="">Level…</option>
+                  {filteredLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              )}
             </div>
 
             {/* Section */}
             <div className="flex flex-col gap-1 min-w-[120px]">
-              <label className="text-xs font-medium text-muted-foreground">Section</label>
-              <select
-                className="input text-sm h-9 px-3"
-                value={sectionId ?? ""}
-                onChange={e => {
-                  const id = e.target.value ? Number(e.target.value) : null;
-                  setSectionId(id);
-                  setSectionName(filteredSections.find(s => s.id === id)?.name ?? "");
-                }}
-                disabled={!levelId || filteredSections.length === 0}
-              >
-                <option value="">All</option>
-                {filteredSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Section {sectionLocked && <Lock className="w-3 h-3" />}
+              </label>
+              {sectionLocked ? (
+                <div className="input h-9 px-3 flex items-center text-sm bg-gray-50 text-secondary font-medium">
+                  {sectionName}
+                </div>
+              ) : (
+                <select
+                  className="input text-sm h-9 px-3"
+                  value={sectionId ?? ""}
+                  onChange={e => {
+                    const id = e.target.value ? Number(e.target.value) : null;
+                    setSectionId(id);
+                    setSectionName(filteredSections.find(s => s.id === id)?.name ?? "");
+                  }}
+                  disabled={!levelId || filteredSections.length === 0}
+                >
+                  <option value="">All</option>
+                  {filteredSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              )}
             </div>
           </div>
 
