@@ -1,0 +1,140 @@
+Application context:
+This is an admin portal for a Gurukul website. The portal already has pages like announcements, calendar, courses, classes, enrolled students, payment details, and inventory. Extend the existing app without breaking current functionality.
+
+Goal:
+Introduce user roles and role-specific access so different users see only the features relevant to them.
+
+Roles to implement:
+1. Gurukul Admin
+   - Full access to all pages, modules, settings, and data
+   - Can manage announcements, calendar, courses, classes, teachers, assistants, students, payments, inventory, notifications, and attendance
+   - Can assign roles to users
+
+2. Teacher
+   - Can access only:
+     - Courses page
+     - Classes page
+     - Course Documents section
+     - Attendance section
+     - Parent Notifications section
+   - Cannot access:
+     - Full admin dashboard controls
+     - Student payment details
+     - Inventory
+     - Role management
+     - Global settings unless explicitly granted
+
+3. Assistant
+   - Same access as Teacher
+   - Can access only:
+     - Courses page
+     - Classes page
+     - Course Documents section
+     - Attendance section
+     - Parent Notifications section
+   - Cannot access:
+     - Full admin dashboard controls
+     - Student payment details
+     - Inventory
+     - Role management
+     - Global settings
+
+Functional requirements:
+1. Authentication and Role Handling
+   - Add a login flow that supports user roles
+   - Store logged-in user info with role in app state
+   - Create sample users for testing:
+     - admin@gurukul.org / role: Gurukul Admin
+     - teacher@gurukul.org / role: Teacher
+     - assistant@gurukul.org / role: Assistant
+   - You may use mock authentication for now, but structure the code so it can later connect to a real backend or AWS Cognito
+
+2. Authorization / Route Guards
+   - Protect routes based on role
+   - Hide unauthorized menu items from the sidebar/navigation
+   - Prevent direct URL access to restricted pages
+   - Show an “Access Denied” page or message if a user tries to open an unauthorized route
+
+3. Navigation Updates
+   - Gurukul Admin sees full navigation
+   - Teacher and Assistant only see:
+     - Courses
+     - Classes
+     - Course Documents
+     - Attendance
+     - Parent Notifications
+
+4. Course Documents
+   - Add a Course Documents page or section
+   - Teachers and Assistants should be able to:
+     - View course-related documents
+     - Open/download documents
+     - Filter documents by course/class
+   - Gurukul Admin also has access
+   - Add mock data for documents such as syllabus, worksheets, assignments, reading materials
+
+5. Attendance Management
+   - Add attendance functionality for Teachers and Assistants
+   - They should be able to:
+     - Select a class
+     - View enrolled students
+     - Mark students as Present / Absent / Late
+     - Save attendance by date
+   - Gurukul Admin can also view and manage all attendance
+   - Add attendance history view with mock data
+
+6. Parent Notifications
+   - Add a Parent Notifications page
+   - Teachers and Assistants should be able to:
+     - Create and publish notifications to parents
+     - Select course/class/audience
+     - Add title, message, date, and priority
+   - Gurukul Admin can also view, edit, and manage all notifications
+   - Include a notification history table with status such as Draft, Published, Sent
+
+7. Role Management
+   - Only Gurukul Admin can:
+     - Create/edit users
+     - Assign roles
+     - Change permissions in future
+   - Build the structure in a reusable way so more roles can be added later
+
+Technical requirements:
+1. Implement a reusable permissions model, for example:
+   - permissions = {
+       admin: [...],
+       teacher: [...],
+       assistant: [...]
+     }
+   - Or a route-level and feature-level access control system
+2. Create reusable components for:
+   - ProtectedRoute
+   - RoleBasedMenu
+   - AccessDenied
+3. Use clean React component structure and modular code
+4. Keep the UI modern, simple, and consistent with the existing portal
+5. Use mock data where backend is not yet available
+6. Ensure the code is production-friendly and easy to later integrate with AWS services like Cognito, API Gateway, Lambda, and DynamoDB
+
+UI requirements:
+- Show logged-in user name and role in the header
+- Show only permitted actions and buttons for each role
+- Use clean tables/cards/forms for:
+  - Course Documents
+  - Attendance
+  - Parent Notifications
+- Add validation for notification publishing and attendance submission
+- Add success/error toasts or messages for user actions
+
+Expected output:
+- Updated role-based admin portal
+- New/updated routes
+- Sidebar filtered by role
+- Attendance management module
+- Course documents module
+- Parent notifications module
+- Mock users and permission logic
+- Clean, organized, maintainable code
+
+Important:
+Do not just hardcode visibility in scattered places. Create a scalable RBAC structur

@@ -1,12 +1,20 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
-import { mockAdminAnnouncements, mockAdminEvents, mockAdminCourses } from "@/admin/mockData";
+import { useListCourses, useListAnnouncements, useListEvents } from "@workspace/api-client-react";
+import { adminApi } from "@/lib/adminApi";
 
 type MessageItem = {
   id: number;
   from: "bot" | "user";
   text: string;
+};
+
+type LiveData = {
+  courses:       { name: string; icon: string; schedule: string }[];
+  announcements: { title: string; isActive: boolean }[];
+  events:        { title: string; date: string; time: string }[];
+  teachers:      { name: string; assignedCourse: string }[];
 };
 
 const QUICK_REPLIES = [
@@ -18,61 +26,39 @@ const QUICK_REPLIES = [
   "How do I register?",
 ];
 
-function getResponse(input: string): string {
+function buildResponse(input: string, live: LiveData): string {
   const q = input.toLowerCase();
 
   if (q.includes("course") || q.includes("class") || q.includes("offered") || q.includes("subject") || q.includes("language")) {
-    const list = mockAdminCourses.map((c) => `${c.icon} ${c.name}`).join("  |  ");
-    return `We offer 6 wonderful courses:\n\n${list}\n\nEach course has 7 levels from beginner to mastery. Ask me about any specific course for more details!`;
+    const list = live.courses.map((c) => `${c.icon} ${c.name}`).join("  |  ");
+    return `We offer ${live.courses.length} wonderful courses:\n\n${list}\n\nEach course has 7 levels from beginner to mastery. Ask me about any specific course for more details!`;
   }
 
-  if (q.includes("hindi")) {
-    const course = mockAdminCourses.find((c) => c.name === "Hindi");
-    if (q.includes("level 1") || q.includes("level1") || q.includes("beginner")) {
-      return `📖 Level 1 Hindi is perfect for beginners! Students learn the Devanagari alphabet, basic pronunciation, and simple vocabulary.\n\nClass schedule: ${course?.levels[0].schedule}`;
+  for (const course of live.courses) {
+    if (q.includes(course.name.toLowerCase())) {
+      if (q.includes("level 1") || q.includes("level1") || q.includes("beginner")) {
+        return `${course.icon} Level 1 ${course.name} is perfect for beginners!\n\nClass schedule: ${course.schedule}\n\nVisit the Courses page for full details!`;
+      }
+      return `${course.icon} ${course.name} classes build reading, writing, and conversational skills across 7 levels.\n\nSchedule: ${course.schedule}\n\nVisit the Courses page for full details!`;
     }
-    return `📖 Hindi classes build reading, writing, and conversational skills across 7 levels.\n\nSchedule: ${course?.levels[0].schedule}\n\nVisit the Courses page for full details!`;
-  }
-
-  if (q.includes("dharma")) {
-    const course = mockAdminCourses.find((c) => c.name === "Dharma");
-    return `🙏 Dharma classes teach Hindu values, ethics, traditions, and scriptures in 7 levels.\n\nSchedule: ${course?.levels[0].schedule}`;
-  }
-
-  if (q.includes("telugu")) {
-    const course = mockAdminCourses.find((c) => c.name === "Telugu");
-    return `🌺 Telugu classes cover reading, writing, and conversation across 7 levels.\n\nSchedule: ${course?.levels[0].schedule}`;
-  }
-
-  if (q.includes("tamil")) {
-    const course = mockAdminCourses.find((c) => c.name === "Tamil");
-    return `🏮 Tamil — one of the world's oldest classical languages! We offer 7 levels.\n\nSchedule: ${course?.levels[0].schedule}`;
-  }
-
-  if (q.includes("sanskrit")) {
-    const course = mockAdminCourses.find((c) => c.name === "Sanskrit");
-    return `🕉️ Sanskrit is the sacred language of the Vedas and scriptures. 7 levels available.\n\nSchedule: ${course?.levels[0].schedule}`;
-  }
-
-  if (q.includes("gujarati")) {
-    const course = mockAdminCourses.find((c) => c.name === "Gujarati");
-    return `🎨 Gujarati classes teach reading, writing, and speaking skills in 7 levels.\n\nSchedule: ${course?.levels[0].schedule}`;
   }
 
   if (q.includes("announcement") || q.includes("news") || q.includes("update") || q.includes("notice")) {
-    const active = mockAdminAnnouncements.filter((a) => a.isActive).slice(0, 3);
+    const active = live.announcements.filter((a) => a.isActive).slice(0, 3);
+    if (active.length === 0) return `📢 No active announcements right now.\n\nCheck back soon or visit the Announcements page!`;
     const list = active.map((a) => `• ${a.title}`).join("\n");
     return `📢 Latest Announcements:\n\n${list}\n\nVisit the Announcements page for full details!`;
   }
 
   if (q.includes("event") || q.includes("calendar") || q.includes("upcoming") || q.includes("program") || q.includes("celebration")) {
-    const events = mockAdminEvents.slice(0, 3);
-    const list = events.map((e) => `• ${e.title}\n  ${e.date} at ${e.time}`).join("\n");
+    const upcoming = live.events.slice(0, 3);
+    if (upcoming.length === 0) return `📅 No upcoming events listed right now.\n\nCheck the Calendar page for updates!`;
+    const list = upcoming.map((e) => `• ${e.title}\n  ${e.date} at ${e.time}`).join("\n");
     return `📅 Upcoming Events:\n\n${list}\n\nSee the Calendar page for all events!`;
   }
 
   if (q.includes("session") || q.includes("start") || q.includes("begin") || (q.includes("when") && q.includes("next"))) {
-    return `🗓️ The Summer 2026 session begins June 1, 2026 and runs through August 31, 2026.\n\nRegistration is currently open! Visit the Parents Portal to enroll your child.`;
+    return `🗓️ Visit the Parents Portal to check the current session dates and availability.\n\nRegistration is open! Contact us at:\ngurukul@bhtohio.org\n(740) 369-0717`;
   }
 
   if (q.includes("register") || q.includes("enroll") || q.includes("join") || q.includes("admission") || q.includes("how do i")) {
@@ -92,7 +78,9 @@ function getResponse(input: string): string {
   }
 
   if (q.includes("teacher") || q.includes("instructor") || q.includes("guru") || q.includes("faculty")) {
-    return `👩‍🏫 Our dedicated teachers:\n\n• Hindi — Smt. Priya Sharma & Smt. Anita Reddy\n• Dharma — Smt. Kavita Patel\n• Telugu — Smt. Lalitha Rao\n• Tamil — Smt. Vijaya Kumar\n• Sanskrit — Pt. Ramesh Joshi\n• Gujarati — Smt. Hetal Shah`;
+    if (live.teachers.length === 0) return `👩‍🏫 Our teachers are dedicated volunteers from the community. Visit the temple or contact us for more info.`;
+    const list = live.teachers.map((t) => `• ${t.assignedCourse} — ${t.name}`).join("\n");
+    return `👩‍🏫 Our dedicated teachers:\n\n${list}\n\nVisit us for more information!`;
   }
 
   if (q.includes("hello") || q.includes("hi") || q.includes("namaste") || q.includes("hey")) {
@@ -118,6 +106,40 @@ export function NaradJi() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Live data from the public API
+  const { data: rawCourses = [] } = useListCourses();
+  const { data: rawAnnouncements = [] } = useListAnnouncements();
+  const { data: rawEvents = [] } = useListEvents();
+  const [rawTeachers, setRawTeachers] = useState<{ name: string; assignedCourse: string }[]>([]);
+
+  useEffect(() => {
+    adminApi.teachers.list()
+      .then((data) => {
+        const ts = (data as { name: string; assignedCourse: string }[])
+          .filter((t) => (t as { status?: string }).status !== "Inactive");
+        setRawTeachers(ts);
+      })
+      .catch(() => {/* non-critical */});
+  }, []);
+
+  const liveData: LiveData = {
+    courses: rawCourses.map((c) => ({
+      name:     (c as { name: string }).name,
+      icon:     (c as { icon: string }).icon ?? "📚",
+      schedule: (c as { schedule: string }).schedule ?? "",
+    })),
+    announcements: rawAnnouncements.map((a) => ({
+      title:    (a as { title: string }).title,
+      isActive: (a as { isActive: boolean }).isActive ?? true,
+    })),
+    events: rawEvents.map((e) => ({
+      title: (e as { title: string }).title,
+      date:  (e as { date: string }).date,
+      time:  (e as { time: string }).time,
+    })),
+    teachers: rawTeachers,
+  };
+
   useEffect(() => {
     if (location !== "/") return;
     const showTimer = setTimeout(() => {
@@ -139,14 +161,14 @@ export function NaradJi() {
     }
   }, [messages, open]);
 
-  function sendMessage(text: string) {
+  const sendMessage = useCallback((text: string) => {
     if (!text.trim()) return;
     const userMsg: MessageItem = { id: Date.now(), from: "user", text };
-    const botMsg: MessageItem = { id: Date.now() + 1, from: "bot", text: getResponse(text) };
+    const botMsg: MessageItem = { id: Date.now() + 1, from: "bot", text: buildResponse(text, liveData) };
     setMessages((prev) => [...prev, userMsg, botMsg]);
     setInput("");
     setShowQuickReplies(false);
-  }
+  }, [liveData]);
 
   return (
     <>

@@ -1,31 +1,48 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { adminLogin } from "./auth";
+import { useAuth } from "./AuthContext";
+import { DEMO_CREDENTIALS } from "./auth";
+import { getDefaultRoute } from "./rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Lock, User, BookOpen } from "lucide-react";
+import { AlertCircle, Lock, Phone, Mail, BookOpen, ChevronDown, Hash } from "lucide-react";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  function handleSubmit(e: React.FormEvent) {
+  const [credential, setCredential] = useState("");
+  const [secret,     setSecret]     = useState("");
+  const [error,      setError]      = useState("");
+  const [loading,    setLoading]    = useState(false);
+  const [showHint,   setShowHint]   = useState(false);
+
+  // Detect whether user is entering a phone number
+  const isPhone = /^\d/.test(credential.replace(/\D/g, "")) && credential.replace(/\D/g, "").length >= 1;
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      const ok = adminLogin(username.trim(), password);
-      if (ok) {
-        setLocation("/admin/dashboard");
+    try {
+      const user = await login(credential.trim(), secret);
+      if (user) {
+        setLocation(getDefaultRoute(user.role));
       } else {
-        setError("Invalid username or password. Please try again.");
+        setError("Invalid credentials. Please try again.");
       }
+    } catch (err: any) {
+      setError(err?.message ?? "Login failed. Please try again.");
+    } finally {
       setLoading(false);
-    }, 600);
+    }
+  }
+
+  function fillDemo(cred: typeof DEMO_CREDENTIALS[number]) {
+    setCredential(cred.credential);
+    setSecret(cred.secret);
+    setShowHint(false);
   }
 
   return (
@@ -46,7 +63,10 @@ export default function AdminLogin() {
           </div>
 
           <div className="p-8">
-            <h2 className="text-xl font-bold text-secondary mb-6 text-center">Sign in to continue</h2>
+            <h2 className="text-xl font-bold text-secondary mb-2 text-center">Sign in to continue</h2>
+            <p className="text-xs text-muted-foreground text-center mb-6">
+              Admin: use email + password &nbsp;·&nbsp; Teachers/Assistants: use phone + PIN
+            </p>
 
             {error && (
               <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6 text-sm">
@@ -57,35 +77,46 @@ export default function AdminLogin() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-secondary font-medium">Username</Label>
+                <Label htmlFor="credential" className="text-secondary font-medium">
+                  {isPhone ? "Phone Number" : "Email / Phone"}
+                </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  {isPhone
+                    ? <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    : <Mail  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
                   <Input
-                    id="username"
+                    id="credential"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder="Email or 10-digit phone"
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    value={credential}
+                    onChange={e => setCredential(e.target.value)}
                     required
                     autoComplete="username"
+                    inputMode={isPhone ? "numeric" : "email"}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-secondary font-medium">Password</Label>
+                <Label htmlFor="secret" className="text-secondary font-medium">
+                  {isPhone ? "4-Digit PIN" : "Password"}
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  {isPhone
+                    ? <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    : <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
                   <Input
-                    id="password"
+                    id="secret"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={isPhone ? "4-digit PIN" : "Enter your password"}
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    value={secret}
+                    onChange={e => setSecret(e.target.value)}
                     required
                     autoComplete="current-password"
+                    maxLength={isPhone ? 4 : undefined}
+                    inputMode={isPhone ? "numeric" : "text"}
                   />
                 </div>
               </div>
@@ -95,12 +126,43 @@ export default function AdminLogin() {
                 className="w-full h-12 rounded-xl text-base font-semibold bg-gradient-to-r from-primary to-accent hover:opacity-90"
                 disabled={loading}
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? "Signing in…" : "Sign In"}
               </Button>
             </form>
 
-            <p className="text-center text-xs text-muted-foreground mt-6">
-              Authorized administrators only. All activity is monitored.
+            <div className="mt-6 border border-dashed border-gray-200 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowHint(!showHint)}
+                className="flex items-center justify-between w-full px-4 py-3 text-xs text-muted-foreground hover:bg-gray-50 transition-colors"
+              >
+                <span className="font-medium">Demo credentials (click to expand)</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showHint ? "rotate-180" : ""}`} />
+              </button>
+              {showHint && (
+                <div className="border-t border-dashed border-gray-200 divide-y divide-dashed divide-gray-100">
+                  {DEMO_CREDENTIALS.map((cred) => (
+                    <button
+                      key={cred.credential}
+                      type="button"
+                      onClick={() => fillDemo(cred)}
+                      className="w-full px-4 py-2.5 text-left hover:bg-amber-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-secondary">{cred.role}</p>
+                          <p className="text-xs text-muted-foreground">{cred.credential} · {cred.hint}</p>
+                        </div>
+                        <span className="text-xs text-primary font-medium">Use →</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground mt-4">
+              Authorized staff only. All activity is monitored.
             </p>
           </div>
         </div>

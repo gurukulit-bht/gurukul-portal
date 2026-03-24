@@ -14,7 +14,9 @@ import Announcements from "@/pages/Announcements";
 import Calendar from "@/pages/Calendar";
 import ParentsPortal from "@/pages/ParentsPortal";
 import Contact from "@/pages/Contact";
+import Register from "@/pages/Register";
 import NotFound from "@/pages/not-found";
+import StudentsCorner from "@/pages/StudentsCorner";
 import AdminApp from "@/admin/AdminApp";
 
 const queryClient = new QueryClient({
@@ -53,6 +55,8 @@ function Router() {
             <Route path="/announcements" component={Announcements} />
             <Route path="/calendar" component={Calendar} />
             <Route path="/parents" component={ParentsPortal} />
+            <Route path="/register" component={Register} />
+            <Route path="/students-corner" component={StudentsCorner} />
             <Route path="/contact" component={Contact} />
             <Route component={NotFound} />
           </Switch>

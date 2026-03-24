@@ -1,40 +1,63 @@
 import { useLocation, Link } from "wouter";
-import { useEffect } from "react";
-import { isAdminAuthenticated, adminLogout } from "./auth";
+import { useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
+import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./rbac";
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
-  Package, Settings, LogOut, Menu, X, ChevronRight
+  Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
+  Bell, ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle,
 } from "lucide-react";
-import { useState } from "react";
+import NaradJiBot from "./components/NaradJiBot";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
-  { label: "Announcements", icon: Megaphone, path: "/admin/announcements" },
-  { label: "Calendar", icon: Calendar, path: "/admin/calendar" },
-  { label: "Courses & Classes", icon: BookOpen, path: "/admin/courses" },
-  { label: "Teacher Assignment", icon: GraduationCap, path: "/admin/teachers" },
-  { label: "Students & Payments", icon: Users, path: "/admin/students" },
-  { label: "Inventory", icon: Package, path: "/admin/inventory" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
+type NavItem = {
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  permission: Permission;
+  section?: "main" | "teacher" | "admin-only" | "help";
+};
+
+const NAV_ITEMS: NavItem[] = [
+  // Admin section
+  { label: "Dashboard",           icon: LayoutDashboard, path: "/admin/dashboard",          permission: "dashboard",        section: "main" },
+  { label: "Announcements",       icon: Megaphone,       path: "/admin/announcements",      permission: "announcements",    section: "main" },
+  { label: "Calendar",            icon: Calendar,        path: "/admin/calendar",            permission: "calendar",         section: "main" },
+  { label: "Course Management",   icon: Layers,          path: "/admin/course-management",  permission: "courseManagement", section: "main" },
+  { label: "Staff Management",     icon: GraduationCap,   path: "/admin/teachers",           permission: "teachers",         section: "main" },
+  { label: "Students & Payments", icon: Users,           path: "/admin/students",           permission: "students",         section: "main" },
+  { label: "Student Registration",icon: UserPlus,        path: "/admin/register",           permission: "registration",     section: "main" },
+  { label: "Inventory",           icon: Package,         path: "/admin/inventory",          permission: "inventory",        section: "main" },
+  { label: "Testimonials",        icon: Quote,           path: "/admin/testimonials",        permission: "testimonials",     section: "main" },
+  { label: "Messaging Center",   icon: Mail,            path: "/admin/messaging",           permission: "messaging",        section: "main" },
+  // Shared (teacher/assistant/admin)
+  { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",            permission: "courses",          section: "teacher" },
+  { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
+  { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
+  { label: "Weekly Updates",      icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
+  // Admin-only management
+  { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
+  { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
+  // Help — available to all
+  { label: "Help & Guide",        icon: HelpCircle,      path: "/admin/help",               permission: "help",             section: "help" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
-    if (!isAdminAuthenticated()) {
-      setLocation("/admin/login");
-    }
-  }, [location]);
+    if (!user) setLocation("/admin/login");
+  }, [location, user]);
 
   function handleLogout() {
-    adminLogout();
+    logout();
     setLocation("/admin/login");
   }
 
-  const currentPage = navItems.find(n => n.path === location)?.label ?? "Admin";
+  const allowedItems = NAV_ITEMS.filter(item => user && canAccess(user.role, item.permission));
+  const currentPage = NAV_ITEMS.find(n => n.path === location)?.label ?? "Admin";
 
   const Sidebar = () => (
     <aside className={`
@@ -42,43 +65,60 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       lg:relative lg:translate-x-0 lg:flex
     `}>
-      <div className="p-6 border-b border-white/10">
+      <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-white font-bold text-sm leading-tight">Gurukul Admin</div>
+            <div className="text-white font-bold text-sm leading-tight">Gurukul Portal</div>
             <div className="text-white/50 text-xs">BHT Powell, OH</div>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4 px-3">
-        {navItems.map(item => {
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+        {allowedItems.map((item, idx) => {
           const active = location === item.path;
+          const prevItem = allowedItems[idx - 1];
+          const showDivider = prevItem && prevItem.section !== item.section;
           return (
-            <Link
-              key={item.path}
-              href={item.path}
-              onClick={() => setSidebarOpen(false)}
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all text-sm font-medium
-                ${active
-                  ? "bg-primary/20 text-accent border border-primary/30"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
-                }
-              `}
-            >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
-              {active && <ChevronRight className="w-3 h-3 ml-auto" />}
-            </Link>
+            <div key={item.path}>
+              {showDivider && <div className="border-t border-white/10 my-2 mx-1" />}
+              <Link
+                href={item.path}
+                onClick={() => setSidebarOpen(false)}
+                className={`
+                  flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium
+                  ${active
+                    ? "bg-primary/20 text-accent border border-primary/30"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                  }
+                `}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {item.label}
+                {active && <ChevronRight className="w-3 h-3 ml-auto" />}
+              </Link>
+            </div>
           );
         })}
       </nav>
 
       <div className="p-4 border-t border-white/10">
+        {user && (
+          <div className="flex items-center gap-2.5 px-3 py-2.5 mb-1">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {user.initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-xs font-semibold truncate">{user.displayName}</p>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${getRoleBadgeColor(user.role)}`}>
+                {getRoleLabel(user.role)}
+              </span>
+            </div>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-white/70 hover:bg-red-500/20 hover:text-red-300 transition-all text-sm font-medium"
@@ -115,21 +155,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-secondary">Admin User</div>
-              <div className="text-xs text-muted-foreground">gurukuluser01</div>
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <div className="text-sm font-semibold text-secondary">{user.displayName}</div>
+                <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleBadgeColor(user.role)}`}>
+                  {getRoleLabel(user.role)}
+                </div>
+              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-sm font-bold">
+                {user.initials}
+              </div>
             </div>
-            <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-sm font-bold">
-              A
-            </div>
-          </div>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </main>
       </div>
+
+      {/* Narad Ji floating chatbot — available on every admin page */}
+      <NaradJiBot />
     </div>
   );
 }

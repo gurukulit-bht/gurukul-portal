@@ -1,0 +1,75 @@
+Teacher Weekly Updates Page
+
+Create a dedicated page under the Teacher’s Portal called Weekly Updates. This page should allow teachers to publish weekly class updates for a specific course, level, and section. These updates should then be displayed on a corresponding Weekly Updates page under the Parents section of the website, which is a public/anonymous page.
+
+Teacher Portal – Weekly Updates Page
+
+Teachers should be able to:
+
+Create and publish a weekly update
+Select the Course
+Select the Level
+Select the Section
+Select or auto-populate the Week / Date Range
+Enter an Update Title
+Enter detailed Update Content
+Optionally add:
+Topics covered
+Homework
+Upcoming activities
+Important reminders
+Attachments or reference links
+Save as Draft or Publish
+Edit previously published updates
+View history of past updates by course, level, and section
+Parents Page – Weekly Updates
+
+Create a Weekly Updates page under the Parents section of the public website where parents can view published updates without logging in.
+
+Parents should be able to:
+
+Browse updates by Course
+Filter by Level
+Filter by Section
+Filter by Week / Month
+View updates in a clean list or card format
+
+Each update should display:
+
+Course
+Level
+Section
+Week / Date Range
+Teacher Name
+Update Title
+Full Update Details
+Homework
+Reminders
+Upcoming Activities
+Attachments or Links, if provided
+System Behavior
+Only published updates should be visible on the public Parents page
+Draft updates must remain visible only within the Teacher Portal
+Teachers should only be able to publish updates for their assigned course, level, and section
+Updates should be displayed in most recent first order
+Since the Parents page is anonymous, do not show sensitive student-specific information
+Show only class-level updates, not child-specific progress or private notes
+Suggested Fields for Weekly Update Form
+Course
+Level
+Section
+Week Start Date
+Week End Date
+Update Title
+Topics Covered
+Class Highlights
+Homework
+Upcoming Plan
+Reminders
+Attachment / Link
+Status: Draft / Published
+UI Recommendation
+In the Teacher Portal, provide a form-based entry page with a table of past updates
+On the Parents page, show updates as searchable/filterable cards or expandable rows
+Add filters at the top for Course, Level, Section, and Date
+Highlight the latest weekly update first

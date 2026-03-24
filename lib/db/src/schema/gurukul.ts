@@ -7,6 +7,7 @@ import {
   integer,
   numeric,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -57,19 +58,29 @@ export const coursesTable = pgTable("courses", {
   learningAreas: text("learning_areas"),
   levelsDetail: text("levels_detail"),
   outcome: text("outcome"),
+  curriculumYear: text("curriculum_year"),            // e.g. "2026-27"; null = not year-scoped
+  archivedAt: timestamp("archived_at"),              // null = active; set = archived
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const contactsTable = pgTable("contacts", {
   id: serial("id").primaryKey(),
-  parentName: text("parent_name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone"),
-  childName: text("child_name").notNull(),
-  childAge: integer("child_age"),
-  courseInterest: text("course_interest").notNull(),
-  message: text("message"),
-  createdAt: timestamp("created_at").defaultNow(),
+  motherName:     text("mother_name"),
+  motherPhone:    text("mother_phone"),
+  motherEmail:    text("mother_email"),
+  fatherName:     text("father_name"),
+  fatherPhone:    text("father_phone"),
+  fatherEmail:    text("father_email"),
+  childName:      text("child_name"),
+  childAge:       integer("child_age"),
+  courseInterest: text("course_interest"),
+  message:        text("message"),
+  // Simplified contact form fields
+  senderName:     text("sender_name"),
+  senderEmail:    text("sender_email"),
+  senderPhone:    text("sender_phone"),
+  isRead:         boolean("is_read").notNull().default(false),
+  createdAt:      timestamp("created_at").defaultNow(),
 });
 
 // ─── Teachers ─────────────────────────────────────────────────────────────────
@@ -81,6 +92,7 @@ export const teachersTable = pgTable("teachers", {
   email: text("email").notNull().unique(),
   phone: text("phone"),
   bio: text("bio"),
+  category: text("category").notNull().default("Senior Teacher"), // "Senior Teacher" | "Assistant"
   status: teacherStatusEnum("status").notNull().default("Active"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -97,9 +109,13 @@ export const teacherAssignmentsTable = pgTable("teacher_assignments", {
   courseId: integer("course_id")
     .notNull()
     .references(() => coursesTable.id, { onDelete: "cascade" }),
-  levelFrom: integer("level_from").notNull().default(1),   // e.g., 1
-  levelTo: integer("level_to").notNull().default(7),       // e.g., 3 = handles L1–L3
-  timing: text("timing"),                                   // e.g., "Sundays 10–11 AM"
+  levelFrom: integer("level_from").notNull().default(1),
+  levelTo: integer("level_to").notNull().default(7),
+  timing: text("timing"),
+  sectionId: integer("section_id")
+    .references(() => courseSectionsTable.id, { onDelete: "set null" }),
+  assistantTeacherId: integer("assistant_teacher_id")
+    .references(() => teachersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -120,6 +136,20 @@ export const courseLevelsTable = pgTable("course_levels", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Temple Members ───────────────────────────────────────────────────────────
+// A temple member (parent/guardian) who has registered or been looked up.
+
+export const membersTable = pgTable("members", {
+  id: serial("id").primaryKey(),
+  name:             text("name"),
+  email:            text("email"),
+  phone:            text("phone"),
+  isExistingMember: boolean("is_existing_member").default(false),
+  policyAgreed:     boolean("policy_agreed").default(false),
+  membershipYear:   integer("membership_year"), // Year membership was last renewed/confirmed
+  createdAt:        timestamp("created_at").defaultNow(),
+});
+
 // ─── Students ─────────────────────────────────────────────────────────────────
 // One row per student (child). Parent info lives here too.
 
@@ -127,14 +157,33 @@ export const studentsTable = pgTable("students", {
   id: serial("id").primaryKey(),
   studentCode: text("student_code").notNull().unique(), // e.g., GK-001
   name: text("name").notNull(),
-  parentName: text("parent_name").notNull(),
-  email: text("email"),
-  phone: text("phone"),
+  // Extended student fields
+  dob: text("dob"),                        // Date of birth e.g. "2015-06-10"
+  grade: text("grade"),                    // School grade e.g. "4th"
+  isNewStudent: boolean("is_new_student").default(true),
+  curriculumYear: text("curriculum_year"),  // e.g. "2027-2028"
+  // Member linkage
+  memberId: integer("member_id").references(() => membersTable.id),
+  // Separate parent contacts
+  motherName:     text("mother_name"),
+  motherPhone:    text("mother_phone"),
+  motherEmail:    text("mother_email"),
+  motherEmployer: text("mother_employer"),
+  fatherName:     text("father_name"),
+  fatherPhone:    text("father_phone"),
+  fatherEmail:    text("father_email"),
+  fatherEmployer: text("father_employer"),
+  address: text("address"),
+  // Volunteer info
+  volunteerParent: boolean("volunteer_parent").default(false),
+  volunteerArea:   text("volunteer_area"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // ─── Enrollments ──────────────────────────────────────────────────────────────
 // A student may be enrolled in multiple course levels (one row each).
+// sectionId is nullable — a student enrolled in a level can be assigned to a
+// specific section within that level. null = unassigned / whole level.
 
 export const enrollmentsTable = pgTable("enrollments", {
   id: serial("id").primaryKey(),
@@ -144,10 +193,15 @@ export const enrollmentsTable = pgTable("enrollments", {
   courseLevelId: integer("course_level_id")
     .notNull()
     .references(() => courseLevelsTable.id, { onDelete: "restrict" }),
+  sectionId: integer("section_id")
+    .references(() => courseSectionsTable.id, { onDelete: "set null" }),
   enrollDate: text("enroll_date").notNull(),
   status: enrollmentStatusEnum("status").notNull().default("Enrolled"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  // A student can only be enrolled in one section per course level at a time
+  unique("enrollment_student_level_uniq").on(t.studentId, t.courseLevelId),
+]);
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
 // One payment record per enrollment (1-to-1, but kept separate for audit trail).
@@ -182,6 +236,72 @@ export const inventoryTable = pgTable("inventory", {
   vendor: text("vendor"),
   remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Course Sections ─────────────────────────────────────────────────────────
+// Sections subdivide a level (e.g., Level 1 Morning / Level 1 Afternoon).
+// Students are enrolled at the level level; sections handle scheduling/grouping.
+
+export const courseSectionsTable = pgTable("course_sections", {
+  id:            serial("id").primaryKey(),
+  courseLevelId: integer("course_level_id")
+    .notNull()
+    .references(() => courseLevelsTable.id, { onDelete: "cascade" }),
+  sectionName:   text("section_name").notNull(),    // e.g., "Morning Batch", "Section A"
+  schedule:      text("schedule"),                   // e.g., "Sundays 10–11 AM"
+  capacity:      integer("capacity").notNull().default(20),
+  status:        courseLevelStatusEnum("status").notNull().default("Active"),
+  createdAt:     timestamp("created_at").defaultNow(),
+});
+
+// Teacher/Assistant → Section assignment (granular, per section)
+export const sectionAssignmentsTable = pgTable("section_assignments", {
+  id:        serial("id").primaryKey(),
+  sectionId: integer("section_id")
+    .notNull()
+    .references(() => courseSectionsTable.id, { onDelete: "cascade" }),
+  teacherId: integer("teacher_id")
+    .notNull()
+    .references(() => teachersTable.id, { onDelete: "cascade" }),
+  role:      text("role").notNull().default("Teacher"),  // "Teacher" | "Assistant"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── Attendance ───────────────────────────────────────────────────────────────
+
+export const attendanceStatusEnum = pgEnum("attendance_status", ["Present", "Absent", "Late"]);
+
+export const attendanceRecordsTable = pgTable("attendance_records", {
+  id:            serial("id").primaryKey(),
+  courseLevelId: integer("course_level_id")
+    .notNull()
+    .references(() => courseLevelsTable.id, { onDelete: "cascade" }),
+  studentId:     integer("student_id")
+    .notNull()
+    .references(() => studentsTable.id, { onDelete: "cascade" }),
+  date:          text("date").notNull(),
+  status:        attendanceStatusEnum("status").notNull(),
+  recordedBy:    text("recorded_by").notNull(),
+  createdAt:     timestamp("created_at").defaultNow(),
+});
+
+// ─── Parent Notifications ─────────────────────────────────────────────────────
+
+export const notificationStatusEnum   = pgEnum("notification_status",   ["Draft", "Published", "Sent"]);
+export const notificationPriorityEnum = pgEnum("notification_priority",  ["High", "Normal", "Low"]);
+
+export const parentNotificationsTable = pgTable("parent_notifications", {
+  id:          serial("id").primaryKey(),
+  title:       text("title").notNull(),
+  message:     text("message").notNull(),
+  courseId:    integer("course_id").references(() => coursesTable.id, { onDelete: "set null" }),
+  courseName:  text("course_name"),
+  audience:    text("audience").notNull().default("All Students"),
+  priority:    notificationPriorityEnum("priority").notNull().default("Normal"),
+  status:      notificationStatusEnum("status").notNull().default("Draft"),
+  createdBy:   text("created_by").notNull(),
+  createdAt:   timestamp("created_at").defaultNow(),
+  publishedAt: timestamp("published_at"),
 });
 
 // ─── Relations ────────────────────────────────────────────────────────────────
@@ -227,6 +347,10 @@ export const enrollmentsRelations = relations(enrollmentsTable, ({ one }) => ({
     fields: [enrollmentsTable.courseLevelId],
     references: [courseLevelsTable.id],
   }),
+  section: one(courseSectionsTable, {
+    fields: [enrollmentsTable.sectionId],
+    references: [courseSectionsTable.id],
+  }),
   payment: one(paymentsTable, {
     fields: [enrollmentsTable.id],
     references: [paymentsTable.enrollmentId],
@@ -253,6 +377,112 @@ export const insertStudentSchema = createInsertSchema(studentsTable).omit({ id: 
 export const insertEnrollmentSchema = createInsertSchema(enrollmentsTable).omit({ id: true, createdAt: true });
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true, createdAt: true });
 export const insertInventorySchema = createInsertSchema(inventoryTable).omit({ id: true, createdAt: true });
+export const insertAttendanceSchema       = createInsertSchema(attendanceRecordsTable).omit({ id: true, createdAt: true });
+export const insertParentNotificationSchema = createInsertSchema(parentNotificationsTable).omit({ id: true, createdAt: true, publishedAt: true });
+
+// ─── Portal Settings ─────────────────────────────────────────────────────────
+// Simple key-value store for admin-configurable portal settings.
+// Key examples: "active_curriculum_year" → "2027-28"
+
+export const portalSettingsTable = pgTable("portal_settings", {
+  key:       text("key").primaryKey(),
+  value:     text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PortalSetting = typeof portalSettingsTable.$inferSelect;
+
+// ─── Testimonials ─────────────────────────────────────────────────────────────
+
+export const testimonialsTable = pgTable("testimonials", {
+  id:          serial("id").primaryKey(),
+  name:        text("name").notNull(),
+  detail:      text("detail").notNull(),
+  quote:       text("quote").notNull(),
+  avatarColor: text("avatar_color").notNull().default("bg-orange-500"),
+  isActive:    boolean("is_active").notNull().default(true),
+  sortOrder:   integer("sort_order").notNull().default(0),
+  createdAt:   timestamp("created_at").defaultNow(),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonialsTable).omit({ id: true, createdAt: true });
+export type Testimonial = typeof testimonialsTable.$inferSelect;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+
+// ─── Email Log ────────────────────────────────────────────────────────────────
+
+export const emailLogsTable = pgTable("email_logs", {
+  id:           serial("id").primaryKey(),
+  subject:      text("subject").notNull(),
+  body:         text("body").notNull(),
+  recipientCount: integer("recipient_count").notNull().default(0),
+  recipientEmails: text("recipient_emails").notNull().default(""),
+  filterCourse:      text("filter_course"),
+  filterCurricYear:  text("filter_curric_year"),
+  filterEmployer:    text("filter_employer"),
+  sentBy:       text("sent_by"),
+  status:       text("status").notNull().default("sent"),
+  sentAt:       timestamp("sent_at").defaultNow(),
+});
+
+export type EmailLog = typeof emailLogsTable.$inferSelect;
+
+// ─── Weekly Updates ───────────────────────────────────────────────────────────
+// Class-level weekly updates published by teachers, visible to parents.
+
+export const weeklyUpdateStatusEnum = pgEnum("weekly_update_status", ["Draft", "Published"]);
+
+export const weeklyUpdatesTable = pgTable("weekly_updates", {
+  id:             serial("id").primaryKey(),
+  courseId:       integer("course_id").references(() => coursesTable.id, { onDelete: "set null" }),
+  courseName:     text("course_name").notNull(),
+  levelId:        integer("level_id").references(() => courseLevelsTable.id, { onDelete: "set null" }),
+  levelName:      text("level_name").notNull(),
+  sectionId:      integer("section_id").references(() => courseSectionsTable.id, { onDelete: "set null" }),
+  sectionName:    text("section_name").notNull().default(""),
+  weekStart:      text("week_start").notNull(),
+  weekEnd:        text("week_end").notNull(),
+  title:          text("title").notNull(),
+  content:        text("content").notNull(),
+  topicsCovered:  text("topics_covered"),
+  homework:       text("homework"),
+  upcomingPlan:   text("upcoming_plan"),
+  reminders:      text("reminders"),
+  attachmentLink: text("attachment_link"),
+  priority:       notificationPriorityEnum("priority").notNull().default("Normal"),
+  status:         weeklyUpdateStatusEnum("status").notNull().default("Draft"),
+  teacherName:    text("teacher_name").notNull(),
+  createdBy:      text("created_by").notNull(),
+  publishedAt:    timestamp("published_at"),
+  createdAt:      timestamp("created_at").defaultNow(),
+  updatedAt:      timestamp("updated_at").defaultNow(),
+});
+
+export const insertWeeklyUpdateSchema = createInsertSchema(weeklyUpdatesTable).omit({ id: true, createdAt: true, updatedAt: true, publishedAt: true });
+export type WeeklyUpdate = typeof weeklyUpdatesTable.$inferSelect;
+export type InsertWeeklyUpdate = z.infer<typeof insertWeeklyUpdateSchema>;
+
+// ─── Portal Users (Teachers / Assistants with PIN auth) ───────────────────────
+
+export const portalUserStatusEnum  = pgEnum("portal_user_status",  ["active", "inactive"]);
+export const portalUserRoleEnum    = pgEnum("portal_user_role",    ["teacher", "assistant"]);
+
+export const portalUsersTable = pgTable("portal_users", {
+  id:            serial("id").primaryKey(),
+  name:          text("name").notNull(),
+  phone:         text("phone").notNull().unique(),
+  pinHash:       text("pin_hash").notNull(),
+  role:          portalUserRoleEnum("role").notNull().default("teacher"),
+  status:        portalUserStatusEnum("status").notNull().default("active"),
+  loginAttempts: integer("login_attempts").notNull().default(0),
+  lockedUntil:   timestamp("locked_until"),
+  createdAt:     timestamp("created_at").defaultNow().notNull(),
+  updatedAt:     timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPortalUserSchema = createInsertSchema(portalUsersTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type PortalUser       = typeof portalUsersTable.$inferSelect;
+export type InsertPortalUser = z.infer<typeof insertPortalUserSchema>;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

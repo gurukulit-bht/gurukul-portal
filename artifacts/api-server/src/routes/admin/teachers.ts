@@ -4,53 +4,66 @@ import {
   teachersTable,
   teacherAssignmentsTable,
   coursesTable,
+  courseLevelsTable,
+  courseSectionsTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 function levelRangeToString(from: number, to: number): string {
-  if (from === 1 && to === 7) return "All Levels";
-  if (from === 1 && to === 3) return "Beginner (L1-L3)";
-  if (from === 4 && to === 7) return "Advanced (L4-L7)";
   if (from === to) return `Level ${from}`;
+  if (from === 1 && to === 7) return "All Levels";
   return `L${from}–L${to}`;
 }
 
-function levelRangeFromString(s: string): { levelFrom: number; levelTo: number } {
-  if (s === "All Levels") return { levelFrom: 1, levelTo: 7 };
-  if (s === "Beginner (L1-L3)") return { levelFrom: 1, levelTo: 3 };
-  if (s === "Advanced (L4-L7)") return { levelFrom: 4, levelTo: 7 };
+function levelNumberFromString(s: string): number {
   const m = s.match(/Level (\d+)/);
-  if (m) { const n = parseInt(m[1]); return { levelFrom: n, levelTo: n }; }
-  return { levelFrom: 1, levelTo: 7 };
+  return m ? parseInt(m[1]) : 1;
 }
 
 async function buildTeacherList() {
   const teachers = await db.select().from(teachersTable).orderBy(teachersTable.id);
-  const assignments = await db.select({
-    id: teacherAssignmentsTable.id,
-    teacherId: teacherAssignmentsTable.teacherId,
-    levelFrom: teacherAssignmentsTable.levelFrom,
-    levelTo: teacherAssignmentsTable.levelTo,
-    timing: teacherAssignmentsTable.timing,
-    courseName: coursesTable.name,
-  })
+
+  const assignments = await db
+    .select({
+      id:                 teacherAssignmentsTable.id,
+      teacherId:          teacherAssignmentsTable.teacherId,
+      levelFrom:          teacherAssignmentsTable.levelFrom,
+      levelTo:            teacherAssignmentsTable.levelTo,
+      timing:             teacherAssignmentsTable.timing,
+      sectionId:          teacherAssignmentsTable.sectionId,
+      assistantTeacherId: teacherAssignmentsTable.assistantTeacherId,
+      courseName:         coursesTable.name,
+      sectionName:        courseSectionsTable.sectionName,
+      sectionSchedule:    courseSectionsTable.schedule,
+    })
     .from(teacherAssignmentsTable)
-    .leftJoin(coursesTable, eq(teacherAssignmentsTable.courseId, coursesTable.id));
+    .leftJoin(coursesTable,         eq(teacherAssignmentsTable.courseId,   coursesTable.id))
+    .leftJoin(courseSectionsTable,  eq(teacherAssignmentsTable.sectionId,  courseSectionsTable.id));
+
+  const assistantMap: Record<number, string> = {};
+  for (const t of teachers) {
+    assistantMap[t.id] = t.name;
+  }
 
   return teachers.map((t) => {
     const asgn = assignments.find((a) => a.teacherId === t.id);
     return {
-      id: t.id,
-      name: t.name,
-      email: t.email,
-      phone: t.phone ?? "",
-      status: t.status,
+      id:             t.id,
+      name:           t.name,
+      email:          t.email,
+      phone:          t.phone ?? "",
+      category:       t.category,
+      status:         t.status,
       assignedCourse: asgn?.courseName ?? "",
-      assignedLevel: asgn ? levelRangeToString(asgn.levelFrom, asgn.levelTo) : "",
-      timing: asgn?.timing ?? "",
-      assignmentId: asgn?.id ?? null,
+      assignedLevel:  asgn ? levelRangeToString(asgn.levelFrom, asgn.levelTo) : "",
+      sectionId:      asgn?.sectionId ?? null,
+      sectionName:    asgn?.sectionName ?? null,
+      sectionSchedule: asgn?.sectionSchedule ?? null,
+      assistantTeacherId:   asgn?.assistantTeacherId ?? null,
+      assistantTeacherName: asgn?.assistantTeacherId ? (assistantMap[asgn.assistantTeacherId] ?? null) : null,
+      assignmentId:   asgn?.id ?? null,
     };
   });
 }
@@ -65,29 +78,56 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/admin/teachers/assistants  — returns teachers with category="Assistant"
+router.get("/assistants", async (req, res) => {
+  try {
+    const rows = await db
+      .select({ id: teachersTable.id, name: teachersTable.name })
+      .from(teachersTable)
+      .where(eq(teachersTable.category, "Assistant"))
+      .orderBy(teachersTable.name);
+    res.json(rows);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch assistants");
+    res.status(500).json({ error: "Failed to fetch assistants" });
+  }
+});
+
 // POST /api/admin/teachers
 router.post("/", async (req, res) => {
   try {
-    const { name, email, phone, status, assignedCourse, assignedLevel, timing } = req.body;
+    const { name, email, phone, category, assignedCourse, assignedLevel, sectionId, assistantTeacherId } = req.body;
+
     const [teacher] = await db
       .insert(teachersTable)
-      .values({ name, email, phone: phone || null, status: status || "Active" })
+      .values({
+        name,
+        email,
+        phone:    phone || null,
+        category: category || "Senior Teacher",
+        status:   "Active",
+      })
       .returning();
 
-    if (assignedCourse) {
+    if (assignedCourse && assignedLevel) {
       const courses = await db.select().from(coursesTable);
-      const course = courses.find((c) => c.name === assignedCourse);
+      const course  = courses.find((c) => c.name === assignedCourse);
       if (course) {
-        const { levelFrom, levelTo } = levelRangeFromString(assignedLevel || "All Levels");
+        const levelNum = levelNumberFromString(assignedLevel);
+        const parsedSectionId        = sectionId ? parseInt(sectionId) : null;
+        const parsedAssistantTeacherId = assistantTeacherId ? parseInt(assistantTeacherId) : null;
+
         await db.insert(teacherAssignmentsTable).values({
-          teacherId: teacher.id,
-          courseId: course.id,
-          levelFrom,
-          levelTo,
-          timing: timing || null,
+          teacherId:          teacher.id,
+          courseId:           course.id,
+          levelFrom:          levelNum,
+          levelTo:            levelNum,
+          sectionId:          parsedSectionId,
+          assistantTeacherId: parsedAssistantTeacherId,
         });
       }
     }
+
     res.json((await buildTeacherList()).find((t) => t.id === teacher.id));
   } catch (err) {
     req.log.error({ err }, "Failed to create teacher");
@@ -99,36 +139,53 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, email, phone, status, assignedCourse, assignedLevel, timing } = req.body;
+    const { name, email, phone, category, assignedCourse, assignedLevel, sectionId, assistantTeacherId } = req.body;
 
     await db
       .update(teachersTable)
-      .set({ name, email, phone: phone || null, status })
+      .set({ name, email, phone: phone || null, category: category || "Senior Teacher" })
       .where(eq(teachersTable.id, id));
 
-    const courses = await db.select().from(coursesTable);
-    const course = courses.find((c) => c.name === assignedCourse);
-    const existingAsgn = await db
-      .select()
-      .from(teacherAssignmentsTable)
-      .where(eq(teacherAssignmentsTable.teacherId, id));
+    if (assignedCourse && assignedLevel) {
+      const courses = await db.select().from(coursesTable);
+      const course  = courses.find((c) => c.name === assignedCourse);
 
-    if (course) {
-      const { levelFrom, levelTo } = levelRangeFromString(assignedLevel || "All Levels");
-      if (existingAsgn.length > 0) {
-        await db
-          .update(teacherAssignmentsTable)
-          .set({ courseId: course.id, levelFrom, levelTo, timing: timing || null })
+      if (course) {
+        const levelNum                 = levelNumberFromString(assignedLevel);
+        const parsedSectionId          = sectionId ? parseInt(sectionId) : null;
+        const parsedAssistantTeacherId = assistantTeacherId ? parseInt(assistantTeacherId) : null;
+
+        const existingAsgn = await db
+          .select()
+          .from(teacherAssignmentsTable)
           .where(eq(teacherAssignmentsTable.teacherId, id));
-      } else {
-        await db.insert(teacherAssignmentsTable).values({
-          teacherId: id,
-          courseId: course.id,
-          levelFrom,
-          levelTo,
-          timing: timing || null,
-        });
+
+        if (existingAsgn.length > 0) {
+          await db
+            .update(teacherAssignmentsTable)
+            .set({
+              courseId:           course.id,
+              levelFrom:          levelNum,
+              levelTo:            levelNum,
+              sectionId:          parsedSectionId,
+              assistantTeacherId: parsedAssistantTeacherId,
+            })
+            .where(eq(teacherAssignmentsTable.teacherId, id));
+        } else {
+          await db.insert(teacherAssignmentsTable).values({
+            teacherId:          id,
+            courseId:           course.id,
+            levelFrom:          levelNum,
+            levelTo:            levelNum,
+            sectionId:          parsedSectionId,
+            assistantTeacherId: parsedAssistantTeacherId,
+          });
+        }
       }
+    } else {
+      await db
+        .delete(teacherAssignmentsTable)
+        .where(eq(teacherAssignmentsTable.teacherId, id));
     }
 
     res.json((await buildTeacherList()).find((t) => t.id === id));

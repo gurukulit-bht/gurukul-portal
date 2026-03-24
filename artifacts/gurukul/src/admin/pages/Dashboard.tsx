@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { adminApi } from "@/lib/adminApi";
-import { BookOpen, Users, GraduationCap, Megaphone, Calendar, Package, AlertTriangle, CreditCard, ArrowRight } from "lucide-react";
+import { BookOpen, Users, GraduationCap, Megaphone, Calendar, Package, AlertTriangle, CreditCard, ArrowRight, Inbox } from "lucide-react";
 
 type Student = { paymentStatus: string; amountDue: number; amountPaid: number };
 type Teacher = { status: string };
@@ -9,6 +9,7 @@ type Announcement = { isActive: boolean };
 type InventoryItem = { id: number; name: string; category: string; currentStock: number; reorderLevel: number };
 type AdminEvent = { id: number; title: string; date: string; time: string };
 type AdminCourse = { id: number; name: string; icon: string; levels: { enrolled: number; capacity: number }[] };
+type InboxMessage = { id: number; isRead: boolean };
 
 export default function Dashboard() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [courses, setCourses] = useState<AdminCourse[]>([]);
+  const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function Dashboard() {
       adminApi.inventory.list().then((d) => setInventory(d as InventoryItem[])),
       adminApi.events.list().then((d) => setEvents(d as AdminEvent[])),
       adminApi.courses.list().then((d) => setCourses(d as AdminCourse[])),
+      adminApi.messaging.inbox().then((d) => setInboxMessages(d as InboxMessage[])).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -34,6 +37,7 @@ export default function Dashboard() {
   const pendingPayments = students.filter((s) => s.paymentStatus !== "Paid").length;
   const overduePayments = students.filter((s) => s.paymentStatus === "Overdue").length;
   const lowStockItems = inventory.filter((i) => i.currentStock <= i.reorderLevel).length;
+  const unreadMessages = inboxMessages.filter((m) => !m.isRead).length;
   const activeCourses = courses.length;
   const upcomingEvents = [...events]
     .filter((e) => new Date(e.date) >= new Date())
@@ -66,6 +70,28 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold text-secondary">Welcome back, Admin</h2>
         <p className="text-muted-foreground text-sm mt-1">Here's what's happening at Gurukul today — {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
       </div>
+
+      {unreadMessages > 0 && (
+        <Link href="/admin/messaging">
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-blue-100 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <Inbox className="w-5 h-5 text-blue-600" />
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                  {unreadMessages > 9 ? "9+" : unreadMessages}
+                </span>
+              </div>
+              <div className="text-sm text-blue-800">
+                <span className="font-semibold">New Message{unreadMessages > 1 ? "s" : ""}: </span>
+                You have {unreadMessages} unread message{unreadMessages > 1 ? "s" : ""} in your inbox.
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-blue-600 text-xs font-semibold shrink-0">
+              View Inbox <ArrowRight className="w-3 h-3" />
+            </div>
+          </div>
+        </Link>
+      )}
 
       {(overduePayments > 0 || lowStockItems > 0) && (
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">

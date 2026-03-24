@@ -1,33 +1,45 @@
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useListCourses } from "@workspace/api-client-react";
 import { motion } from "framer-motion";
-import { User, GraduationCap, CheckCircle2, Target, ChevronRight } from "lucide-react";
+import { User, GraduationCap, CheckCircle2, Target, ChevronRight, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
-interface LevelDetail {
-  name: string;
-  desc: string;
-}
-
-const LEVEL_COLORS: Record<string, string> = {
-  Beginner: "bg-green-50 text-green-700 border-green-200",
-  Intermediate: "bg-amber-50 text-amber-700 border-amber-200",
-  Advanced: "bg-red-50 text-red-700 border-red-200",
-};
+const LEVEL_BADGE_COLORS = [
+  "bg-green-50 text-green-700 border-green-200",
+  "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "bg-teal-50 text-teal-700 border-teal-200",
+  "bg-amber-50 text-amber-700 border-amber-200",
+  "bg-orange-50 text-orange-700 border-orange-200",
+  "bg-red-50 text-red-700 border-red-200",
+  "bg-purple-50 text-purple-700 border-purple-200",
+];
 
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
-
 const cardItem = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
+type DbLevel = {
+  id: number; levelNumber: number; className: string;
+  schedule: string; capacity: number;
+  sections: { id: number; sectionName: string; schedule: string; capacity: number }[];
+};
+
+type Course = {
+  id: number; name: string; description: string; ageGroup: string;
+  level: string; schedule: string; instructor: string; icon: string;
+  learningAreas: string | null; levelsDetail: string | null; outcome: string | null;
+  levels?: DbLevel[];
+};
+
 export default function Courses() {
-  const { data: courses = [], isLoading } = useListCourses();
+  const { data: rawCourses = [], isLoading } = useListCourses();
+  const courses = rawCourses as Course[];
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -54,8 +66,9 @@ export default function Courses() {
               const learningAreas: string[] = course.learningAreas
                 ? JSON.parse(course.learningAreas)
                 : [];
-              const levels: LevelDetail[] = course.levelsDetail
-                ? JSON.parse(course.levelsDetail)
+
+              const dbLevels: DbLevel[] = Array.isArray(course.levels) && course.levels.length > 0
+                ? course.levels.slice().sort((a, b) => a.levelNumber - b.levelNumber)
                 : [];
 
               return (
@@ -74,10 +87,15 @@ export default function Courses() {
                         <h3 className="text-2xl font-display font-bold text-secondary leading-tight">
                           {course.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary">
                             Age: {course.ageGroup}
                           </span>
+                          {dbLevels.length > 0 && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary flex items-center gap-1">
+                              <Layers className="w-3 h-3" /> {dbLevels.length} Levels
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -105,22 +123,26 @@ export default function Courses() {
                       </div>
                     )}
 
-                    {/* Levels */}
-                    {levels.length > 0 && (
+                    {/* DB Levels */}
+                    {dbLevels.length > 0 && (
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">
-                          Levels
+                          Course Levels
                         </h4>
-                        <div className="space-y-2">
-                          {levels.map((lvl, i) => (
+                        <div className="grid grid-cols-2 gap-2">
+                          {dbLevels.map((lvl, i) => (
                             <div
-                              key={i}
-                              className={`flex items-start gap-3 px-3 py-2 rounded-lg border text-sm ${LEVEL_COLORS[lvl.name] ?? "bg-muted text-foreground border-border"}`}
+                              key={lvl.id}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${LEVEL_BADGE_COLORS[i % LEVEL_BADGE_COLORS.length]}`}
                             >
-                              <GraduationCap className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-semibold">{lvl.name}:</span>{" "}
-                                <span className="opacity-90">{lvl.desc}</span>
+                              <GraduationCap className="w-3.5 h-3.5 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <span className="font-semibold text-xs">{lvl.className}</span>
+                                {lvl.sections.length > 0 && (
+                                  <span className="block text-[10px] opacity-70">
+                                    {lvl.sections.length} section{lvl.sections.length !== 1 ? "s" : ""}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))}

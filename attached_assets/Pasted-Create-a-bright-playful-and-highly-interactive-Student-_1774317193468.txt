@@ -1,0 +1,136 @@
+Create a bright, playful, and highly interactive “Student’s Corner” for the Bhartiya Hindu Temple Gurukul website. This section is designed for kids (ages 5–14) and should feel like a fun learning playground that teaches Hindu values through stories, quizzes, and rewards.
+
+🌈 Design & Experience (VERY IMPORTANT)
+Make the UI extremely kid-friendly
+Use:
+Bright colors (yellow, saffron, sky blue, green)
+Cartoon-style visuals (Ram, Krishna, Hanuman, Ganesha as friendly characters)
+Rounded buttons, big icons, playful fonts
+Add:
+Animations (confetti, stars, sparkles)
+Fun sound effects (optional)
+Keep navigation simple and intuitive
+Avoid heavy text — use short sentences + visuals
+🧒 Landing Screen (Student’s Corner Home)
+Title:
+
+“🎉 Student’s Corner – Learn, Play & Shine!”
+
+Welcome Message:
+
+“Namaste little champs! 🚀
+Let’s go on a fun journey of stories, wisdom, and exciting challenges!”
+
+Show 2 Big Course Cards:
+🏹 Know Your Ram
+🪔 Geeta Gyan
+
+Each card should have:
+
+Fun image/icon
+Short description
+Big “Start Adventure” button
+📚 Course 1: Know Your Ram 🏹
+Experience:
+Story-based adventure
+Each chapter feels like a “level”
+Chapters:
+Birth of Ram 👶
+Ram & Sita 💛
+Vanvas 🌳
+Hanuman’s Leap 🐒
+Battle with Ravana ⚔️
+Return to Ayodhya 🏰
+Each Chapter Includes:
+Short, simple story (kid-friendly language)
+Key value (Truth, Courage, Kindness, Duty)
+Illustration or icon
+“Take Quiz” button
+🪔 Course 2: Geeta Gyan
+Experience:
+Wisdom made simple for kids
+Chapters:
+What is Geeta? 📖
+Do Your Duty (Karma) 💪
+Stay Focused 🎯
+Control Your Mind 🧠
+Good Choices 👍
+Peace & Happiness 😊
+Each Chapter Includes:
+Simple explanation
+Real-life relatable example
+Fun takeaway line
+Quiz button
+🎮 Quiz System (VERY FUN)
+3–5 MCQ questions per chapter
+Use emojis in questions and answers
+Example:
+“What did Ram always follow? 😊”
+Instant feedback:
+✅ “Awesome! You got it right!” 🎉
+❌ “Oops! Try again champ 💪”
+Show score at end
+Require 70% to pass
+Unlock next chapter only after passing
+🏆 Rewards & Celebration
+
+When a course is completed:
+
+Show Celebration Screen:
+🎉 Confetti animation
+
+Message:
+
+“Yay! You did it, Superstar! 🌟”
+
+Generate Certificate:
+
+Include:
+
+Student Name
+Course Name
+Completion Badge:
+“🏹 Ram Hero”
+“🪔 Geeta Star”
+Temple Name (Bhartiya Hindu Temple Gurukul)
+Completion Date
+Buttons:
+“Download Certificate”
+“Try Another Course”
+📊 Progress Tracking
+Show progress bar:
+“3/6 Chapters Completed”
+Show:
+Completed chapters ✅
+Locked chapters 🔒
+Visual progress tracker (stars or steps)
+🤖 Fun Assistant (Optional but recommended)
+
+Include chatbot Narad Ji:
+
+Message:
+“Hey! I’m Narad Ji 😄 Need help with your adventure?”
+Can:
+Give hints
+Remind what to do next
+Share fun facts
+🎨 UI Elements to Include
+Big colorful buttons
+Icons:
+Bow & arrow 🏹
+Lamp 🪔
+Star ⭐
+Trophy 🏆
+Cards with shadows and rounded edges
+Hover animations
+Fun loading messages like:
+“Getting your adventure ready…”
+🛠️ Technical Requirements
+Fully responsive (mobile-first)
+Use mock/static data for:
+Stories
+Quiz questions
+Store progress:
+Local storage (for demo)
+Modular design for future backend integration
+Smooth transitions between chapters
