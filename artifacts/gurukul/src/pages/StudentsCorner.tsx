@@ -1654,7 +1654,7 @@ export default function StudentsCorner() {
         </div>
 
         {/* Course cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 max-w-7xl mx-auto mb-10">
           {COURSES.map((course, i) => {
             const prog = getProgress(course.id);
             const pct = Math.round((prog.completed.length / course.chapters.length) * 100);
@@ -1683,21 +1683,8 @@ export default function StudentsCorner() {
                   <h2 className="text-xl font-black text-secondary mb-1">{course.title}</h2>
                   <p className="text-gray-600 text-sm leading-relaxed mb-4">{course.description}</p>
 
-                  {/* Progress */}
-                  {pct > 0 && (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs font-bold text-gray-500 mb-1">
-                        <span>{prog.completed.length}/{course.chapters.length} chapters</span>
-                        <span className={course.textAccent}>{pct}%</span>
-                      </div>
-                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div className={`h-full rounded-full bg-gradient-to-r ${course.gradient}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )}
-
                   <button className={`w-full py-3 rounded-2xl text-white font-black text-base bg-gradient-to-r ${course.gradient} shadow-lg hover:shadow-xl transition-shadow`}>
-                    {pct === 0 ? "🚀 Start Adventure!" : pct === 100 ? "🏆 View Certificate!" : "▶️ Continue!"}
+                    Start Adventure! 🚀
                   </button>
                 </div>
               </motion.div>
