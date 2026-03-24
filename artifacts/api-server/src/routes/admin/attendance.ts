@@ -4,17 +4,30 @@ import {
   attendanceRecordsTable, courseLevelsTable, coursesTable,
   studentsTable, teachersTable, teacherAssignmentsTable,
 } from "@workspace/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 
 const router = Router();
 
-/** Returns course IDs assigned to the given teacher email, or null if not found. */
-async function getTeacherCourseIds(email: string): Promise<number[] | null> {
+/** Strips all non-digit characters from a phone string. */
+function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
+
+/** Returns course IDs assigned to the teacher matched by email OR phone (digits-normalized). */
+async function getTeacherCourseIds(email?: string, phone?: string): Promise<number[] | null> {
+  if (!email && !phone) return null;
+
+  const conditions = [];
+  if (email) conditions.push(eq(teachersTable.email, email));
+  // Normalize both sides so "(740) 555-0101" matches "7405550101"
+  if (phone) conditions.push(
+    eq(sql`regexp_replace(${teachersTable.phone}, '[^0-9]', '', 'g')`, digitsOnly(phone))
+  );
+
   const [teacher] = await db
     .select({ id: teachersTable.id })
     .from(teachersTable)
-    .where(eq(teachersTable.email, email));
+    .where(or(...conditions));
   if (!teacher) return null;
+
   const rows = await db
     .select({ courseId: teacherAssignmentsTable.courseId })
     .from(teacherAssignmentsTable)
@@ -26,10 +39,11 @@ async function getTeacherCourseIds(email: string): Promise<number[] | null> {
 router.get("/levels", async (req, res) => {
   const role  = req.headers["x-user-role"]  as string | undefined;
   const email = req.headers["x-user-email"] as string | undefined;
+  const phone = req.headers["x-user-phone"] as string | undefined;
 
   let courseIds: number[] | undefined;
-  if ((role === "teacher" || role === "assistant") && email) {
-    const ids = await getTeacherCourseIds(email);
+  if (role === "teacher" || role === "assistant") {
+    const ids = await getTeacherCourseIds(email, phone);
     if (ids !== null) courseIds = ids;
   }
 

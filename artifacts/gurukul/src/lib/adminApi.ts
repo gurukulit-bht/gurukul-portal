@@ -5,9 +5,10 @@ function getAuthHeaders(): Record<string, string> {
   try {
     const raw = localStorage.getItem(AUTH_KEY);
     if (!raw) return {};
-    const user = JSON.parse(raw) as { email?: string; role?: string };
+    const user = JSON.parse(raw) as { email?: string; phone?: string; role?: string };
     const headers: Record<string, string> = {};
     if (user.email) headers["X-User-Email"] = user.email;
+    if (user.phone) headers["X-User-Phone"] = user.phone;
     if (user.role)  headers["X-User-Role"]  = user.role;
     return headers;
   } catch {

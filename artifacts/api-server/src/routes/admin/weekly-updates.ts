@@ -8,7 +8,7 @@ import {
   teachersTable,
   teacherAssignmentsTable,
 } from "@workspace/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, or } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -48,9 +48,19 @@ function mapUpdate(u: typeof weeklyUpdatesTable.$inferSelect) {
   };
 }
 
-// ── Helper: get teacher row from email ──
-async function getTeacherByEmail(email: string) {
-  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.email, email));
+/** Strips all non-digit characters from a phone string. */
+function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
+
+// ── Helper: get teacher row by email OR phone (digits-normalized) ──
+async function getTeacher(email?: string, phone?: string) {
+  if (!email && !phone) return null;
+  const conditions = [];
+  if (email) conditions.push(eq(teachersTable.email, email));
+  // Normalize both sides so "(740) 555-0101" matches "7405550101"
+  if (phone) conditions.push(
+    eq(sql`regexp_replace(${teachersTable.phone}, '[^0-9]', '', 'g')`, digitsOnly(phone))
+  );
+  const [teacher] = await db.select().from(teachersTable).where(or(...conditions));
   return teacher ?? null;
 }
 
@@ -83,7 +93,8 @@ router.get("/", async (req, res) => {
 router.get("/form-meta", async (req, res) => {
   try {
     const role  = (req.headers["x-user-role"]  as string) ?? "";
-    const email = (req.headers["x-user-email"] as string) ?? "";
+    const email = req.headers["x-user-email"] as string | undefined;
+    const phone = req.headers["x-user-phone"] as string | undefined;
 
     const courses  = await db.select().from(coursesTable).orderBy(coursesTable.name);
     const levels   = await db.select().from(courseLevelsTable).orderBy(courseLevelsTable.levelNumber);
@@ -92,7 +103,7 @@ router.get("/form-meta", async (req, res) => {
     // Scope teacher to assigned course IDs
     let allowedCourseIds: number[] | null = null;
     if (role !== "admin") {
-      const teacher = await getTeacherByEmail(email);
+      const teacher = await getTeacher(email, phone);
       if (teacher) {
         const assignments = await db
           .select({ courseId: teacherAssignmentsTable.courseId })
