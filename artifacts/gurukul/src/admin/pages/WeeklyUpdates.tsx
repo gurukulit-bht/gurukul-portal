@@ -333,7 +333,7 @@ export default function WeeklyUpdates() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6">
 
       {/* Page header */}
       <div>
@@ -489,14 +489,15 @@ export default function WeeklyUpdates() {
                 className="w-full rounded-xl border border-border px-4 py-3 text-sm text-secondary placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none min-h-[90px]"
                 placeholder="Write your update for parents… (e.g. This week we practiced Devanagari letters. Homework: pages 12–14.)"
                 value={message}
+                maxLength={5000}
                 onChange={e => setMessage(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handlePost(); }}
               />
             </div>
 
             <div className="px-5 pb-4 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {message.length > 0 ? `${message.length} chars · Ctrl+Enter to post` : "Ctrl+Enter to post"}
+              <span className={`text-xs ${message.length >= 4750 ? (message.length >= 5000 ? "text-red-600 font-semibold" : "text-amber-600") : "text-muted-foreground"}`}>
+                {message.length > 0 ? `${message.length} / 5000 chars${message.length < 5000 ? " · Ctrl+Enter to post" : " — limit reached"}` : "Ctrl+Enter to post · 5000 char limit"}
               </span>
               <button
                 onClick={handlePost}
@@ -556,9 +557,13 @@ export default function WeeklyUpdates() {
                             <textarea
                               className="w-full rounded-xl border border-border px-3 py-2 text-sm text-secondary focus:outline-none focus:border-primary resize-none min-h-[80px]"
                               value={editText}
+                              maxLength={5000}
                               onChange={e => setEditText(e.target.value)}
                               autoFocus
                             />
+                            <span className={`text-xs ${editText.length >= 4750 ? (editText.length >= 5000 ? "text-red-600 font-semibold" : "text-amber-600") : "text-muted-foreground"}`}>
+                              {editText.length} / 5000
+                            </span>
                             <div className="flex gap-2 items-center">
                               <button
                                 onClick={() => saveEdit(u)}

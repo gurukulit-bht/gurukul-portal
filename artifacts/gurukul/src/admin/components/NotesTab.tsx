@@ -147,13 +147,14 @@ export default function NotesTab() {
           className={`w-full rounded-xl border-2 px-4 py-3 text-sm text-secondary placeholder:text-muted-foreground focus:outline-none resize-none min-h-[100px] transition-colors ${currentStyle.bg} ${currentStyle.border}`}
           placeholder="Jot down a note… (only you can see this)"
           value={draft}
+          maxLength={2500}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAdd(); }}
         />
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {draft.length > 0 ? `${draft.length} chars · Ctrl+Enter to save` : "Private — only visible to you"}
+          <span className={`text-xs ${draft.length >= 2250 ? (draft.length >= 2500 ? "text-red-600 font-semibold" : "text-amber-600") : "text-muted-foreground"}`}>
+            {draft.length > 0 ? `${draft.length} / 2500 chars${draft.length < 2500 ? " · Ctrl+Enter to save" : " — limit reached"}` : "Private — only visible to you · 2500 char limit"}
           </span>
           <button
             onClick={handleAdd}
@@ -219,9 +220,13 @@ export default function NotesTab() {
                           <textarea
                             className={`w-full rounded-xl border-2 px-3 py-2 text-sm text-secondary focus:outline-none resize-none min-h-[80px] bg-white/60 ${noteStyle(editColor).border}`}
                             value={editContent}
+                            maxLength={2500}
                             onChange={e => setEditContent(e.target.value)}
                             autoFocus
                           />
+                          <span className={`text-xs ${editContent.length >= 2250 ? (editContent.length >= 2500 ? "text-red-600 font-semibold" : "text-amber-600") : "text-muted-foreground"}`}>
+                            {editContent.length} / 2500
+                          </span>
                           <div className="flex gap-2">
                             <button
                               onClick={() => saveEdit(n.id)}
