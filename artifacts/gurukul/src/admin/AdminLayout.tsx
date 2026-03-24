@@ -5,42 +5,86 @@ import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./r
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
   Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
-  Bell, ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle,
+  ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle,
 } from "lucide-react";
 import NaradJiBot from "./components/NaradJiBot";
 import { Button } from "@/components/ui/button";
+
+type Permission_ = Permission;
 
 type NavItem = {
   label: string;
   icon: React.ElementType;
   path: string;
-  permission: Permission;
-  section?: "main" | "teacher" | "admin-only" | "help";
+  permission: Permission_;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  // Admin section
-  { label: "Dashboard",           icon: LayoutDashboard, path: "/admin/dashboard",          permission: "dashboard",        section: "main" },
-  { label: "Announcements",       icon: Megaphone,       path: "/admin/announcements",      permission: "announcements",    section: "main" },
-  { label: "Calendar",            icon: Calendar,        path: "/admin/calendar",            permission: "calendar",         section: "main" },
-  { label: "Course Management",   icon: Layers,          path: "/admin/course-management",  permission: "courseManagement", section: "main" },
-  { label: "Staff Management",     icon: GraduationCap,   path: "/admin/teachers",           permission: "teachers",         section: "main" },
-  { label: "Students & Payments", icon: Users,           path: "/admin/students",           permission: "students",         section: "main" },
-  { label: "Student Registration",icon: UserPlus,        path: "/admin/register",           permission: "registration",     section: "main" },
-  { label: "Inventory",           icon: Package,         path: "/admin/inventory",          permission: "inventory",        section: "main" },
-  { label: "Testimonials",        icon: Quote,           path: "/admin/testimonials",        permission: "testimonials",     section: "main" },
-  { label: "Messaging Center",   icon: Mail,            path: "/admin/messaging",           permission: "messaging",        section: "main" },
-  // Shared (teacher/assistant/admin)
-  { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
-  { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",            permission: "courses",          section: "teacher" },
-  { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
-  { label: "Messaging Center",     icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
-  // Admin-only management
-  { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
-  { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
-  // Help — available to all
-  { label: "Help & Guide",        icon: HelpCircle,      path: "/admin/help",               permission: "help",             section: "help" },
+type NavGroup = {
+  label: string;
+  emoji: string;
+  items: NavItem[];
+};
+
+// ── Admin grouped nav ─────────────────────────────────────────────────────────
+
+const ADMIN_NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Operations",
+    emoji: "📌",
+    items: [
+      { label: "Dashboard",            icon: LayoutDashboard, path: "/admin/dashboard",         permission: "dashboard" },
+      { label: "Student Registration", icon: UserPlus,        path: "/admin/register",          permission: "registration" },
+      { label: "Students & Payments",  icon: Users,           path: "/admin/students",          permission: "students" },
+    ],
+  },
+  {
+    label: "Academic Management",
+    emoji: "📚",
+    items: [
+      { label: "Course Management",    icon: Layers,          path: "/admin/course-management", permission: "courseManagement" },
+      { label: "Staff Management",     icon: GraduationCap,   path: "/admin/teachers",          permission: "teachers" },
+    ],
+  },
+  {
+    label: "Communication",
+    emoji: "📢",
+    items: [
+      { label: "Announcements",        icon: Megaphone,       path: "/admin/announcements",     permission: "announcements" },
+      { label: "Calendar",             icon: Calendar,        path: "/admin/calendar",          permission: "calendar" },
+      { label: "Messaging Center",     icon: Mail,            path: "/admin/messaging",         permission: "messaging" },
+    ],
+  },
+  {
+    label: "Operations Support",
+    emoji: "🧾",
+    items: [
+      { label: "Inventory",            icon: Package,         path: "/admin/inventory",         permission: "inventory" },
+      { label: "Testimonials",         icon: Quote,           path: "/admin/testimonials",      permission: "testimonials" },
+    ],
+  },
+  {
+    label: "Administration",
+    emoji: "⚙️",
+    items: [
+      { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",             permission: "roles" },
+      { label: "Settings",             icon: Settings,        path: "/admin/settings",          permission: "settings" },
+      { label: "Help & Guide",         icon: HelpCircle,      path: "/admin/help",              permission: "help" },
+    ],
+  },
 ];
+
+// ── Teacher flat nav ──────────────────────────────────────────────────────────
+
+const TEACHER_NAV_ITEMS: NavItem[] = [
+  { label: "Attendance",         icon: ClipboardList, path: "/admin/attendance",     permission: "attendance" },
+  { label: "Courses & Classes",  icon: BookOpen,      path: "/admin/courses",        permission: "courses" },
+  { label: "Course Documents",   icon: FileText,      path: "/admin/documents",      permission: "documents" },
+  { label: "Messaging Center",   icon: Newspaper,     path: "/admin/weekly-updates", permission: "weeklyUpdates" },
+  { label: "Settings",           icon: Settings,      path: "/admin/settings",       permission: "settings" },
+  { label: "Help & Guide",       icon: HelpCircle,    path: "/admin/help",           permission: "help" },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -56,8 +100,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.location.href = "/";
   }
 
-  const allowedItems = NAV_ITEMS.filter(item => user && canAccess(user.role, item.permission));
-  const currentPage = NAV_ITEMS.find(n => n.path === location)?.label ?? "Admin";
+  const isAdmin = user?.role === "admin";
+
+  // For the header "current page" label — search both sources
+  const allItems = [
+    ...ADMIN_NAV_GROUPS.flatMap(g => g.items),
+    ...TEACHER_NAV_ITEMS,
+  ];
+  const currentPage = allItems.find(n => n.path === location)?.label ?? "Admin";
+
+  function NavLink({ item }: { item: NavItem }) {
+    const active = location === item.path;
+    return (
+      <Link
+        href={item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={`
+          flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium
+          ${active
+            ? "bg-primary/20 text-accent border border-primary/30"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
+          }
+        `}
+      >
+        <item.icon className="w-4 h-4 shrink-0" />
+        {item.label}
+        {active && <ChevronRight className="w-3 h-3 ml-auto" />}
+      </Link>
+    );
+  }
 
   const Sidebar = () => (
     <aside className={`
@@ -65,6 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       lg:relative lg:translate-x-0 lg:flex
     `}>
+      {/* Logo */}
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
@@ -77,34 +149,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-        {allowedItems.map((item, idx) => {
-          const active = location === item.path;
-          const prevItem = allowedItems[idx - 1];
-          const showDivider = prevItem && prevItem.section !== item.section;
-          return (
-            <div key={item.path}>
-              {showDivider && <div className="border-t border-white/10 my-2 mx-1" />}
-              <Link
-                href={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium
-                  ${active
-                    ? "bg-primary/20 text-accent border border-primary/30"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                  }
-                `}
-              >
-                <item.icon className="w-4 h-4 shrink-0" />
-                {item.label}
-                {active && <ChevronRight className="w-3 h-3 ml-auto" />}
-              </Link>
-            </div>
-          );
-        })}
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-3">
+        {isAdmin ? (
+          // ── Admin: grouped sections ──
+          <div className="space-y-1">
+            {ADMIN_NAV_GROUPS.map((group, gIdx) => {
+              const visibleItems = group.items.filter(
+                item => user && canAccess(user.role, item.permission)
+              );
+              if (visibleItems.length === 0) return null;
+              return (
+                <div key={group.label}>
+                  {gIdx > 0 && <div className="border-t border-white/10 mt-3 mb-1 mx-1" />}
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 pt-2 pb-1 select-none">
+                    {group.emoji} {group.label}
+                  </p>
+                  <div className="space-y-0.5">
+                    {visibleItems.map(item => (
+                      <NavLink key={item.path} item={item} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // ── Teacher / Assistant: flat list ──
+          <div className="space-y-0.5">
+            {TEACHER_NAV_ITEMS.filter(
+              item => user && canAccess(user.role, item.permission)
+            ).map(item => (
+              <NavLink key={item.path} item={item} />
+            ))}
+          </div>
+        )}
       </nav>
 
+      {/* User footer */}
       <div className="p-4 border-t border-white/10">
         {user && (
           <div className="flex items-center gap-2.5 px-3 py-2.5 mb-1">
@@ -175,7 +257,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
 
-      {/* Narad Ji floating chatbot — available on every admin page */}
       <NaradJiBot />
     </div>
   );
