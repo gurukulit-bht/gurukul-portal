@@ -40,6 +40,12 @@ type Student = {
   curriculumYear: string;
   isNewStudent: boolean;
   isActive: boolean;
+  // Temple membership
+  memberId: number | null;
+  memberName: string | null;
+  memberPhone: string | null;
+  memberEmail: string | null;
+  // Parent contacts
   motherName: string;
   motherPhone: string;
   motherEmail: string;
@@ -79,6 +85,10 @@ function groupRows(raw: RawRow[]): Student[] {
         curriculumYear: r.curriculumYear as string ?? "",
         isNewStudent: r.isNewStudent as boolean ?? true,
         isActive: r.isActive as boolean ?? true,
+        memberId: r.memberId as number | null ?? null,
+        memberName: r.memberName as string | null ?? null,
+        memberPhone: r.memberPhone as string | null ?? null,
+        memberEmail: r.memberEmail as string | null ?? null,
         motherName: r.motherName as string ?? "",
         motherPhone: r.motherPhone as string ?? "",
         motherEmail: r.motherEmail as string ?? "",
@@ -368,11 +378,23 @@ type MetaLevel    = { id: number; levelNumber: number; className: string; sectio
 type MetaCourse   = { id: number; name: string; icon: string; levels: MetaLevel[] };
 type Meta         = { nextCode: string; courses: MetaCourse[] };
 
+type LinkedMember = { id: number; name: string | null; email: string | null; phone: string | null };
+
 function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; onRegistered: () => void }) {
   const { curriculumYearsLong, activeCurriculumYearLong } = usePortalSettings();
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  // ── Temple member (required) ──
+  const [linkedMember,   setLinkedMember]   = useState<LinkedMember | null>(null);
+  const [memberSearch,   setMemberSearch]   = useState("");
+  const [memberLooking,  setMemberLooking]  = useState(false);
+  const [memberNotFound, setMemberNotFound] = useState(false);
+  const [creatingMember, setCreatingMember] = useState(false);
+  const [newMemberName,  setNewMemberName]  = useState("");
+  const [newMemberPhone, setNewMemberPhone] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  // ── Student fields ──
   const [firstName,  setFirstName]  = useState("");
   const [lastName,   setLastName]   = useState("");
   const [dob,        setDob]        = useState("");
@@ -396,6 +418,47 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
     adminApi.students.meta().then((d) => setMeta(d as Meta)).finally(() => setLoading(false));
   }, []);
 
+  async function lookupMember() {
+    const val = memberSearch.trim();
+    if (!val) { toast.error("Enter a phone number or email to search"); return; }
+    setMemberLooking(true);
+    setMemberNotFound(false);
+    setLinkedMember(null);
+    try {
+      const m = await adminApi.members.lookup(val);
+      setLinkedMember(m);
+      toast.success(`Member found: ${m.name ?? val}`);
+    } catch {
+      setMemberNotFound(true);
+      // Pre-fill the "create" fields with father's info if entered
+      setNewMemberName(fatherName.trim() || "");
+      setNewMemberPhone(fatherPhone.trim() || val);
+      setNewMemberEmail(fatherEmail.trim() || (val.includes("@") ? val : ""));
+    } finally {
+      setMemberLooking(false);
+    }
+  }
+
+  async function createAndLinkMember() {
+    if (!newMemberName.trim()) { toast.error("Member name is required"); return; }
+    setCreatingMember(true);
+    try {
+      const m = await adminApi.members.create({
+        name:  newMemberName.trim(),
+        phone: newMemberPhone.trim() || null,
+        email: newMemberEmail.trim() || null,
+        isExistingMember: true,
+      });
+      setLinkedMember({ id: m.id, name: newMemberName.trim(), phone: newMemberPhone.trim() || null, email: newMemberEmail.trim() || null });
+      setMemberNotFound(false);
+      toast.success("Member created and linked!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create member");
+    } finally {
+      setCreatingMember(false);
+    }
+  }
+
   function addEnrollment() {
     setEnrollments(prev => [...prev, { key: draftKey, courseId: "", levelId: "", sectionId: "", amountDue: "35.00" }]);
     setDraftKey(k => k + 1);
@@ -414,6 +477,7 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) { toast.error("First and last name required"); return; }
+    if (!linkedMember) { toast.error("A temple member record must be linked first. Use the Temple Membership section above."); return; }
     const valid = enrollments.filter(e => e.courseId && e.levelId);
     setSaving(true);
     try {
@@ -421,6 +485,7 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
         firstName: firstName.trim(), lastName: lastName.trim(),
         dob: dob || undefined, grade: grade || undefined,
         curriculumYear: curricYear || undefined, isNewStudent: isNew,
+        memberId: linkedMember.id,
         motherName: motherName.trim() || undefined, motherPhone: motherPhone.trim() || undefined, motherEmail: motherEmail.trim() || undefined,
         fatherName: fatherName.trim() || undefined, fatherPhone: fatherPhone.trim() || undefined, fatherEmail: fatherEmail.trim() || undefined,
         address: address.trim() || undefined,
@@ -452,6 +517,59 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
                   <span className="font-mono font-bold text-primary text-sm">{meta.nextCode}</span>
                 </div>
               )}
+
+              {/* ── Temple Membership (REQUIRED) ── */}
+              <div>
+                <div className="flex items-center gap-2 py-2 border-b border-border mb-4">
+                  <Users className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-bold text-secondary uppercase tracking-wide">Temple Membership</span>
+                  <span className="ml-auto text-xs font-semibold text-red-600 uppercase">Required</span>
+                </div>
+                {linkedMember ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                    <div>
+                      <p className="font-semibold text-green-800 text-sm">{linkedMember.name ?? "Unknown"}</p>
+                      <p className="text-xs text-green-700">{[linkedMember.phone, linkedMember.email].filter(Boolean).join(" · ")}</p>
+                    </div>
+                    <button type="button" onClick={() => { setLinkedMember(null); setMemberNotFound(false); setMemberSearch(""); }}
+                      className="text-xs text-red-500 hover:text-red-700 underline ml-3">Change</button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">Every student must be linked to a temple member record. Search by phone number or email address.</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={memberSearch}
+                        onChange={e => { setMemberSearch(e.target.value); setMemberNotFound(false); }}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); lookupMember(); } }}
+                        placeholder="Phone or email address"
+                        className={inputCls}
+                      />
+                      <button type="button" onClick={lookupMember} disabled={memberLooking}
+                        className="shrink-0 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 flex items-center gap-1">
+                        {memberLooking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                        Find
+                      </button>
+                    </div>
+                    {memberNotFound && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                        <p className="text-xs font-semibold text-amber-800">No member found for that contact. Create a new member record:</p>
+                        <div className="space-y-2">
+                          <input value={newMemberName} onChange={e => setNewMemberName(e.target.value)} placeholder="Full name *" className={inputCls} />
+                          <input value={newMemberPhone} onChange={e => setNewMemberPhone(e.target.value)} placeholder="Phone number" className={inputCls} />
+                          <input value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} placeholder="Email address" className={inputCls} />
+                        </div>
+                        <button type="button" onClick={createAndLinkMember} disabled={creatingMember}
+                          className="w-full py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                          {creatingMember ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                          Create Member &amp; Link
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <div className="flex items-center gap-2 py-2 border-b border-border mb-4"><GraduationCap className="w-4 h-4 text-primary" /><span className="text-sm font-bold text-secondary uppercase tracking-wide">Student Information</span></div>
                 <div className="grid grid-cols-2 gap-4">
@@ -605,6 +723,9 @@ export default function Students() {
   const [confirmInactive, setConfirmInactive] = useState(false);
   const [confirmActive,   setConfirmActive]   = useState(false);
   const [actionLoading,   setActionLoading]   = useState(false);
+  // ── unlinked member banner
+  const [unlinkedCount,   setUnlinkedCount]   = useState(0);
+  const [backfilling,     setBackfilling]     = useState(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -615,7 +736,25 @@ export default function Students() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { loadStudents(); }, [loadStudents]);
+  const loadUnlinkedCount = useCallback(() => {
+    adminApi.students.unlinkedCount().then(r => setUnlinkedCount(r.unlinkedCount ?? 0)).catch(() => {});
+  }, []);
+
+  async function runBackfill() {
+    setBackfilling(true);
+    try {
+      const res = await adminApi.backfill.linkMembers();
+      toast.success(`Backfill complete: ${res.totalStudentsFixed} student(s) linked to member records.`);
+      loadStudents();
+      loadUnlinkedCount();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Backfill failed");
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
+  useEffect(() => { loadStudents(); loadUnlinkedCount(); }, [loadStudents, loadUnlinkedCount]);
   useEffect(() => { if (activeCurriculumYearLong && filterCurricYear === "All") setFilterCurricYear(activeCurriculumYearLong); }, [activeCurriculumYearLong]);
 
   // ── dynamic filter options from data
@@ -780,6 +919,26 @@ export default function Students() {
           </Button>
         </div>
       </div>
+
+      {/* ── Unlinked Members Banner ── */}
+      {isAdmin && unlinkedCount > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border border-amber-300 rounded-xl shrink-0">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-sm text-amber-800">
+              <strong>{unlinkedCount} student{unlinkedCount !== 1 ? "s" : ""}</strong> {unlinkedCount !== 1 ? "are" : "is"} not linked to a temple member record.
+            </span>
+          </div>
+          <button
+            onClick={runBackfill}
+            disabled={backfilling}
+            className="shrink-0 text-xs px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60 flex items-center gap-1 font-medium"
+          >
+            {backfilling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            {backfilling ? "Linking…" : "Auto-Link All"}
+          </button>
+        </div>
+      )}
 
       {/* ── Summary (2 cards only) ── */}
       <div className="grid grid-cols-2 gap-3 shrink-0">

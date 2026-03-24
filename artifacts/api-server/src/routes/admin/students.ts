@@ -7,8 +7,9 @@ import {
   coursesTable,
   courseSectionsTable,
   paymentsTable,
+  membersTable,
 } from "@workspace/db/schema";
-import { eq, asc, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, asc, and, desc, sql, inArray, isNull, count } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -24,6 +25,11 @@ async function buildStudentList() {
       curriculumYear: studentsTable.curriculumYear,
       isNewStudent:   studentsTable.isNewStudent,
       isActive:       studentsTable.isActive,
+      // Temple membership
+      memberId:       studentsTable.memberId,
+      memberName:     membersTable.name,
+      memberPhone:    membersTable.phone,
+      memberEmail:    membersTable.email,
       // Parent contacts
       motherName:     studentsTable.motherName,
       motherPhone:    studentsTable.motherPhone,
@@ -51,6 +57,7 @@ async function buildStudentList() {
       receiptId:      paymentsTable.receiptId,
     })
     .from(studentsTable)
+    .leftJoin(membersTable, eq(membersTable.id, studentsTable.memberId))
     .leftJoin(enrollmentsTable, eq(enrollmentsTable.studentId, studentsTable.id))
     .leftJoin(courseLevelsTable, eq(courseLevelsTable.id, enrollmentsTable.courseLevelId))
     .leftJoin(coursesTable, eq(coursesTable.id, courseLevelsTable.courseId))
@@ -67,6 +74,10 @@ async function buildStudentList() {
     curriculumYear: r.curriculumYear ?? "",
     isNewStudent:   r.isNewStudent ?? true,
     isActive:       r.isActive ?? true,
+    memberId:       r.memberId ?? null,
+    memberName:     r.memberName ?? null,
+    memberPhone:    r.memberPhone ?? null,
+    memberEmail:    r.memberEmail ?? null,
     motherName:     r.motherName ?? "",
     motherPhone:    r.motherPhone ?? "",
     motherEmail:    r.motherEmail ?? "",
@@ -151,6 +162,20 @@ router.get("/meta", async (req, res) => {
   }
 });
 
+// GET /api/admin/students/unlinked-count — how many students have no member record
+router.get("/unlinked-count", async (req, res) => {
+  try {
+    const [{ value }] = await db
+      .select({ value: count() })
+      .from(studentsTable)
+      .where(isNull(studentsTable.memberId));
+    res.json({ unlinkedCount: Number(value) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to count unlinked students");
+    res.status(500).json({ error: "Failed to count" });
+  }
+});
+
 // GET /api/admin/students
 router.get("/", async (req, res) => {
   try {
@@ -184,6 +209,17 @@ router.post("/", async (req, res) => {
 
     if (!firstName?.trim() || !lastName?.trim()) {
       return res.status(400).json({ error: "First name and last name are required" });
+    }
+    if (!memberId) {
+      return res.status(400).json({ error: "A temple member record must be linked before registering a student." });
+    }
+    // Verify the member exists
+    const [memberCheck] = await db
+      .select({ id: membersTable.id })
+      .from(membersTable)
+      .where(eq(membersTable.id, memberId));
+    if (!memberCheck) {
+      return res.status(400).json({ error: "The specified temple member record does not exist." });
     }
 
     let code = studentCode?.trim();

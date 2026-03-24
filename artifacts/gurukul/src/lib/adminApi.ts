@@ -43,9 +43,10 @@ export const adminApi = {
     remove:     (id: number) => request("DELETE", `/teachers/${id}`),
   },
   students: {
-    list:          () => request<unknown[]>("GET", "/students"),
-    meta:          () => request<unknown>("GET", "/students/meta"),
-    register:      (data: unknown) => request("POST", "/students", data),
+    list:            () => request<unknown[]>("GET", "/students"),
+    meta:            () => request<unknown>("GET", "/students/meta"),
+    unlinkedCount:   () => request<{ unlinkedCount: number }>("GET", "/students/unlinked-count"),
+    register:        (data: unknown) => request("POST", "/students", data),
     update:        (code: string, data: unknown) => request("PATCH", `/students/${code}`, data),
     setStatus:     (code: string, isActive: boolean) => request("PATCH", `/students/${code}/status`, { isActive }),
     remove:        (code: string) => request("DELETE", `/students/${code}`),
@@ -56,8 +57,11 @@ export const adminApi = {
   },
   members: {
     lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null }>("POST", "/members/lookup", { emailOrPhone }),
-    create: (data: unknown) => request<{ id: number }>("POST", "/members", data),
+    create: (data: unknown) => request<{ id: number; name: string | null; email: string | null; phone: string | null }>("POST", "/members", data),
     update: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
+  },
+  backfill: {
+    linkMembers: () => request<{ created: number; linked: number; reusedExisting: number; totalStudentsFixed: number }>("POST", "/backfill/members", {}),
   },
   inventory: {
     list:       () => request<unknown[]>("GET", "/inventory"),
