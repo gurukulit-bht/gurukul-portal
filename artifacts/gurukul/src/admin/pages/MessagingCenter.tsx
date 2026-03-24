@@ -6,6 +6,7 @@ import {
   Mail, Send, Users, Filter, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Clock, RefreshCw, Eye, EyeOff,
   X, Loader2, Info, Inbox, Phone, MailOpen, Trash2, StickyNote,
+  AlertTriangle, GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotesTab from "../components/NotesTab";
@@ -76,7 +77,16 @@ export default function MessagingCenter() {
   const [employers,        setEmployers]         = useState<string[]>([]);
   const [showFilters,      setShowFilters]       = useState(true);
 
-  // ── Recipients ──
+  // ── Audience (send-to) ──
+  const [sendTo, setSendTo] = useState<"parents" | "teachers" | "both">("parents");
+
+  // ── Teachers ──
+  type TeacherBasic = { id: number; name: string; email: string };
+  const [teacherList,           setTeacherList]           = useState<TeacherBasic[]>([]);
+  const [selectedTeacherEmails, setSelectedTeacherEmails] = useState<Set<string>>(new Set());
+  const [showTeachers,          setShowTeachers]          = useState(false);
+
+  // ── Recipients (parents) ──
   const [recipients,       setRecipients]       = useState<Recipient[]>([]);
   const [recipientsLoading, setRecipientsLoading] = useState(false);
   const [selectedEmails,   setSelectedEmails]   = useState<Set<string>>(new Set());
@@ -98,13 +108,20 @@ export default function MessagingCenter() {
   const [inboxMessages,  setInboxMessages]  = useState<InboxMessage[]>([]);
   const [inboxLoading,   setInboxLoading]   = useState(false);
 
-  // Load employers and inbox count on mount
+  // Load employers, inbox, and teachers on mount
   useEffect(() => {
     adminApi.messaging.employers()
       .then(list => setEmployers(list as string[]))
       .catch(() => {});
     adminApi.messaging.inbox()
       .then(data => setInboxMessages(data as InboxMessage[]))
+      .catch(() => {});
+    adminApi.teachers.list()
+      .then(data => {
+        const list = (data as { id: number; name: string; email: string }[]).filter(t => !!t.email);
+        setTeacherList(list);
+        setSelectedTeacherEmails(new Set(list.map(t => t.email)));
+      })
       .catch(() => {});
   }, []);
 
@@ -146,11 +163,32 @@ export default function MessagingCenter() {
     setSelectedEmails(new Set());
   }
 
+  function toggleTeacher(email: string) {
+    setSelectedTeacherEmails(prev => {
+      const next = new Set(prev);
+      next.has(email) ? next.delete(email) : next.add(email);
+      return next;
+    });
+  }
+  function selectAllTeachers()   { setSelectedTeacherEmails(new Set(teacherList.map(t => t.email))); }
+  function deselectAllTeachers() { setSelectedTeacherEmails(new Set()); }
+
   async function handleSend() {
     if (!subject.trim()) { alert("Please enter a subject."); return; }
     if (!body.trim())    { alert("Please write a message body."); return; }
-    const chosen = recipients.filter(r => selectedEmails.has(r.email));
-    if (!chosen.length)  { alert("No recipients selected."); return; }
+
+    const parentRecipients = sendTo !== "teachers"
+      ? recipients.filter(r => selectedEmails.has(r.email))
+          .map(r => ({ name: r.name, email: r.email, studentName: r.studentName }))
+      : [];
+
+    const teacherRecipients = sendTo !== "parents"
+      ? teacherList.filter(t => selectedTeacherEmails.has(t.email))
+          .map(t => ({ name: t.name, email: t.email, studentName: "" }))
+      : [];
+
+    const allRecipients = [...parentRecipients, ...teacherRecipients];
+    if (!allRecipients.length)  { alert("No recipients selected."); return; }
 
     setSending(true);
     setSendResult(null);
@@ -158,7 +196,7 @@ export default function MessagingCenter() {
       const result = await adminApi.messaging.send({
         subject,
         body,
-        recipients: chosen.map(r => ({ name: r.name, email: r.email, studentName: r.studentName })),
+        recipients: allRecipients,
         filterCourse:     filterCourse !== "All" ? filterCourse : undefined,
         filterCurricYear: filterCurricYear !== "All" ? filterCurricYear : undefined,
         filterEmployer:   filterEmployer !== "All" ? filterEmployer : undefined,
@@ -172,7 +210,7 @@ export default function MessagingCenter() {
       setSendResult({
         success: false,
         sent: 0,
-        failed: chosen.length,
+        failed: allRecipients.length,
         message: err instanceof Error ? err.message : "Send failed.",
         smtpConfigured: false,
       });
@@ -226,7 +264,10 @@ export default function MessagingCenter() {
 
   const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
-  const selectedCount = recipients.filter(r => selectedEmails.has(r.email)).length;
+  const selectedCount        = recipients.filter(r => selectedEmails.has(r.email)).length;
+  const selectedTeacherCount = teacherList.filter(t => selectedTeacherEmails.has(t.email)).length;
+  const totalSelectedCount   = (sendTo !== "teachers" ? selectedCount : 0)
+                             + (sendTo !== "parents"  ? selectedTeacherCount : 0);
 
   return (
     <div className="space-y-6">
@@ -235,7 +276,7 @@ export default function MessagingCenter() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-secondary">Messaging Center</h2>
-          <p className="text-sm text-muted-foreground">Send emails to parents filtered by course, curriculum year, or employer.</p>
+          <p className="text-sm text-muted-foreground">Send emails to parents, teachers, or both — filtered by course, curriculum year, or employer.</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -281,120 +322,177 @@ export default function MessagingCenter() {
           {/* LEFT: Filters + Recipients */}
           <div className="xl:col-span-1 space-y-4">
 
-            {/* Filter card */}
-            <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
-              <button
-                className="w-full flex items-center justify-between px-5 py-4 text-left"
-                onClick={() => setShowFilters(f => !f)}
+            {/* ── Audience card ── */}
+            <div className="bg-white border border-border rounded-2xl shadow-sm px-5 py-4 space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5" /> Send To
+              </label>
+              <select
+                value={sendTo}
+                onChange={e => setSendTo(e.target.value as "parents" | "teachers" | "both")}
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white font-medium"
               >
-                <span className="flex items-center gap-2 font-semibold text-secondary text-sm">
-                  <Filter className="w-4 h-4 text-primary" /> Recipient Filters
-                </span>
-                {showFilters ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-              </button>
-
-              {showFilters && (
-                <div className="px-5 pb-5 space-y-4 border-t border-border pt-4">
-
-                  {/* Course */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</label>
-                    <select
-                      value={filterCourse}
-                      onChange={e => setFilterCourse(e.target.value)}
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
-                    >
-                      {COURSES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Curriculum Year */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Curriculum Year</label>
-                    <select
-                      value={filterCurricYear}
-                      onChange={e => setFilterCurricYear(e.target.value)}
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
-                    >
-                      <option value="All">All Years</option>
-                      {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Employer */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Parent Employer</label>
-                    <select
-                      value={filterEmployer}
-                      onChange={e => setFilterEmployer(e.target.value)}
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
-                    >
-                      <option value="All">All Employers</option>
-                      {employers.map(e => <option key={e} value={e}>{e}</option>)}
-                    </select>
-                  </div>
-
-                  <Button variant="outline" size="sm" className="w-full gap-2" onClick={loadRecipients} disabled={recipientsLoading}>
-                    <RefreshCw className={cn("w-4 h-4", recipientsLoading && "animate-spin")} />
-                    Refresh Recipients
-                  </Button>
-                </div>
-              )}
+                <option value="parents">Parents only</option>
+                <option value="teachers">Teachers only</option>
+                <option value="both">Both (Parents + Teachers)</option>
+              </select>
             </div>
 
-            {/* Recipients card */}
-            <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                <span className="flex items-center gap-2 font-semibold text-secondary text-sm">
-                  <Users className="w-4 h-4 text-primary" />
-                  {recipientsLoading ? "Loading…" : `${selectedCount} / ${recipients.length} recipients`}
-                </span>
+            {/* ── Parent filter + recipient cards (hidden when teachers-only) ── */}
+            {sendTo !== "teachers" && (<>
+              {/* Filter card */}
+              <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
                 <button
-                  onClick={() => setShowRecipients(v => !v)}
-                  className="text-xs text-muted-foreground hover:text-secondary flex items-center gap-1"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left"
+                  onClick={() => setShowFilters(f => !f)}
                 >
-                  {showRecipients ? <><EyeOff className="w-3.5 h-3.5" /> Hide</> : <><Eye className="w-3.5 h-3.5" /> Show</>}
+                  <span className="flex items-center gap-2 font-semibold text-secondary text-sm">
+                    <Filter className="w-4 h-4 text-primary" /> Parent Filters
+                  </span>
+                  {showFilters ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                 </button>
+
+                {showFilters && (
+                  <div className="px-5 pb-5 space-y-4 border-t border-border pt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</label>
+                      <select
+                        value={filterCourse}
+                        onChange={e => setFilterCourse(e.target.value)}
+                        className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
+                      >
+                        {COURSES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Curriculum Year</label>
+                      <select
+                        value={filterCurricYear}
+                        onChange={e => setFilterCurricYear(e.target.value)}
+                        className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
+                      >
+                        <option value="All">All Years</option>
+                        {curriculumYearsLong.map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Parent Employer</label>
+                      <select
+                        value={filterEmployer}
+                        onChange={e => setFilterEmployer(e.target.value)}
+                        className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-primary bg-white"
+                      >
+                        <option value="All">All Employers</option>
+                        {employers.map(e => <option key={e} value={e}>{e}</option>)}
+                      </select>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full gap-2" onClick={loadRecipients} disabled={recipientsLoading}>
+                      <RefreshCw className={cn("w-4 h-4", recipientsLoading && "animate-spin")} />
+                      Refresh Recipients
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              {recipientsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              {/* Parent recipients card */}
+              <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <span className="flex items-center gap-2 font-semibold text-secondary text-sm">
+                    <Users className="w-4 h-4 text-primary" />
+                    {recipientsLoading ? "Loading…" : `${selectedCount} / ${recipients.length} parents`}
+                  </span>
+                  <button
+                    onClick={() => setShowRecipients(v => !v)}
+                    className="text-xs text-muted-foreground hover:text-secondary flex items-center gap-1"
+                  >
+                    {showRecipients ? <><EyeOff className="w-3.5 h-3.5" /> Hide</> : <><Eye className="w-3.5 h-3.5" /> Show</>}
+                  </button>
                 </div>
-              ) : recipients.length === 0 ? (
-                <div className="py-8 text-center text-sm text-muted-foreground px-4">
-                  No parents match the current filters.
-                </div>
-              ) : (
-                <div>
-                  {/* Select all / none */}
-                  <div className="px-5 py-2 border-b border-border flex gap-3 text-xs">
-                    <button onClick={selectAll} className="text-primary hover:underline font-medium">Select all</button>
-                    <button onClick={deselectAll} className="text-muted-foreground hover:underline">Deselect all</button>
+                {recipientsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
+                ) : recipients.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground px-4">
+                    No parents match the current filters.
+                  </div>
+                ) : (
+                  <div>
+                    <div className="px-5 py-2 border-b border-border flex gap-3 text-xs">
+                      <button onClick={selectAll} className="text-primary hover:underline font-medium">Select all</button>
+                      <button onClick={deselectAll} className="text-muted-foreground hover:underline">Deselect all</button>
+                    </div>
+                    {showRecipients && (
+                      <ul className="max-h-72 overflow-y-auto divide-y divide-border">
+                        {recipients.map(r => (
+                          <li key={r.email} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              checked={selectedEmails.has(r.email)}
+                              onChange={() => toggleRecipient(r.email)}
+                              className="mt-0.5 accent-primary w-4 h-4 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-secondary truncate">{r.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{r.email}</p>
+                              <p className="text-xs text-muted-foreground">{r.relation} · Student: {r.studentName}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>)}
 
-                  {showRecipients && (
-                    <ul className="max-h-72 overflow-y-auto divide-y divide-border">
-                      {recipients.map(r => (
-                        <li key={r.email} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50">
-                          <input
-                            type="checkbox"
-                            checked={selectedEmails.has(r.email)}
-                            onChange={() => toggleRecipient(r.email)}
-                            className="mt-0.5 accent-primary w-4 h-4 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-secondary truncate">{r.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{r.email}</p>
-                            <p className="text-xs text-muted-foreground">{r.relation} · Student: {r.studentName}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+            {/* ── Teacher list card (hidden when parents-only) ── */}
+            {sendTo !== "parents" && (
+              <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <span className="flex items-center gap-2 font-semibold text-secondary text-sm">
+                    <GraduationCap className="w-4 h-4 text-primary" />
+                    {`${selectedTeacherCount} / ${teacherList.length} teachers`}
+                  </span>
+                  <button
+                    onClick={() => setShowTeachers(v => !v)}
+                    className="text-xs text-muted-foreground hover:text-secondary flex items-center gap-1"
+                  >
+                    {showTeachers ? <><EyeOff className="w-3.5 h-3.5" /> Hide</> : <><Eye className="w-3.5 h-3.5" /> Show</>}
+                  </button>
                 </div>
-              )}
-            </div>
+                {teacherList.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground px-4">
+                    No teachers with registered emails found.
+                  </div>
+                ) : (
+                  <div>
+                    <div className="px-5 py-2 border-b border-border flex gap-3 text-xs">
+                      <button onClick={selectAllTeachers} className="text-primary hover:underline font-medium">Select all</button>
+                      <button onClick={deselectAllTeachers} className="text-muted-foreground hover:underline">Deselect all</button>
+                    </div>
+                    {showTeachers && (
+                      <ul className="max-h-64 overflow-y-auto divide-y divide-border">
+                        {teacherList.map(t => (
+                          <li key={t.email} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              checked={selectedTeacherEmails.has(t.email)}
+                              onChange={() => toggleTeacher(t.email)}
+                              className="accent-primary w-4 h-4 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-secondary truncate">{t.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{t.email}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Compose */}
@@ -408,6 +506,21 @@ export default function MessagingCenter() {
                 <span className="ml-1">Use <code className="text-xs bg-sky-100 px-1 rounded">{'{{parent_name}}'}</code> and <code className="text-xs bg-sky-100 px-1 rounded">{'{{student_name}}'}</code> for personalisation.</span>
               </div>
             </div>
+
+            {/* ── Parent visibility warning ── */}
+            {sendTo !== "teachers" && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-4 py-3 text-sm">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                <div>
+                  <span className="font-semibold">Heads up — parents will see this message.</span>{" "}
+                  Please review your content carefully before sending. Once sent, this email will be delivered directly to{" "}
+                  {sendTo === "both"
+                    ? <><span className="font-semibold">{selectedCount} parent{selectedCount !== 1 ? "s" : ""}</span> and <span className="font-semibold">{selectedTeacherCount} teacher{selectedTeacherCount !== 1 ? "s" : ""}</span>.</>
+                    : <><span className="font-semibold">{selectedCount} parent{selectedCount !== 1 ? "s" : ""}</span>.</>
+                  }
+                </div>
+              </div>
+            )}
 
             <div className="bg-white border border-border rounded-2xl shadow-sm p-6 space-y-5">
               <h3 className="font-bold text-secondary">Compose Email</h3>
@@ -468,10 +581,19 @@ export default function MessagingCenter() {
 
               {/* Send button */}
               <div className="flex items-center justify-between gap-4 pt-2">
-                <p className="text-sm text-muted-foreground">
-                  Will send to <span className="font-semibold text-secondary">{selectedCount}</span> recipient{selectedCount !== 1 ? "s" : ""}
-                </p>
-                <Button onClick={handleSend} disabled={sending || selectedCount === 0} className="gap-2 min-w-36">
+                <div className="text-sm text-muted-foreground space-y-0.5">
+                  <p>
+                    Will send to <span className="font-semibold text-secondary">{totalSelectedCount}</span> recipient{totalSelectedCount !== 1 ? "s" : ""}
+                  </p>
+                  {sendTo === "both" && (
+                    <p className="text-xs">
+                      <span className="text-primary font-medium">{selectedCount} parent{selectedCount !== 1 ? "s" : ""}</span>
+                      {" + "}
+                      <span className="text-primary font-medium">{selectedTeacherCount} teacher{selectedTeacherCount !== 1 ? "s" : ""}</span>
+                    </p>
+                  )}
+                </div>
+                <Button onClick={handleSend} disabled={sending || totalSelectedCount === 0} className="gap-2 min-w-36">
                   {sending
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
                     : <><Send className="w-4 h-4" /> Send Email</>}
