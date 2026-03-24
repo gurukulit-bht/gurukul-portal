@@ -238,10 +238,16 @@ function LevelAccordion({
   const [saving, setSaving]                   = useState<Set<number>>(new Set());
   const [allTeachers, setAllTeachers]         = useState<{ id: number; name: string }[]>([]);
 
-  // Load teachers on mount so the Assign button works even when collapsed
+  // Load teachers on mount so the Assign button works even when collapsed.
+  // Exclude Assistants — they are not assigned as lead teachers to sections.
   useEffect(() => {
     adminApi.teachers.list()
-      .then((data) => setAllTeachers((data as { id: number; name: string }[]).map(t => ({ id: t.id, name: t.name }))))
+      .then((data) => {
+        const senior = (data as { id: number; name: string; category: string }[])
+          .filter(t => t.category !== "Assistant")
+          .map(t => ({ id: t.id, name: t.name }));
+        setAllTeachers(senior);
+      })
       .catch(() => { /* silent */ });
   }, []);
 
