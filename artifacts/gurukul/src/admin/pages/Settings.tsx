@@ -10,6 +10,7 @@ import { changePin } from "../auth";
 export default function Settings() {
   const [saved, setSaved] = useState<string | null>(null);
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const {
     activeCurriculumYear,
@@ -22,7 +23,6 @@ export default function Settings() {
   const [yearSaving, setYearSaving] = useState(false);
   const [yearError, setYearError] = useState<string | null>(null);
 
-  // Change PIN state (for teachers / assistants who log in with phone+PIN)
   const [currentPin, setCurrentPin] = useState("");
   const [newPin,     setNewPin]     = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -76,113 +76,113 @@ export default function Settings() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h2 className="text-xl font-bold text-secondary">Settings</h2>
-        <p className="text-sm text-muted-foreground">Manage your admin portal preferences</p>
+        <p className="text-sm text-muted-foreground">
+          {isAdmin ? "Manage your admin portal preferences" : "Manage your account settings"}
+        </p>
       </div>
 
-      {/* ── Curriculum Year Preference ── */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-            <CalendarDays className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-bold text-secondary">Curriculum Year Preference</h3>
-            <p className="text-xs text-muted-foreground">Sets the active year used globally across courses, enrollment, reports, and all dropdowns.</p>
-          </div>
-        </div>
-
-        {settingsLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading current setting…
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Active Curriculum Year</Label>
-              <select
-                value={displayYear}
-                onChange={e => {
-                  setPendingYear(e.target.value);
-                  setSaved(null);
-                  setYearError(null);
-                }}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary"
-              >
-                {curriculumYears.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground">
-                Currently active: <strong>{activeCurriculumYear}</strong>. Changing this will immediately update all year-related dropdowns and filters portal-wide.
-              </p>
+      {/* ── Curriculum Year (admin only) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+              <CalendarDays className="w-4 h-4" />
             </div>
+            <div>
+              <h3 className="font-bold text-secondary">Curriculum Year Preference</h3>
+              <p className="text-xs text-muted-foreground">Sets the active year used globally across courses, enrollment, reports, and all dropdowns.</p>
+            </div>
+          </div>
 
-            {yearError && (
-              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{yearError}</p>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {/* Quick-select badges for common years */}
-                {[activeCurriculumYear,
-                  (() => { const [s] = activeCurriculumYear.split("-"); const n = parseInt(s) + 1; return `${n}-${String(n+1).slice(-2)}`; })(),
-                  (() => { const [s] = activeCurriculumYear.split("-"); const n = parseInt(s) - 1; return `${n}-${String(n+1).slice(-2)}`; })(),
-                ].filter((y, i, arr) => arr.indexOf(y) === i).map(y => (
-                  <button
-                    key={y}
-                    type="button"
-                    onClick={() => { setPendingYear(y); setSaved(null); }}
-                    className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                      displayYear === y
-                        ? "bg-primary text-white border-primary"
-                        : "border-border text-secondary hover:border-primary/50"
-                    }`}
-                  >
-                    {y}
-                  </button>
-                ))}
+          {settingsLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading current setting…
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Active Curriculum Year</Label>
+                <select
+                  value={displayYear}
+                  onChange={e => { setPendingYear(e.target.value); setSaved(null); setYearError(null); }}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary"
+                >
+                  {curriculumYears.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Currently active: <strong>{activeCurriculumYear}</strong>. Changing this will immediately update all year-related dropdowns and filters portal-wide.
+                </p>
               </div>
 
-              <Button
-                onClick={saveYear}
-                disabled={yearSaving || displayYear === activeCurriculumYear}
-                className="rounded-xl gap-2 shrink-0"
-              >
-                {yearSaving
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                  : saved === "year"
-                    ? <><Check className="w-4 h-4" /> Saved!</>
-                    : "Apply Year"
-                }
-              </Button>
+              {yearError && (
+                <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{yearError}</p>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    activeCurriculumYear,
+                    (() => { const [s] = activeCurriculumYear.split("-"); const n = parseInt(s) + 1; return `${n}-${String(n + 1).slice(-2)}`; })(),
+                    (() => { const [s] = activeCurriculumYear.split("-"); const n = parseInt(s) - 1; return `${n}-${String(n + 1).slice(-2)}`; })(),
+                  ].filter((y, i, arr) => arr.indexOf(y) === i).map(y => (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => { setPendingYear(y); setSaved(null); }}
+                      className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                        displayYear === y
+                          ? "bg-primary text-white border-primary"
+                          : "border-border text-secondary hover:border-primary/50"
+                      }`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  onClick={saveYear}
+                  disabled={yearSaving || displayYear === activeCurriculumYear}
+                  className="rounded-xl gap-2 shrink-0"
+                >
+                  {yearSaving
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                    : saved === "year"
+                      ? <><Check className="w-4 h-4" /> Saved!</>
+                      : "Apply Year"}
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* ── Gurukul Information ── */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-            <School className="w-4 h-4" />
+      {/* ── Gurukul Information (admin only) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+              <School className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-secondary">Gurukul Information</h3>
           </div>
-          <h3 className="font-bold text-secondary">Gurukul Information</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>Organization Name</Label><Input defaultValue="Bhartiya Hindu Temple Gurukul" className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label>Address</Label><Input defaultValue="3671 Hyatts Rd, Powell, OH 43065" className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label>Phone</Label><Input defaultValue="(740) 369-0717" className="rounded-xl" /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label><Input defaultValue="gurukul@bhtohio.org" className="rounded-xl" /></div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => save("gurukul")} className="rounded-xl gap-2">
+              {saved === "gurukul" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
+            </Button>
+          </div>
         </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5"><Label>Organization Name</Label><Input defaultValue="Bhartiya Hindu Temple Gurukul" className="rounded-xl" /></div>
-          <div className="space-y-1.5"><Label>Address</Label><Input defaultValue="3671 Hyatts Rd, Powell, OH 43065" className="rounded-xl" /></div>
-          <div className="space-y-1.5"><Label>Phone</Label><Input defaultValue="(740) 369-0717" className="rounded-xl" /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label><Input defaultValue="gurukul@bhtohio.org" className="rounded-xl" /></div>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => save("gurukul")} className="rounded-xl gap-2">
-            {saved === "gurukul" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
-          </Button>
-        </div>
-      </div>
+      )}
 
-      {/* ── Change PIN (teachers / assistants only) ── */}
+      {/* ── Change PIN (teachers / assistants — have phone, not admin) ── */}
       {user?.phone && (
         <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
           <div className="flex items-center gap-3 mb-2">
@@ -250,8 +250,7 @@ export default function Settings() {
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
                   : pinSaved
                     ? <><Check className="w-4 h-4" /> PIN Updated!</>
-                    : "Update PIN"
-                }
+                    : "Update PIN"}
               </Button>
             </div>
           </form>
@@ -259,7 +258,7 @@ export default function Settings() {
       )}
 
       {/* ── Change Password (admin only) ── */}
-      {!user?.phone && (
+      {isAdmin && !user?.phone && (
         <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
@@ -280,67 +279,71 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ── Notification Preferences ── */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
-            <Bell className="w-4 h-4" />
+      {/* ── Notification Preferences (admin only) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
+              <Bell className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-secondary">Notification Preferences</h3>
           </div>
-          <h3 className="font-bold text-secondary">Notification Preferences</h3>
+          <div className="space-y-3">
+            {[
+              { label: "Payment overdue alerts", defaultChecked: true },
+              { label: "Low inventory alerts", defaultChecked: true },
+              { label: "New enrollment notifications", defaultChecked: true },
+              { label: "Upcoming event reminders", defaultChecked: false },
+              { label: "Weekly summary report", defaultChecked: false },
+            ].map(pref => (
+              <label key={pref.label} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer">
+                <span className="text-sm font-medium text-secondary">{pref.label}</span>
+                <input type="checkbox" defaultChecked={pref.defaultChecked} className="w-4 h-4 accent-primary" />
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => save("notifications")} className="rounded-xl gap-2">
+              {saved === "notifications" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Preferences"}
+            </Button>
+          </div>
         </div>
-        <div className="space-y-3">
-          {[
-            { label: "Payment overdue alerts", defaultChecked: true },
-            { label: "Low inventory alerts", defaultChecked: true },
-            { label: "New enrollment notifications", defaultChecked: true },
-            { label: "Upcoming event reminders", defaultChecked: false },
-            { label: "Weekly summary report", defaultChecked: false },
-          ].map(pref => (
-            <label key={pref.label} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer">
-              <span className="text-sm font-medium text-secondary">{pref.label}</span>
-              <input type="checkbox" defaultChecked={pref.defaultChecked} className="w-4 h-4 accent-primary" />
-            </label>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => save("notifications")} className="rounded-xl gap-2">
-            {saved === "notifications" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Preferences"}
-          </Button>
-        </div>
-      </div>
+      )}
 
-      {/* ── Academic Settings ── */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center">
-            <Globe className="w-4 h-4" />
+      {/* ── Academic Settings (admin only) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center">
+              <Globe className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-secondary">Academic Settings</h3>
           </div>
-          <h3 className="font-bold text-secondary">Academic Settings</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Default Fee per Session</Label>
+              <Input defaultValue="$150" className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Class Duration</Label>
+              <Input defaultValue="60 minutes" className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Session Start Date</Label>
+              <Input type="date" defaultValue="2026-06-01" className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Session End Date</Label>
+              <Input type="date" defaultValue="2026-09-30" className="rounded-xl" />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => save("academic")} className="rounded-xl gap-2">
+              {saved === "academic" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Settings"}
+            </Button>
+          </div>
         </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Default Fee per Session</Label>
-            <Input defaultValue="$150" className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Class Duration</Label>
-            <Input defaultValue="60 minutes" className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Session Start Date</Label>
-            <Input type="date" defaultValue="2026-06-01" className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Session End Date</Label>
-            <Input type="date" defaultValue="2026-09-30" className="rounded-xl" />
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => save("academic")} className="rounded-xl gap-2">
-            {saved === "academic" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Settings"}
-          </Button>
-        </div>
-      </div>
+      )}
 
       <div className="bg-gray-50 rounded-2xl border border-border p-5 text-center">
         <p className="text-sm text-muted-foreground">Admin Portal v1.0 • Bhartiya Hindu Temple Gurukul • Powell, OH</p>
