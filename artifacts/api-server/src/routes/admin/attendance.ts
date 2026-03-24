@@ -11,8 +11,10 @@ const router = Router();
 /** Strips all non-digit characters from a phone string. */
 function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
 
-/** Returns course IDs assigned to the teacher matched by email OR phone (digits-normalized). */
-async function getTeacherCourseIds(email?: string, phone?: string): Promise<number[] | null> {
+type Assignment = { courseId: number; levelFrom: number; levelTo: number };
+
+/** Returns assignments for the teacher matched by email OR phone (digits-normalized). */
+async function getTeacherAssignments(email?: string, phone?: string): Promise<Assignment[] | null> {
   if (!email && !phone) return null;
 
   const conditions = [];
@@ -29,10 +31,14 @@ async function getTeacherCourseIds(email?: string, phone?: string): Promise<numb
   if (!teacher) return null;
 
   const rows = await db
-    .select({ courseId: teacherAssignmentsTable.courseId })
+    .select({
+      courseId:  teacherAssignmentsTable.courseId,
+      levelFrom: teacherAssignmentsTable.levelFrom,
+      levelTo:   teacherAssignmentsTable.levelTo,
+    })
     .from(teacherAssignmentsTable)
     .where(eq(teacherAssignmentsTable.teacherId, teacher.id));
-  return rows.map((r) => r.courseId);
+  return rows;
 }
 
 // GET /api/admin/attendance/levels — course levels with course names (for dropdown)
@@ -41,30 +47,37 @@ router.get("/levels", async (req, res) => {
   const email = req.headers["x-user-email"] as string | undefined;
   const phone = req.headers["x-user-phone"] as string | undefined;
 
-  let courseIds: number[] | undefined;
+  let assignments: Assignment[] | undefined;
   if (role === "teacher" || role === "assistant") {
-    const ids = await getTeacherCourseIds(email, phone);
-    if (ids !== null) courseIds = ids;
+    const rows = await getTeacherAssignments(email, phone);
+    if (rows !== null) assignments = rows;
   }
 
-  const query = db
+  const levels = await db
     .select({
-      id:         courseLevelsTable.id,
-      className:  courseLevelsTable.className,
-      schedule:   courseLevelsTable.schedule,
-      courseName: coursesTable.name,
-      courseId:   coursesTable.id,
+      id:          courseLevelsTable.id,
+      className:   courseLevelsTable.className,
+      schedule:    courseLevelsTable.schedule,
+      courseName:  coursesTable.name,
+      courseId:    coursesTable.id,
+      levelNumber: courseLevelsTable.levelNumber,
     })
     .from(courseLevelsTable)
-    .innerJoin(coursesTable, eq(courseLevelsTable.courseId, coursesTable.id));
+    .innerJoin(coursesTable, eq(courseLevelsTable.courseId, coursesTable.id))
+    .orderBy(coursesTable.name, courseLevelsTable.levelNumber);
 
-  const levels = await query.orderBy(coursesTable.name, courseLevelsTable.levelNumber);
-
-  const filtered = courseIds !== undefined
-    ? levels.filter((l) => courseIds!.includes(l.courseId))
+  const filtered = assignments !== undefined
+    ? levels.filter((l) =>
+        assignments!.some(
+          (a) =>
+            a.courseId === l.courseId &&
+            l.levelNumber >= a.levelFrom &&
+            l.levelNumber <= a.levelTo
+        )
+      )
     : levels;
 
-  return res.json(filtered.map(({ courseId: _c, ...rest }) => rest));
+  return res.json(filtered.map(({ courseId: _c, levelNumber: _n, ...rest }) => rest));
 });
 
 // GET /api/admin/attendance/history?levelId=X

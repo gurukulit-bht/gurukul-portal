@@ -100,25 +100,38 @@ router.get("/form-meta", async (req, res) => {
     const levels   = await db.select().from(courseLevelsTable).orderBy(courseLevelsTable.levelNumber);
     const sections = await db.select().from(courseSectionsTable).orderBy(courseSectionsTable.id);
 
-    // Scope teacher to assigned course IDs
-    let allowedCourseIds: number[] | null = null;
+    // Scope teacher to assigned courses AND level ranges
+    type Assign = { courseId: number; levelFrom: number; levelTo: number };
+    let teacherAssignments: Assign[] | null = null;
     if (role !== "admin") {
       const teacher = await getTeacher(email, phone);
       if (teacher) {
-        const assignments = await db
-          .select({ courseId: teacherAssignmentsTable.courseId })
+        teacherAssignments = await db
+          .select({
+            courseId:  teacherAssignmentsTable.courseId,
+            levelFrom: teacherAssignmentsTable.levelFrom,
+            levelTo:   teacherAssignmentsTable.levelTo,
+          })
           .from(teacherAssignmentsTable)
           .where(eq(teacherAssignmentsTable.teacherId, teacher.id));
-        allowedCourseIds = assignments.map((a) => a.courseId);
       }
     }
+
+    const allowedCourseIds = teacherAssignments ? teacherAssignments.map((a) => a.courseId) : null;
 
     const filteredCourses = allowedCourseIds
       ? courses.filter((c) => allowedCourseIds!.includes(c.id))
       : courses;
 
-    const filteredLevels = allowedCourseIds
-      ? levels.filter((l) => allowedCourseIds!.includes(l.courseId))
+    const filteredLevels = teacherAssignments
+      ? levels.filter((l) =>
+          teacherAssignments!.some(
+            (a) =>
+              a.courseId === l.courseId &&
+              l.levelNumber >= a.levelFrom &&
+              l.levelNumber <= a.levelTo
+          )
+        )
       : levels;
 
     const allowedLevelIds = filteredLevels.map((l) => l.id);
