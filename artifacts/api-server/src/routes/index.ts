@@ -9,6 +9,7 @@ import adminRouter from "./admin";
 import settingsRouter from "./settings";
 import weeklyUpdatesRouter from "./weekly-updates";
 import authRouter from "./auth";
+import adminMessagesRouter from "./admin-messages";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/admin", adminRouter);
 router.use("/settings", settingsRouter);
 router.use("/weekly-updates", weeklyUpdatesRouter);
 router.use("/auth", authRouter);
+router.use("/admin-messages", adminMessagesRouter);
 
 export default router;

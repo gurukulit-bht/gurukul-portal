@@ -7,7 +7,7 @@ import {
   BookOpen, Globe, Heart, Users, Star, Lightbulb,
   CheckCircle2, ArrowRight, Music, Palette, Mic,
   Scroll, Sparkles, ShieldCheck, ChevronDown, Lock, Phone,
-  Calendar, ChevronUp, User, FileText, Loader2,
+  Calendar, ChevronUp, User, FileText, Loader2, MessageSquare, Eye, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -158,6 +158,10 @@ function WeeklyUpdatesSection() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [filterCourse, setFilterCourse] = useState("");
 
+  type AdminMsg = { id: number; subject: string; body: string; sentAt: string; sentBy: string | null };
+  const [adminMsgs, setAdminMsgs] = useState<AdminMsg[]>([]);
+  const [expandedMsgId, setExpandedMsgId] = useState<number | null>(null);
+
   async function verifyPhone() {
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 10) {
@@ -175,7 +179,7 @@ function WeeklyUpdatesSection() {
       if (!res.ok) throw new Error("not found");
       const data = await res.json();
       setMemberName(data.name ?? "");
-      await fetchUpdates();
+      await Promise.all([fetchUpdates(), fetchAdminMessages()]);
       setPhase("unlocked");
     } catch {
       setPhoneErr("We couldn't find a member with that phone number. Please check and try again.");
@@ -194,6 +198,16 @@ function WeeklyUpdatesSection() {
       setUpdates([]);
     } finally {
       setLoadingUpdates(false);
+    }
+  }
+
+  async function fetchAdminMessages() {
+    try {
+      const res  = await fetch("/api/admin-messages");
+      const data = await res.json();
+      setAdminMsgs(Array.isArray(data) ? data : []);
+    } catch {
+      setAdminMsgs([]);
     }
   }
 
@@ -391,6 +405,49 @@ function WeeklyUpdatesSection() {
                     })}
                   </div>
                 </>
+              )}
+
+              {/* ── Admin Messages ── */}
+              {adminMsgs.length > 0 && (
+                <div className={`${updates.length > 0 ? "mt-10 pt-8 border-t border-border" : "mt-6"} space-y-4`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                      <MessageSquare className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-secondary text-sm">Messages from Gurukul Admin</p>
+                      <p className="text-xs text-muted-foreground">{adminMsgs.length} message{adminMsgs.length !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {adminMsgs.map(msg => (
+                      <div key={msg.id} className="bg-white border border-border rounded-2xl shadow-sm p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-secondary text-sm">{msg.subject}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(msg.sentAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                              {msg.sentBy && <> · from {msg.sentBy}</>}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setExpandedMsgId(expandedMsgId === msg.id ? null : msg.id)}
+                            className="text-xs text-muted-foreground hover:text-secondary shrink-0 flex items-center gap-1"
+                          >
+                            {expandedMsgId === msg.id
+                              ? <><X className="w-3 h-3" /> Collapse</>
+                              : <><Eye className="w-3 h-3" /> Read</>}
+                          </button>
+                        </div>
+                        {expandedMsgId === msg.id && (
+                          <div className="mt-4 pt-4 border-t border-border">
+                            <pre className="text-sm text-secondary whitespace-pre-wrap bg-gray-50 rounded-xl p-4 font-sans leading-relaxed">{msg.body}</pre>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </motion.div>
           )}

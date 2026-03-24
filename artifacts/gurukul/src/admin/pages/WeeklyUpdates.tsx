@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Send, Trash2, Pencil, Loader2, BookOpen, Lock, X, Check,
   Eye, AlertTriangle, Bell, ChevronDown, ChevronRight, Pin,
-  StickyNote,
+  StickyNote, MessageSquare,
 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 import { useAuth } from "../AuthContext";
@@ -207,7 +207,25 @@ export default function WeeklyUpdates() {
   const isAdmin = user?.role === "admin";
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const [tab, setTab] = useState<"updates" | "notices" | "notes">("updates");
+  const [tab, setTab] = useState<"updates" | "notices" | "messages" | "notes">("updates");
+
+  // ── Admin Messages ──
+  type AdminMsg = { id: number; subject: string; body: string; audienceType: string; sentAt: string; sentBy: string | null };
+  const [adminMsgs, setAdminMsgs]       = useState<AdminMsg[]>([]);
+  const [adminMsgsLoading, setAdminMsgsLoading] = useState(false);
+  const [expandedMsg, setExpandedMsg]   = useState<number | null>(null);
+
+  async function loadAdminMessages() {
+    setAdminMsgsLoading(true);
+    try {
+      const data = await adminApi.messaging.teacherInbox();
+      setAdminMsgs(data as AdminMsg[]);
+    } catch {
+      setAdminMsgs([]);
+    } finally {
+      setAdminMsgsLoading(false);
+    }
+  }
 
   const [updates, setUpdates] = useState<Update[]>([]);
   const [meta, setMeta]       = useState<FormMeta>({ courses: [], levels: [], sections: [] });
@@ -367,6 +385,20 @@ export default function WeeklyUpdates() {
         >
           <Bell className="w-4 h-4" />
           Notice Board
+        </button>
+        <button
+          onClick={() => { setTab("messages"); loadAdminMessages(); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+            tab === "messages" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          From Admin
+          {adminMsgs.length > 0 && (
+            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+              {adminMsgs.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setTab("notes")}
@@ -619,6 +651,66 @@ export default function WeeklyUpdates() {
 
       {/* ── Notice Board Tab ── */}
       {tab === "notices" && <NoticeBoard />}
+
+      {/* ── From Admin Tab ── */}
+      {tab === "messages" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {adminMsgs.length} message{adminMsgs.length !== 1 ? "s" : ""} from admin
+            </p>
+            <button
+              onClick={loadAdminMessages}
+              disabled={adminMsgsLoading}
+              className="text-xs text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
+            >
+              {adminMsgsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              Refresh
+            </button>
+          </div>
+
+          {adminMsgsLoading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" /> Loading messages…
+            </div>
+          ) : adminMsgs.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium text-sm">No messages from admin yet</p>
+              <p className="text-xs mt-1">Messages sent to teachers will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {adminMsgs.map(msg => (
+                <div key={msg.id} className="bg-white border border-border rounded-2xl shadow-sm p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-secondary text-sm truncate">{msg.subject}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(msg.sentAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                        {msg.sentBy && <> · from {msg.sentBy}</>}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setExpandedMsg(expandedMsg === msg.id ? null : msg.id)}
+                      className="text-xs text-muted-foreground hover:text-secondary shrink-0 flex items-center gap-1"
+                    >
+                      {expandedMsg === msg.id
+                        ? <><X className="w-3 h-3" /> Collapse</>
+                        : <><Eye className="w-3 h-3" /> Read</>}
+                    </button>
+                  </div>
+                  {expandedMsg === msg.id && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <pre className="text-sm text-secondary whitespace-pre-wrap bg-gray-50 rounded-xl p-4 font-sans leading-relaxed">{msg.body}</pre>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── My Notes Tab ── */}
       {tab === "notes" && <NotesTab />}

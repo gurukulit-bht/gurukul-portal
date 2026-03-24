@@ -498,6 +498,25 @@ export const teacherNotesTable = pgTable("teacher_notes", {
 
 export type TeacherNote = typeof teacherNotesTable.$inferSelect;
 
+// ─── Admin In-App Messages ────────────────────────────────────────────────────
+// Replaces SMTP email blasts — messages are stored here and displayed in-portal.
+
+export const adminMessagesTable = pgTable("admin_messages", {
+  id:               serial("id").primaryKey(),
+  subject:          text("subject").notNull(),
+  body:             text("body").notNull(),
+  audienceType:     text("audience_type").notNull().default("parents"), // "parents" | "teachers" | "both"
+  sentBy:           text("sent_by"),
+  recipientCount:   integer("recipient_count").notNull().default(0),
+  teacherEmails:    text("teacher_emails"),      // comma-separated, set when audienceType includes teachers
+  filterCourse:     text("filter_course"),
+  filterCurricYear: text("filter_curric_year"),
+  filterEmployer:   text("filter_employer"),
+  sentAt:           timestamp("sent_at").defaultNow().notNull(),
+});
+
+export type AdminMessage = typeof adminMessagesTable.$inferSelect;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Announcement = typeof announcementsTable.$inferSelect;

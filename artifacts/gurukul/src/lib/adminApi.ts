@@ -131,9 +131,10 @@ export const adminApi = {
       if (params.employer)   qs.set("employer",    params.employer);
       return request<unknown[]>("GET", `/messaging/recipients?${qs}`);
     },
-    employers: () => request<string[]>("GET", "/messaging/employers"),
-    send:      (data: unknown) => request("POST", "/messaging/send", data),
-    logs:      () => request<unknown[]>("GET", "/messaging/logs"),
+    employers:     () => request<string[]>("GET", "/messaging/employers"),
+    send:          (data: unknown) => request("POST", "/messaging/send", data),
+    messages:      () => request<unknown[]>("GET", "/messaging/messages"),
+    teacherInbox:  () => request<unknown[]>("GET", "/messaging/teacher-inbox"),
     inbox:         () => request<unknown[]>("GET", "/messaging/inbox"),
     markRead:      (id: number) => request("PATCH", `/messaging/inbox/${id}/read`, {}),
     deleteMessage: (id: number) => request("DELETE", `/messaging/inbox/${id}`),

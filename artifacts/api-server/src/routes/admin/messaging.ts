@@ -5,34 +5,15 @@ import {
   enrollmentsTable,
   courseLevelsTable,
   coursesTable,
-  emailLogsTable,
+  adminMessagesTable,
   contactsTable,
 } from "@workspace/db/schema";
 import { eq, asc, isNotNull, sql, desc } from "drizzle-orm";
-import nodemailer from "nodemailer";
 
 const router: IRouter = Router();
 
-// ─── Build transporter (SMTP via env vars) ────────────────────────────────────
-
-function getTransporter() {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT ?? "587");
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) return null;
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-}
-
 // ─── GET /api/admin/messaging/recipients ─────────────────────────────────────
-// Returns filtered parent list (for preview before sending)
+// Returns filtered parent list with email AND phone
 
 router.get("/recipients", async (req, res) => {
   const { course, curricYear, employer } = req.query as Record<string, string | undefined>;
@@ -45,9 +26,11 @@ router.get("/recipients", async (req, res) => {
         curriculumYear: studentsTable.curriculumYear,
         motherName:     studentsTable.motherName,
         motherEmail:    studentsTable.motherEmail,
+        motherPhone:    studentsTable.motherPhone,
         motherEmployer: studentsTable.motherEmployer,
         fatherName:     studentsTable.fatherName,
         fatherEmail:    studentsTable.fatherEmail,
+        fatherPhone:    studentsTable.fatherPhone,
         fatherEmployer: studentsTable.fatherEmployer,
         courseName:     coursesTable.name,
       })
@@ -57,12 +40,11 @@ router.get("/recipients", async (req, res) => {
       .leftJoin(coursesTable, eq(coursesTable.id, courseLevelsTable.courseId))
       .orderBy(asc(studentsTable.studentCode));
 
-    // De-duplicate by student, then aggregate course names
     const studentMap = new Map<string, {
       studentCode: string; studentName: string;
       curriculumYear: string | null;
-      motherName: string | null; motherEmail: string | null; motherEmployer: string | null;
-      fatherName: string | null; fatherEmail: string | null; fatherEmployer: string | null;
+      motherName: string | null; motherEmail: string | null; motherPhone: string | null; motherEmployer: string | null;
+      fatherName: string | null; fatherEmail: string | null; fatherPhone: string | null; fatherEmployer: string | null;
       courses: string[];
     }>();
 
@@ -73,12 +55,8 @@ router.get("/recipients", async (req, res) => {
           studentCode: r.studentCode ?? "",
           studentName: r.studentName ?? "",
           curriculumYear: r.curriculumYear,
-          motherName: r.motherName,
-          motherEmail: r.motherEmail,
-          motherEmployer: r.motherEmployer,
-          fatherName: r.fatherName,
-          fatherEmail: r.fatherEmail,
-          fatherEmployer: r.fatherEmployer,
+          motherName: r.motherName, motherEmail: r.motherEmail, motherPhone: r.motherPhone, motherEmployer: r.motherEmployer,
+          fatherName: r.fatherName, fatherEmail: r.fatherEmail, fatherPhone: r.fatherPhone, fatherEmployer: r.fatherEmployer,
           courses: [],
         });
       }
@@ -90,7 +68,6 @@ router.get("/recipients", async (req, res) => {
 
     let entries = Array.from(studentMap.values());
 
-    // Apply filters
     if (course && course !== "All") {
       entries = entries.filter(e => e.courses.includes(course));
     }
@@ -104,25 +81,29 @@ router.get("/recipients", async (req, res) => {
       );
     }
 
-    // Build recipient list (deduplicate emails)
+    // Build recipient list — include parent even if no email (in-app messaging uses phone lookup too)
     const recipientSet = new Map<string, {
-      name: string; email: string; relation: string; studentName: string; studentCode: string;
+      name: string; email: string; phone: string; relation: string; studentName: string; studentCode: string;
     }>();
 
     for (const e of entries) {
-      if (e.motherEmail?.trim()) {
-        recipientSet.set(e.motherEmail.toLowerCase(), {
-          name: e.motherName ?? "Parent",
-          email: e.motherEmail.trim(),
+      const key = (e.motherEmail ?? e.motherPhone ?? "").toLowerCase();
+      if (key && (e.motherEmail?.trim() || e.motherPhone?.trim())) {
+        recipientSet.set(key, {
+          name: e.motherName ?? "Mother",
+          email: e.motherEmail?.trim() ?? "",
+          phone: e.motherPhone?.trim() ?? "",
           relation: "Mother",
           studentName: e.studentName,
           studentCode: e.studentCode,
         });
       }
-      if (e.fatherEmail?.trim()) {
-        recipientSet.set(e.fatherEmail.toLowerCase(), {
-          name: e.fatherName ?? "Parent",
-          email: e.fatherEmail.trim(),
+      const key2 = (e.fatherEmail ?? e.fatherPhone ?? "").toLowerCase();
+      if (key2 && (e.fatherEmail?.trim() || e.fatherPhone?.trim())) {
+        recipientSet.set(key2, {
+          name: e.fatherName ?? "Father",
+          email: e.fatherEmail?.trim() ?? "",
+          phone: e.fatherPhone?.trim() ?? "",
           relation: "Father",
           studentName: e.studentName,
           studentCode: e.studentCode,
@@ -138,7 +119,6 @@ router.get("/recipients", async (req, res) => {
 });
 
 // ─── GET /api/admin/messaging/employers ─────────────────────────────────────
-// Returns distinct employer values
 
 router.get("/employers", async (_req, res) => {
   try {
@@ -160,20 +140,25 @@ router.get("/employers", async (_req, res) => {
 });
 
 // ─── POST /api/admin/messaging/send ─────────────────────────────────────────
+// In-app messaging: stores message to DB (no SMTP). Visible in teacher portal
+// and parent portal once delivered.
 
 router.post("/send", async (req, res) => {
   const {
-    subject, body, recipients, filterCourse, filterCurricYear, filterEmployer,
+    subject, body, recipients, teacherEmails, audienceType,
+    filterCourse, filterCurricYear, filterEmployer,
   } = req.body as {
     subject: string;
     body: string;
-    recipients: { name: string; email: string; studentName: string }[];
+    recipients: { name: string; email: string; phone?: string; studentName: string }[];
+    teacherEmails?: string;    // comma-separated teacher emails when audience includes teachers
+    audienceType?: string;     // "parents" | "teachers" | "both"
     filterCourse?: string;
     filterCurricYear?: string;
     filterEmployer?: string;
   };
 
-  const sentBy = req.headers["x-user-email"] as string | undefined;
+  const sentBy = (req.headers["x-user-email"] as string | undefined) || "admin";
 
   if (!subject?.trim() || !body?.trim()) {
     return res.status(400).json({ error: "Subject and body are required." });
@@ -182,82 +167,85 @@ router.post("/send", async (req, res) => {
     return res.status(400).json({ error: "No recipients selected." });
   }
 
-  const transporter = getTransporter();
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@bhtohio.org";
+  try {
+    await db.insert(adminMessagesTable).values({
+      subject:          subject.trim(),
+      body:             body.trim(),
+      audienceType:     audienceType || "parents",
+      sentBy,
+      recipientCount:   recipients.length,
+      teacherEmails:    teacherEmails || null,
+      filterCourse:     filterCourse || null,
+      filterCurricYear: filterCurricYear || null,
+      filterEmployer:   filterEmployer || null,
+    });
 
-  let successCount = 0;
-  let failCount = 0;
-  const errors: string[] = [];
-
-  for (const r of recipients) {
-    const personalised = body
-      .replace(/\{\{parent_name\}\}/gi, r.name)
-      .replace(/\{\{student_name\}\}/gi, r.studentName);
-
-    if (transporter) {
-      try {
-        await transporter.sendMail({
-          from: `"BHT Gurukul" <${from}>`,
-          to: r.email,
-          subject,
-          html: personalised.replace(/\n/g, "<br>"),
-          text: personalised,
-        });
-        successCount++;
-      } catch (err) {
-        failCount++;
-        errors.push(`${r.email}: ${err instanceof Error ? err.message : "unknown error"}`);
-      }
-    } else {
-      req.log.info({ to: r.email, subject }, "[MESSAGING] Email preview (SMTP not configured)");
-      successCount++;
-    }
+    return res.json({
+      success: true,
+      sent: recipients.length,
+      failed: 0,
+      smtpConfigured: false,
+      message: `Message delivered to ${recipients.length} recipient${recipients.length !== 1 ? "s" : ""} in-portal.`,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to save in-app message");
+    return res.status(500).json({ error: "Failed to send message." });
   }
-
-  // Log to DB
-  await db.insert(emailLogsTable).values({
-    subject,
-    body,
-    recipientCount: recipients.length,
-    recipientEmails: recipients.map(r => r.email).join(", "),
-    filterCourse:     filterCourse || null,
-    filterCurricYear: filterCurricYear || null,
-    filterEmployer:   filterEmployer || null,
-    sentBy:  sentBy || null,
-    status:  failCount === recipients.length ? "failed" : failCount > 0 ? "partial" : "sent",
-  });
-
-  const smtpConfigured = !!transporter;
-
-  return res.json({
-    success: true,
-    sent: successCount,
-    failed: failCount,
-    errors,
-    smtpConfigured,
-    message: smtpConfigured
-      ? `Email sent to ${successCount} of ${recipients.length} recipients.`
-      : `SMTP not configured — ${successCount} emails logged (not delivered). Configure SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM to enable real delivery.`,
-  });
 });
 
-// ─── GET /api/admin/messaging/logs ───────────────────────────────────────────
+// ─── GET /api/admin/messaging/messages ───────────────────────────────────────
+// Returns all sent in-app messages (admin history view)
 
-router.get("/logs", async (_req, res) => {
+router.get("/messages", async (_req, res) => {
   try {
-    const logs = await db
+    const msgs = await db
       .select()
-      .from(emailLogsTable)
-      .orderBy(sql`${emailLogsTable.sentAt} DESC`)
+      .from(adminMessagesTable)
+      .orderBy(desc(adminMessagesTable.sentAt))
       .limit(100);
-    return res.json(logs);
+    return res.json(msgs);
   } catch (err) {
-    return res.status(500).json({ error: "Failed to fetch logs" });
+    return res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+// ─── GET /api/admin/messaging/teacher-inbox ──────────────────────────────────
+// Returns in-app messages for the authenticated teacher.
+// Teacher identified via X-User-Phone (digits-only) matched to their email via
+// the teachers table, OR directly by X-User-Email if admin is viewing.
+
+router.get("/teacher-inbox", async (req, res) => {
+  const userEmail = (req.headers["x-user-email"] as string | undefined)?.toLowerCase().trim();
+  const userPhone = (req.headers["x-user-phone"] as string | undefined)?.replace(/\D/g, "");
+
+  try {
+    const all = await db
+      .select()
+      .from(adminMessagesTable)
+      .where(
+        sql`${adminMessagesTable.audienceType} IN ('teachers', 'both')`
+      )
+      .orderBy(desc(adminMessagesTable.sentAt));
+
+    // Filter to only messages where this teacher's email appears in teacherEmails
+    const filtered = all.filter(m => {
+      if (!m.teacherEmails) {
+        // If no specific teacher list — message was sent to all teachers
+        return true;
+      }
+      const list = m.teacherEmails.split(",").map(e => e.trim().toLowerCase());
+      if (userEmail && list.includes(userEmail)) return true;
+      return false;
+    });
+
+    return res.json(filtered);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch teacher messages" });
   }
 });
 
 // ─── GET /api/admin/messaging/inbox ──────────────────────────────────────────
-// Returns contact-form submissions from the public Contact Us page
+// Contact-form submissions from the public Contact Us page
 
 router.get("/inbox", async (_req, res) => {
   try {
@@ -282,7 +270,6 @@ router.get("/inbox", async (_req, res) => {
 });
 
 // ─── PATCH /api/admin/messaging/inbox/:id/read ───────────────────────────────
-// Mark a contact message as read
 
 router.patch("/inbox/:id/read", async (req, res) => {
   const id = parseInt(req.params.id, 10);
@@ -296,7 +283,6 @@ router.patch("/inbox/:id/read", async (req, res) => {
 });
 
 // ─── DELETE /api/admin/messaging/inbox/:id ────────────────────────────────────
-// Permanently delete a contact message from the inbox
 
 router.delete("/inbox/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);

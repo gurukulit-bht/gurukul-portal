@@ -16,22 +16,23 @@ import NotesTab from "../components/NotesTab";
 type Recipient = {
   name: string;
   email: string;
+  phone: string;
   relation: string;
   studentName: string;
   studentCode: string;
 };
 
-type EmailLog = {
+type AdminMessage = {
   id: number;
   subject: string;
   body: string;
+  audienceType: string;
   recipientCount: number;
-  recipientEmails: string;
+  teacherEmails: string | null;
   filterCourse: string | null;
   filterCurricYear: string | null;
   filterEmployer: string | null;
   sentBy: string | null;
-  status: string;
   sentAt: string;
 };
 
@@ -47,10 +48,10 @@ type InboxMessage = {
 
 const COURSES = ["All", "Hindi", "Dharma", "Telugu", "Tamil", "Sanskrit", "Gujarati"];
 
-const STATUS_STYLE: Record<string, string> = {
-  sent:    "bg-green-100 text-green-700",
-  partial: "bg-orange-100 text-orange-700",
-  failed:  "bg-red-100 text-red-700",
+const AUDIENCE_LABEL: Record<string, string> = {
+  parents:  "Parents",
+  teachers: "Teachers",
+  both:     "Parents + Teachers",
 };
 
 function formatDate(iso: string) {
@@ -101,7 +102,7 @@ export default function MessagingCenter() {
   } | null>(null);
 
   // ── History ──
-  const [logs,        setLogs]        = useState<EmailLog[]>([]);
+  const [logs,        setLogs]        = useState<AdminMessage[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
   // ── Inbox ──
@@ -137,7 +138,7 @@ export default function MessagingCenter() {
       });
       const list = data as Recipient[];
       setRecipients(list);
-      setSelectedEmails(new Set(list.map(r => r.email)));
+      setSelectedEmails(new Set(list.map(r => r.email || r.phone)));
     } catch {
       setRecipients([]);
     } finally {
@@ -147,16 +148,18 @@ export default function MessagingCenter() {
 
   useEffect(() => { loadRecipients(); }, [loadRecipients]);
 
-  function toggleRecipient(email: string) {
+  const recipientKey = (r: Recipient) => r.email || r.phone;
+
+  function toggleRecipient(key: string) {
     setSelectedEmails(prev => {
       const next = new Set(prev);
-      next.has(email) ? next.delete(email) : next.add(email);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   }
 
   function selectAll() {
-    setSelectedEmails(new Set(recipients.map(r => r.email)));
+    setSelectedEmails(new Set(recipients.map(recipientKey)));
   }
 
   function deselectAll() {
@@ -178,17 +181,21 @@ export default function MessagingCenter() {
     if (!body.trim())    { alert("Please write a message body."); return; }
 
     const parentRecipients = sendTo !== "teachers"
-      ? recipients.filter(r => selectedEmails.has(r.email))
-          .map(r => ({ name: r.name, email: r.email, studentName: r.studentName }))
+      ? recipients.filter(r => selectedEmails.has(recipientKey(r)))
+          .map(r => ({ name: r.name, email: r.email, phone: r.phone, studentName: r.studentName }))
       : [];
 
     const teacherRecipients = sendTo !== "parents"
       ? teacherList.filter(t => selectedTeacherEmails.has(t.email))
-          .map(t => ({ name: t.name, email: t.email, studentName: "" }))
+          .map(t => ({ name: t.name, email: t.email, phone: "", studentName: "" }))
       : [];
 
     const allRecipients = [...parentRecipients, ...teacherRecipients];
     if (!allRecipients.length)  { alert("No recipients selected."); return; }
+
+    const chosenTeacherEmails = sendTo !== "parents"
+      ? teacherList.filter(t => selectedTeacherEmails.has(t.email)).map(t => t.email).join(",")
+      : undefined;
 
     setSending(true);
     setSendResult(null);
@@ -197,6 +204,8 @@ export default function MessagingCenter() {
         subject,
         body,
         recipients: allRecipients,
+        audienceType: sendTo,
+        teacherEmails: chosenTeacherEmails,
         filterCourse:     filterCourse !== "All" ? filterCourse : undefined,
         filterCurricYear: filterCurricYear !== "All" ? filterCurricYear : undefined,
         filterEmployer:   filterEmployer !== "All" ? filterEmployer : undefined,
@@ -222,8 +231,8 @@ export default function MessagingCenter() {
   async function loadLogs() {
     setLogsLoading(true);
     try {
-      const data = await adminApi.messaging.logs();
-      setLogs(data as EmailLog[]);
+      const data = await adminApi.messaging.messages();
+      setLogs(data as AdminMessage[]);
     } catch {
       setLogs([]);
     } finally {
@@ -264,7 +273,7 @@ export default function MessagingCenter() {
 
   const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
-  const selectedCount        = recipients.filter(r => selectedEmails.has(r.email)).length;
+  const selectedCount        = recipients.filter(r => selectedEmails.has(recipientKey(r))).length;
   const selectedTeacherCount = teacherList.filter(t => selectedTeacherEmails.has(t.email)).length;
   const totalSelectedCount   = (sendTo !== "teachers" ? selectedCount : 0)
                              + (sendTo !== "parents"  ? selectedTeacherCount : 0);
@@ -425,17 +434,18 @@ export default function MessagingCenter() {
                     {showRecipients && (
                       <ul className="max-h-72 overflow-y-auto divide-y divide-border">
                         {recipients.map(r => (
-                          <li key={r.email} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50">
+                          <li key={recipientKey(r)} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50">
                             <input
                               type="checkbox"
-                              checked={selectedEmails.has(r.email)}
-                              onChange={() => toggleRecipient(r.email)}
+                              checked={selectedEmails.has(recipientKey(r))}
+                              onChange={() => toggleRecipient(recipientKey(r))}
                               className="mt-0.5 accent-primary w-4 h-4 shrink-0"
                             />
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-secondary truncate">{r.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{r.email}</p>
-                              <p className="text-xs text-muted-foreground">{r.relation} · Student: {r.studentName}</p>
+                              {r.email && <p className="text-xs text-muted-foreground truncate">{r.email}</p>}
+                              {r.phone && <p className="text-xs text-muted-foreground">{r.phone}</p>}
+                              <p className="text-xs text-muted-foreground">{r.relation} · {r.studentName}</p>
                             </div>
                           </li>
                         ))}
@@ -498,12 +508,13 @@ export default function MessagingCenter() {
           {/* RIGHT: Compose */}
           <div className="xl:col-span-2 space-y-4">
 
-            {/* SMTP notice banner */}
+            {/* ── In-app notice banner ── */}
             <div className="flex items-start gap-3 bg-sky-50 border border-sky-200 text-sky-800 rounded-xl px-4 py-3 text-sm">
               <Info className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
-                <span className="font-semibold">Email delivery note:</span> Configure <code className="text-xs bg-sky-100 px-1 rounded">SMTP_HOST</code>, <code className="text-xs bg-sky-100 px-1 rounded">SMTP_USER</code>, <code className="text-xs bg-sky-100 px-1 rounded">SMTP_PASS</code>, and <code className="text-xs bg-sky-100 px-1 rounded">SMTP_FROM</code> environment variables to enable real delivery. Without them, messages are logged only.
-                <span className="ml-1">Use <code className="text-xs bg-sky-100 px-1 rounded">{'{{parent_name}}'}</code> and <code className="text-xs bg-sky-100 px-1 rounded">{'{{student_name}}'}</code> for personalisation.</span>
+                <span className="font-semibold">In-app messaging:</span> Messages are stored securely and displayed directly inside the portal —
+                teachers see them in their Messaging Center, and parents see them on the Parent Portal after verifying their phone.
+                No email is sent.
               </div>
             </div>
 
@@ -513,7 +524,7 @@ export default function MessagingCenter() {
                 <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
                 <div>
                   <span className="font-semibold">Heads up — parents will see this message.</span>{" "}
-                  Please review your content carefully before sending. Once sent, this email will be delivered directly to{" "}
+                  Please review your content carefully. Once published, this message will be visible in the Parent Portal to{" "}
                   {sendTo === "both"
                     ? <><span className="font-semibold">{selectedCount} parent{selectedCount !== 1 ? "s" : ""}</span> and <span className="font-semibold">{selectedTeacherCount} teacher{selectedTeacherCount !== 1 ? "s" : ""}</span>.</>
                     : <><span className="font-semibold">{selectedCount} parent{selectedCount !== 1 ? "s" : ""}</span>.</>
@@ -523,7 +534,7 @@ export default function MessagingCenter() {
             )}
 
             <div className="bg-white border border-border rounded-2xl shadow-sm p-6 space-y-5">
-              <h3 className="font-bold text-secondary">Compose Email</h3>
+              <h3 className="font-bold text-secondary">Compose Message</h3>
 
               {/* Subject */}
               <div className="space-y-1.5">
@@ -542,18 +553,15 @@ export default function MessagingCenter() {
               {/* Body */}
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-secondary">
-                  Message Body <span className="text-red-500">*</span>
+                  Message <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={12}
                   value={body}
                   onChange={e => setBody(e.target.value)}
-                  placeholder={`Dear {{parent_name}},\n\nWe wanted to share an important update regarding {{student_name}}'s enrollment at BHT Gurukul.\n\n...\n\nWarm regards,\nBHT Gurukul Team`}
-                  className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition resize-none font-mono"
+                  placeholder={`Dear Parents,\n\nWe wanted to share an important update from BHT Gurukul...\n\nWarm regards,\nBHT Gurukul Team`}
+                  className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition resize-none"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use <code className="bg-gray-100 px-1 rounded">{`{{parent_name}}`}</code> and <code className="bg-gray-100 px-1 rounded">{`{{student_name}}`}</code> — they will be replaced per recipient.
-                </p>
               </div>
 
               {/* Result banner */}
@@ -568,13 +576,8 @@ export default function MessagingCenter() {
                     ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
                     : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
                   <div>
-                    <p className="font-semibold">{sendResult.success ? "Done!" : "Error"}</p>
+                    <p className="font-semibold">{sendResult.success ? "Published!" : "Error"}</p>
                     <p>{sendResult.message}</p>
-                    {!sendResult.smtpConfigured && sendResult.success && (
-                      <p className="mt-1 text-xs opacity-80">
-                        Emails were not delivered — SMTP is not configured. Set the environment variables to enable real delivery.
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
@@ -583,7 +586,7 @@ export default function MessagingCenter() {
               <div className="flex items-center justify-between gap-4 pt-2">
                 <div className="text-sm text-muted-foreground space-y-0.5">
                   <p>
-                    Will send to <span className="font-semibold text-secondary">{totalSelectedCount}</span> recipient{totalSelectedCount !== 1 ? "s" : ""}
+                    Will deliver to <span className="font-semibold text-secondary">{totalSelectedCount}</span> recipient{totalSelectedCount !== 1 ? "s" : ""}
                   </p>
                   {sendTo === "both" && (
                     <p className="text-xs">
@@ -595,8 +598,8 @@ export default function MessagingCenter() {
                 </div>
                 <Button onClick={handleSend} disabled={sending || totalSelectedCount === 0} className="gap-2 min-w-36">
                   {sending
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
-                    : <><Send className="w-4 h-4" /> Send Email</>}
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Publishing…</>
+                    : <><Send className="w-4 h-4" /> Publish Message</>}
                 </Button>
               </div>
             </div>
@@ -679,13 +682,13 @@ export default function MessagingCenter() {
 
 // ─── Log Card ─────────────────────────────────────────────────────────────────
 
-function LogCard({ log }: { log: EmailLog }) {
+function LogCard({ log }: { log: AdminMessage }) {
   const [expanded, setExpanded] = useState(false);
 
   const tags = [
-    log.filterCourse    && log.filterCourse    !== "All" ? `Course: ${log.filterCourse}`    : null,
-    log.filterCurricYear && log.filterCurricYear !== "All" ? `Year: ${log.filterCurricYear}` : null,
-    log.filterEmployer  && log.filterEmployer  !== "All" ? `Employer: ${log.filterEmployer}` : null,
+    log.filterCourse     && log.filterCourse     !== "All" ? `Course: ${log.filterCourse}`       : null,
+    log.filterCurricYear && log.filterCurricYear  !== "All" ? `Year: ${log.filterCurricYear}`    : null,
+    log.filterEmployer   && log.filterEmployer   !== "All" ? `Employer: ${log.filterEmployer}`   : null,
   ].filter(Boolean) as string[];
 
   return (
@@ -693,8 +696,8 @@ function LogCard({ log }: { log: EmailLog }) {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium shrink-0", STATUS_STYLE[log.status] ?? "bg-gray-100 text-gray-600")}>
-              {log.status}
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-primary/10 text-primary">
+              {AUDIENCE_LABEL[log.audienceType] ?? log.audienceType}
             </span>
             <p className="font-semibold text-secondary text-sm truncate">{log.subject}</p>
           </div>
@@ -721,13 +724,13 @@ function LogCard({ log }: { log: EmailLog }) {
       {expanded && (
         <div className="mt-4 pt-4 border-t border-border space-y-3">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Message Body</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Message</p>
             <pre className="text-sm text-secondary whitespace-pre-wrap bg-gray-50 rounded-xl p-4 font-sans">{log.body}</pre>
           </div>
-          {log.recipientEmails && (
+          {log.teacherEmails && log.audienceType !== "parents" && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Recipients</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">{log.recipientEmails}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Teacher Recipients</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{log.teacherEmails.split(",").join(", ")}</p>
             </div>
           )}
         </div>
