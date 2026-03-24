@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,6 +29,9 @@ const queryClient = new QueryClient({
 });
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  // Student's Corner has its own built-in Narad Ji assistant — skip the global one
+  const hideGlobalNarad = location.startsWith("/students-corner");
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -36,7 +39,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <Footer />
-      <NaradJi />
+      {!hideGlobalNarad && <NaradJi />}
     </div>
   );
 }
