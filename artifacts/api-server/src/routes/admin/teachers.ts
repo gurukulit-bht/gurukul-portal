@@ -82,12 +82,16 @@ router.post("/", async (req, res) => {
   try {
     const { name, email, phone, category } = req.body;
 
+    if (!name?.trim())  return res.status(400).json({ error: "Name is required." });
+    if (!email?.trim()) return res.status(400).json({ error: "Email is required." });
+    if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
+
     const [teacher] = await db
       .insert(teachersTable)
       .values({
-        name,
-        email,
-        phone:    phone || null,
+        name:     name.trim(),
+        email:    email.trim(),
+        phone:    phone.trim(),
         category: category || "Senior Teacher",
         status:   "Active",
       })
@@ -106,9 +110,13 @@ router.put("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const { name, email, phone, category } = req.body;
 
+    if (!name?.trim())  return res.status(400).json({ error: "Name is required." });
+    if (!email?.trim()) return res.status(400).json({ error: "Email is required." });
+    if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
+
     await db
       .update(teachersTable)
-      .set({ name, email, phone: phone || null, category: category || "Senior Teacher" })
+      .set({ name: name.trim(), email: email.trim(), phone: phone.trim(), category: category || "Senior Teacher" })
       .where(eq(teachersTable.id, id));
 
     res.json((await buildTeacherList()).find((t) => t.id === id));

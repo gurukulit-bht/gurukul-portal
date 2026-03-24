@@ -80,6 +80,7 @@ export default function Teachers() {
   async function handleSave() {
     if (!form.name.trim())  { setError("Full name is required."); return; }
     if (!form.email.trim()) { setError("Email is required."); return; }
+    if (!form.phone.trim()) { setError("Phone number is required. It is used as the teacher's login identifier."); return; }
     if (!form.category)     { setError("Category is required."); return; }
 
     setSaving(true);
@@ -323,13 +324,14 @@ export default function Teachers() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Phone</Label>
+                <Label>Phone <span className="text-red-500">*</span></Label>
                 <Input
-                  placeholder="Phone number"
+                  placeholder="e.g. (614) 555-0101"
                   value={form.phone}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                   className="rounded-xl"
                 />
+                <p className="text-xs text-muted-foreground">Used as the primary login identifier for portal access.</p>
               </div>
 
               <div className="space-y-1.5">
