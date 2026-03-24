@@ -116,7 +116,7 @@ function NoticeBoard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 text-muted-foreground py-16">
-        <Loader2 className="w-5 h-5 animate-spin" /> Loading notices…
+        <Loader2 className="w-5 h-5 animate-spin" /> Loading announcements…
       </div>
     );
   }
@@ -125,8 +125,8 @@ function NoticeBoard() {
     return (
       <div className="text-center py-16 text-muted-foreground">
         <Bell className="w-10 h-10 mx-auto mb-3 opacity-30" />
-        <p className="font-medium text-sm">No notices from admin</p>
-        <p className="text-xs mt-1">Check back later for updates and announcements.</p>
+        <p className="font-medium text-sm">No announcements from admin</p>
+        <p className="text-xs mt-1">Check back later for updates.</p>
       </div>
     );
   }
@@ -149,7 +149,7 @@ function NoticeBoard() {
               <div className="flex-1 flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-secondary text-sm">{fmtDateLong(date)}</span>
                 <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">
-                  {items.length} notice{items.length !== 1 ? "s" : ""}
+                  {items.length} announcement{items.length !== 1 ? "s" : ""}
                 </span>
                 {hasUrgent && (
                   <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-medium">
@@ -357,7 +357,7 @@ export default function WeeklyUpdates() {
       <div>
         <h1 className="text-2xl font-bold text-secondary">Messaging Center</h1>
         <p className="text-sm text-muted-foreground">
-          Post updates for parents and read notices from the admin
+          Post updates for parents and read announcements from the admin
         </p>
       </div>
 
@@ -384,7 +384,7 @@ export default function WeeklyUpdates() {
           }`}
         >
           <Bell className="w-4 h-4" />
-          Notice Board
+          Announcements
         </button>
         <button
           onClick={() => { setTab("messages"); loadAdminMessages(); }}
