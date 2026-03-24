@@ -7,6 +7,7 @@ import contactRouter from "./contact";
 import testimonialsRouter from "./testimonials";
 import adminRouter from "./admin";
 import settingsRouter from "./settings";
+import weeklyUpdatesRouter from "./weekly-updates";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/contact", contactRouter);
 router.use("/testimonials", testimonialsRouter);
 router.use("/admin", adminRouter);
 router.use("/settings", settingsRouter);
+router.use("/weekly-updates", weeklyUpdatesRouter);
 
 export default router;

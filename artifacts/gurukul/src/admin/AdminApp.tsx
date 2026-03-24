@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import CourseDocuments from "./pages/CourseDocuments";
 import Attendance from "./pages/Attendance";
 import ParentNotifications from "./pages/ParentNotifications";
+import WeeklyUpdates from "./pages/WeeklyUpdates";
 import RoleManagement from "./pages/RoleManagement";
 import StudentRegistration from "./pages/StudentRegistration";
 import Testimonials from "./pages/Testimonials";
@@ -97,6 +98,9 @@ function AdminRoutes() {
       </Route>
       <Route path="/admin/notifications">
         <ProtectedRoute permission="notifications"><ParentNotifications /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/weekly-updates">
+        <ProtectedRoute permission="weeklyUpdates"><WeeklyUpdates /></ProtectedRoute>
       </Route>
 
       <Route path="/admin/register">

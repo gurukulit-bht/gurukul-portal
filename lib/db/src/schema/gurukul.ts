@@ -427,6 +427,40 @@ export const emailLogsTable = pgTable("email_logs", {
 
 export type EmailLog = typeof emailLogsTable.$inferSelect;
 
+// ─── Weekly Updates ───────────────────────────────────────────────────────────
+// Class-level weekly updates published by teachers, visible to parents.
+
+export const weeklyUpdateStatusEnum = pgEnum("weekly_update_status", ["Draft", "Published"]);
+
+export const weeklyUpdatesTable = pgTable("weekly_updates", {
+  id:             serial("id").primaryKey(),
+  courseId:       integer("course_id").references(() => coursesTable.id, { onDelete: "set null" }),
+  courseName:     text("course_name").notNull(),
+  levelId:        integer("level_id").references(() => courseLevelsTable.id, { onDelete: "set null" }),
+  levelName:      text("level_name").notNull(),
+  sectionId:      integer("section_id").references(() => courseSectionsTable.id, { onDelete: "set null" }),
+  sectionName:    text("section_name").notNull().default(""),
+  weekStart:      text("week_start").notNull(),
+  weekEnd:        text("week_end").notNull(),
+  title:          text("title").notNull(),
+  content:        text("content").notNull(),
+  topicsCovered:  text("topics_covered"),
+  homework:       text("homework"),
+  upcomingPlan:   text("upcoming_plan"),
+  reminders:      text("reminders"),
+  attachmentLink: text("attachment_link"),
+  status:         weeklyUpdateStatusEnum("status").notNull().default("Draft"),
+  teacherName:    text("teacher_name").notNull(),
+  createdBy:      text("created_by").notNull(),
+  publishedAt:    timestamp("published_at"),
+  createdAt:      timestamp("created_at").defaultNow(),
+  updatedAt:      timestamp("updated_at").defaultNow(),
+});
+
+export const insertWeeklyUpdateSchema = createInsertSchema(weeklyUpdatesTable).omit({ id: true, createdAt: true, updatedAt: true, publishedAt: true });
+export type WeeklyUpdate = typeof weeklyUpdatesTable.$inferSelect;
+export type InsertWeeklyUpdate = z.infer<typeof insertWeeklyUpdateSchema>;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Announcement = typeof announcementsTable.$inferSelect;

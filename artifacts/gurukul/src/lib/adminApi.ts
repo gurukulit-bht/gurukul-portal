@@ -108,6 +108,14 @@ export const adminApi = {
     create:       (data: unknown) => request("POST", "/notifications", data),
     updateStatus: (id: number, status: string) => request("PATCH", `/notifications/${id}/status`, { status }),
   },
+  weeklyUpdates: {
+    list:       () => request<unknown[]>("GET", "/weekly-updates"),
+    formMeta:   () => request<unknown>("GET", "/weekly-updates/form-meta"),
+    create:     (data: unknown) => request("POST", "/weekly-updates", data),
+    update:     (id: number, data: unknown) => request("PUT", `/weekly-updates/${id}`, data),
+    publish:    (id: number) => request("PATCH", `/weekly-updates/${id}/publish`, {}),
+    remove:     (id: number) => request("DELETE", `/weekly-updates/${id}`),
+  },
   messaging: {
     recipients: (params: { course?: string; curricYear?: string; employer?: string }) => {
       const qs = new URLSearchParams();

@@ -11,6 +11,7 @@ import notificationsRouter from "./notifications";
 import testimonialsRouter from "./testimonials";
 import messagingRouter from "./messaging";
 import settingsRouter from "./settings";
+import weeklyUpdatesRouter from "./weekly-updates";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/notifications", notificationsRouter);
 router.use("/testimonials", testimonialsRouter);
 router.use("/messaging", messagingRouter);
 router.use("/settings", settingsRouter);
+router.use("/weekly-updates", weeklyUpdatesRouter);
 
 export default router;

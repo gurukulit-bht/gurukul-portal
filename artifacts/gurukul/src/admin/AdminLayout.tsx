@@ -5,7 +5,7 @@ import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./r
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
   Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
-  Bell, ShieldCheck, UserPlus, Layers, Quote, Mail,
+  Bell, ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
   { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
   { label: "Parent Notifications",icon: Bell,            path: "/admin/notifications",      permission: "notifications",    section: "teacher" },
+  { label: "Weekly Updates",      icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
   // Admin-only management
   { label: "Role Management",     icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
   { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
