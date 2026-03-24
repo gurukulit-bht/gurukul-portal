@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, BookOpen, ChevronDown } from "lucide-react";
+import { Menu, X, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -20,8 +20,6 @@ export function Navbar() {
   const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -33,10 +31,6 @@ export function Navbar() {
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [location]);
-
-  useEffect(() => {
-    setMoreOpen(false);
   }, [location]);
 
   return (
@@ -82,39 +76,6 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setMoreOpen(!moreOpen)}
-                  className={cn(
-                    "ml-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-1 hover:bg-primary/10 hover:text-primary",
-                    location === "/calendar" ? "text-primary bg-primary/10" : "text-foreground/75"
-                  )}
-                >
-                  More
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                <AnimatePresence>
-                  {moreOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                      className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-border/70 bg-background shadow-xl p-2 z-50"
-                    >
-                      <Link
-                        href="/calendar"
-                        className={cn(
-                          "block px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-primary/10 hover:text-primary",
-                          location === "/calendar" ? "text-primary bg-primary/10" : "text-foreground/75"
-                        )}
-                      >
-                        Calendar
-                      </Link>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
               <Link
                 href={REGISTER_HREF}
                 className={cn(
@@ -161,15 +122,6 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href="/calendar"
-                className={cn(
-                  "text-xl font-display font-bold transition-colors px-4 py-2 rounded-full",
-                  location === "/calendar" ? "text-primary bg-primary/10" : "text-secondary"
-                )}
-              >
-                Calendar
-              </Link>
               <Link
                 href={REGISTER_HREF}
                 className="mt-2 px-8 py-3 bg-primary text-white rounded-full text-xl font-display font-bold shadow-md hover:bg-primary/90 transition-colors"
