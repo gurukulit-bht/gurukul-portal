@@ -31,9 +31,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Testimonials",        icon: Quote,           path: "/admin/testimonials",        permission: "testimonials",     section: "main" },
   { label: "Messaging Center",   icon: Mail,            path: "/admin/messaging",           permission: "messaging",        section: "main" },
   // Shared (teacher/assistant/admin)
+  { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
   { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",            permission: "courses",          section: "teacher" },
   { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
-  { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
   { label: "Messaging Center",     icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
   // Admin-only management
   { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },

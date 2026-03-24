@@ -55,6 +55,6 @@ export function getDefaultRoute(role: UserRole): string {
   switch (role) {
     case "admin":     return "/admin/dashboard";
     case "teacher":
-    case "assistant": return "/admin/courses";
+    case "assistant": return "/admin/attendance";
   }
 }
