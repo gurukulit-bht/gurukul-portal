@@ -134,9 +134,7 @@ export default function AdminLogin() {
                     autoComplete="username"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Admins: enter your 10-digit phone number &nbsp;·&nbsp; Super Admin: enter email
-                </p>
+
               </div>
 
               {/* Password / PIN */}
