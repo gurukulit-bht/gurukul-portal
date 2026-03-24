@@ -72,7 +72,7 @@ export default function RoleManagement() {
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
         <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
         <div className="text-blue-800">
-          <p className="font-semibold mb-0.5">Demo Role Management</p>
+          <p className="font-semibold mb-0.5">Demo User Management</p>
           <p className="text-xs leading-relaxed">
             This portal uses local role assignments for demonstration. The structure is designed for easy integration with
             AWS Cognito, API Gateway, and Lambda. In production, role assignments would be persisted in DynamoDB or your backend service.

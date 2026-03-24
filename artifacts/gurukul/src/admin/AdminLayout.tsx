@@ -36,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Parent Notifications",icon: Bell,            path: "/admin/notifications",      permission: "notifications",    section: "teacher" },
   { label: "Weekly Updates",      icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
   // Admin-only management
-  { label: "Role Management",     icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
+  { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
   { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
 ];
 
