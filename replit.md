@@ -20,13 +20,20 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 Accessible at `/admin`. Three roles with role-based access control.
 
-**Demo credentials:**
-- `admin@gurukul.org` / `Admin@123` → Gurukul Admin (full access)
-- `teacher@gurukul.org` / `Teacher@123` → Teacher (Courses, Documents, Attendance, Notifications)
-- `assistant@gurukul.org` / `Asst@123` → Assistant (same as Teacher)
-- `gurukuluser01` / `gurukuladmin` → backward-compatible legacy admin login
+**Login system:**
+- **Admin**: email + password (local, hardcoded) → `admin@gurukul.org` / `Admin@123`
+- **Teachers & Assistants**: phone number (10 digits) + 4-digit PIN (created by admin, stored hashed via bcryptjs in DB)
+- Smart auto-detection on the login page: entering digits switches the UI to phone+PIN mode
+- Legacy: `gurukuluser01` / `gurukuladmin` still works
 
-Auth is localStorage-based (demo, structured for AWS Cognito integration). **All admin data is live from PostgreSQL.** Frontend utility: `artifacts/gurukul/src/lib/adminApi.ts`.
+**PIN auth features:**
+- Admin creates users at `/admin/roles` (User Management) — system generates a random 4-digit PIN shown once
+- Admin can reset any user's PIN (new PIN displayed once, old one instantly invalid)
+- Max 5 failed attempts → 15-minute account lock
+- Users can change their own PIN in Settings → Change PIN section
+- PINs stored as bcrypt hashes in `portal_users` table
+
+Auth is localStorage-based (structured for production backend integration). **All admin data is live from PostgreSQL.**
 
 ### RBAC Files
 - `artifacts/gurukul/src/admin/rbac.ts` — role permissions model (admin/teacher/assistant)

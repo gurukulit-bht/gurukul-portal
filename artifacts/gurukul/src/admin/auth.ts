@@ -1,53 +1,54 @@
 import type { UserRole } from "./rbac";
 
 export interface AuthUser {
-  email:       string;
+  id?:         number;
+  email?:      string;
+  phone?:      string;
   displayName: string;
   role:        UserRole;
   initials:    string;
 }
 
-const DEMO_USERS: Array<AuthUser & { password: string; username?: string }> = [
+// ── Admin-only local credentials ──────────────────────────────────────────────
+const ADMIN_USERS: Array<{ email: string; username?: string; password: string } & AuthUser> = [
   {
-    email: "admin@gurukul.org",
-    password: "Admin@123",
+    email:       "admin@gurukul.org",
+    password:    "Admin@123",
     displayName: "Gurukul Admin",
-    role: "admin",
-    initials: "GA",
+    role:        "admin",
+    initials:    "GA",
   },
   {
-    email: "teacher@gurukul.org",
-    password: "Teacher@123",
-    displayName: "Smt. Priya Sharma",
-    role: "teacher",
-    initials: "PS",
-  },
-  {
-    email: "assistant@gurukul.org",
-    password: "Asst@123",
-    displayName: "Sri Venkat Rao",
-    role: "assistant",
-    initials: "VR",
-  },
-  // Backward-compatible legacy credential (maps to admin)
-  {
-    email: "gurukuluser01",
+    email:    "gurukuluser01",
     username: "gurukuluser01",
     password: "gurukuladmin",
     displayName: "Gurukul Admin",
-    role: "admin",
-    initials: "GA",
+    role:        "admin",
+    initials:    "GA",
   },
 ];
 
 const AUTH_KEY = "gurukul_admin_auth_v2";
 
-export function adminLogin(emailOrUsername: string, password: string): AuthUser | null {
-  const lower = emailOrUsername.toLowerCase().trim();
-  const match = DEMO_USERS.find(
+function saveUser(user: AuthUser) {
+  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+}
+
+// ── Smart async login — detects phone vs email ────────────────────────────────
+export async function adminLogin(credential: string, secret: string): Promise<AuthUser | null> {
+  const clean = credential.replace(/\D/g, "");
+
+  // 10-digit phone → PIN login via API
+  if (/^\d{10}$/.test(clean)) {
+    return pinLogin(clean, secret);
+  }
+
+  // Email / username → local admin check
+  const lower = credential.toLowerCase().trim();
+  const match = ADMIN_USERS.find(
     (u) =>
       (u.email.toLowerCase() === lower || u.username?.toLowerCase() === lower) &&
-      u.password === password,
+      u.password === secret,
   );
   if (!match) return null;
   const user: AuthUser = {
@@ -56,13 +57,49 @@ export function adminLogin(emailOrUsername: string, password: string): AuthUser 
     role:        match.role,
     initials:    match.initials,
   };
-  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+  saveUser(user);
   return user;
 }
 
+// ── PIN-based login via API ───────────────────────────────────────────────────
+export async function pinLogin(phone: string, pin: string): Promise<AuthUser | null> {
+  const res = await fetch("/api/auth/pin-login", {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ phone, pin }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Login failed.");
+  }
+  const data = await res.json();
+  const user: AuthUser = {
+    id:          data.id,
+    phone:       data.phone,
+    displayName: data.name,
+    role:        data.role as UserRole,
+    initials:    data.initials,
+  };
+  saveUser(user);
+  return user;
+}
+
+// ── PIN change via API ────────────────────────────────────────────────────────
+export async function changePin(phone: string, currentPin: string, newPin: string): Promise<void> {
+  const res = await fetch("/api/auth/change-pin", {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ phone, currentPin, newPin }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to change PIN.");
+  }
+}
+
+// ── Session helpers ───────────────────────────────────────────────────────────
 export function adminLogout() {
   localStorage.removeItem(AUTH_KEY);
-  // Also clear legacy key
   localStorage.removeItem("gurukul_admin_auth");
 }
 
@@ -71,10 +108,9 @@ export function getAuthUser(): AuthUser | null {
   if (raw) {
     try { return JSON.parse(raw) as AuthUser; } catch { /* ignore */ }
   }
-  // Legacy key migration
   if (localStorage.getItem("gurukul_admin_auth") === "true") {
     const legacy: AuthUser = { email: "gurukuluser01", displayName: "Gurukul Admin", role: "admin", initials: "GA" };
-    localStorage.setItem(AUTH_KEY, JSON.stringify(legacy));
+    saveUser(legacy);
     localStorage.removeItem("gurukul_admin_auth");
     return legacy;
   }
@@ -86,7 +122,5 @@ export function isAdminAuthenticated(): boolean {
 }
 
 export const DEMO_CREDENTIALS = [
-  { email: "admin@gurukul.org",     password: "Admin@123",    role: "Gurukul Admin" },
-  { email: "teacher@gurukul.org",   password: "Teacher@123",  role: "Teacher" },
-  { email: "assistant@gurukul.org", password: "Asst@123",     role: "Assistant" },
+  { credential: "admin@gurukul.org", secret: "Admin@123", role: "Gurukul Admin", hint: "Email + Password" },
 ];

@@ -461,6 +461,28 @@ export const insertWeeklyUpdateSchema = createInsertSchema(weeklyUpdatesTable).o
 export type WeeklyUpdate = typeof weeklyUpdatesTable.$inferSelect;
 export type InsertWeeklyUpdate = z.infer<typeof insertWeeklyUpdateSchema>;
 
+// ─── Portal Users (Teachers / Assistants with PIN auth) ───────────────────────
+
+export const portalUserStatusEnum  = pgEnum("portal_user_status",  ["active", "inactive"]);
+export const portalUserRoleEnum    = pgEnum("portal_user_role",    ["teacher", "assistant"]);
+
+export const portalUsersTable = pgTable("portal_users", {
+  id:            serial("id").primaryKey(),
+  name:          text("name").notNull(),
+  phone:         text("phone").notNull().unique(),
+  pinHash:       text("pin_hash").notNull(),
+  role:          portalUserRoleEnum("role").notNull().default("teacher"),
+  status:        portalUserStatusEnum("status").notNull().default("active"),
+  loginAttempts: integer("login_attempts").notNull().default(0),
+  lockedUntil:   timestamp("locked_until"),
+  createdAt:     timestamp("created_at").defaultNow().notNull(),
+  updatedAt:     timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPortalUserSchema = createInsertSchema(portalUsersTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type PortalUser       = typeof portalUsersTable.$inferSelect;
+export type InsertPortalUser = z.infer<typeof insertPortalUserSchema>;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Announcement = typeof announcementsTable.$inferSelect;

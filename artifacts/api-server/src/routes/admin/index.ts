@@ -12,6 +12,7 @@ import testimonialsRouter from "./testimonials";
 import messagingRouter from "./messaging";
 import settingsRouter from "./settings";
 import weeklyUpdatesRouter from "./weekly-updates";
+import portalUsersRouter from "./portal-users";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/testimonials", testimonialsRouter);
 router.use("/messaging", messagingRouter);
 router.use("/settings", settingsRouter);
 router.use("/weekly-updates", weeklyUpdatesRouter);
+router.use("/portal-users", portalUsersRouter);
 
 export default router;

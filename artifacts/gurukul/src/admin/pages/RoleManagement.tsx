@@ -1,65 +1,189 @@
-import { useState } from "react";
-import { ShieldCheck, Users, Mail, Edit2, Save, X, Info } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  ShieldCheck, Users, Phone, UserPlus, RefreshCw,
+  Copy, Check, Eye, EyeOff, Loader2, Trash2, X
+} from "lucide-react";
 import { getRoleLabel, getRoleBadgeColor, type UserRole } from "../rbac";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-type DemoUser = {
-  id: string;
-  displayName: string;
-  email: string;
-  role: UserRole;
-  status: "Active" | "Inactive";
+type PortalUser = {
+  id:        number;
+  name:      string;
+  phone:     string;
+  role:      "teacher" | "assistant";
+  status:    "active" | "inactive";
+  createdAt: string;
 };
 
-const INITIAL_USERS: DemoUser[] = [
-  { id: "1", displayName: "Gurukul Admin",     email: "admin@gurukul.org",     role: "admin",     status: "Active" },
-  { id: "2", displayName: "Smt. Priya Sharma", email: "teacher@gurukul.org",   role: "teacher",   status: "Active" },
-  { id: "3", displayName: "Sri Venkat Rao",    email: "assistant@gurukul.org", role: "assistant", status: "Active" },
-];
+type NewPin = { userId: number; pin: string; copied: boolean };
 
-const ROLES: UserRole[] = ["admin", "teacher", "assistant"];
+const API = "/api/admin/portal-users";
 
-export default function RoleManagement() {
-  const [users, setUsers]       = useState<DemoUser[]>(INITIAL_USERS);
-  const [editing, setEditing]   = useState<string | null>(null);
-  const [editRole, setEditRole] = useState<UserRole>("teacher");
+function formatPhone(p: string) {
+  if (p.length === 10) return `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
+  return p;
+}
 
-  function startEdit(user: DemoUser) {
-    setEditing(user.id);
-    setEditRole(user.role);
+export default function UserManagement() {
+  const [users,      setUsers]      = useState<PortalUser[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showForm,   setShowForm]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [newPin,     setNewPin]     = useState<NewPin | null>(null);
+  const [showPin,    setShowPin]    = useState(false);
+  const [resetting,  setResetting]  = useState<number | null>(null);
+  const [deleting,   setDeleting]   = useState<number | null>(null);
+
+  // Form state
+  const [name,  setName]  = useState("");
+  const [phone, setPhone] = useState("");
+  const [role,  setRole]  = useState<"teacher" | "assistant">("teacher");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(API);
+      if (!res.ok) throw new Error("Failed to load");
+      setUsers(await res.json());
+    } catch {
+      toast.error("Failed to load users.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function createUser(e: React.FormEvent) {
+    e.preventDefault();
+    const clean = phone.replace(/\D/g, "");
+    if (clean.length !== 10) { toast.error("Phone must be 10 digits."); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch(API, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ name: name.trim(), phone: clean, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to create user."); return; }
+      setUsers(prev => [data, ...prev]);
+      setNewPin({ userId: data.id, pin: data.pin, copied: false });
+      setShowPin(true);
+      setShowForm(false);
+      setName(""); setPhone(""); setRole("teacher");
+      toast.success(`User created! Share the PIN with ${data.name}.`);
+    } catch {
+      toast.error("Failed to create user.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function saveEdit(id: string) {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, role: editRole } : u));
-    setEditing(null);
-    toast.success("Role updated successfully.");
+  async function resetPin(user: PortalUser) {
+    if (!confirm(`Reset PIN for ${user.name}? The old PIN will be invalidated immediately.`)) return;
+    setResetting(user.id);
+    try {
+      const res  = await fetch(`${API}/${user.id}/reset-pin`, { method: "PATCH" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to reset PIN."); return; }
+      setNewPin({ userId: user.id, pin: data.pin, copied: false });
+      setShowPin(true);
+      toast.success("PIN reset. Share the new PIN with the user.");
+    } catch {
+      toast.error("Failed to reset PIN.");
+    } finally {
+      setResetting(null);
+    }
   }
 
-  function toggleStatus(id: string) {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "Active" ? "Inactive" : "Active" } : u));
-    const user = users.find(u => u.id === id);
-    toast.success(`${user?.displayName} set to ${user?.status === "Active" ? "Inactive" : "Active"}.`);
+  async function toggleStatus(user: PortalUser) {
+    const next = user.status === "active" ? "inactive" : "active";
+    try {
+      const res  = await fetch(`${API}/${user.id}/status`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ status: next }),
+      });
+      if (!res.ok) { toast.error("Failed to update status."); return; }
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: next } : u));
+      toast.success(`${user.name} is now ${next}.`);
+    } catch {
+      toast.error("Failed to update status.");
+    }
+  }
+
+  async function deleteUser(user: PortalUser) {
+    if (!confirm(`Delete ${user.name}? This cannot be undone.`)) return;
+    setDeleting(user.id);
+    try {
+      const res = await fetch(`${API}/${user.id}`, { method: "DELETE" });
+      if (!res.ok) { toast.error("Failed to delete user."); return; }
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      toast.success(`${user.name} deleted.`);
+    } catch {
+      toast.error("Failed to delete user.");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function copyPin() {
+    if (!newPin) return;
+    navigator.clipboard.writeText(newPin.pin).then(() => {
+      setNewPin(p => p ? { ...p, copied: true } : null);
+      setTimeout(() => setNewPin(p => p ? { ...p, copied: false } : null), 2000);
+    });
   }
 
   const stats = {
-    total:     users.length,
-    active:    users.filter(u => u.status === "Active").length,
-    admins:    users.filter(u => u.role === "admin").length,
-    teachers:  users.filter(u => u.role === "teacher").length,
-    assistants:users.filter(u => u.role === "assistant").length,
+    total:      users.length,
+    active:     users.filter(u => u.status === "active").length,
+    teachers:   users.filter(u => u.role === "teacher").length,
+    assistants: users.filter(u => u.role === "assistant").length,
   };
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+
+      {/* ── PIN reveal banner ─────────────────────────────────────────── */}
+      {newPin && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-800 mb-1">
+              New PIN generated — share this securely with the user
+            </p>
+            <p className="text-xs text-amber-700">This PIN is only shown once. Copy it before dismissing.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white border border-amber-300 rounded-xl px-4 py-2">
+              <span className="font-mono text-2xl font-bold text-secondary tracking-widest">
+                {showPin ? newPin.pin : "••••"}
+              </span>
+              <button onClick={() => setShowPin(v => !v)} className="text-muted-foreground hover:text-secondary">
+                {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <Button size="sm" variant="outline" onClick={copyPin} className="gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-100">
+              {newPin.copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+            </Button>
+            <button onClick={() => setNewPin(null)} className="text-muted-foreground hover:text-secondary">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stats ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total Users",  value: stats.total,      color: "text-secondary" },
-          { label: "Active",       value: stats.active,     color: "text-green-600" },
-          { label: "Admins",       value: stats.admins,     color: "text-red-600" },
-          { label: "Teachers",     value: stats.teachers,   color: "text-blue-600" },
-          { label: "Assistants",   value: stats.assistants, color: "text-green-600" },
+          { label: "Total Users",  value: stats.total,      color: "text-secondary"  },
+          { label: "Active",       value: stats.active,     color: "text-green-600"  },
+          { label: "Teachers",     value: stats.teachers,   color: "text-blue-600"   },
+          { label: "Assistants",   value: stats.assistants, color: "text-purple-600" },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl p-4 shadow-sm border border-border">
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -68,125 +192,153 @@ export default function RoleManagement() {
         ))}
       </div>
 
-      {/* Info Banner */}
-      <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
-        <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-        <div className="text-blue-800">
-          <p className="font-semibold mb-0.5">Demo User Management</p>
-          <p className="text-xs leading-relaxed">
-            This portal uses local role assignments for demonstration. The structure is designed for easy integration with
-            AWS Cognito, API Gateway, and Lambda. In production, role assignments would be persisted in DynamoDB or your backend service.
-          </p>
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
+      {/* ── Users table ───────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold text-secondary">Portal Users</h3>
+            <span className="text-xs text-muted-foreground">(Teachers &amp; Assistants)</span>
           </div>
-          <button
-            onClick={() => toast.info("Add user flow will connect to your identity provider (e.g. AWS Cognito).")}
-            className="text-xs text-primary hover:underline font-medium"
+          <Button
+            size="sm"
+            onClick={() => setShowForm(v => !v)}
+            className="gap-1.5 h-8 text-xs"
           >
-            + Add User
-          </button>
+            <UserPlus className="w-3.5 h-3.5" />
+            {showForm ? "Cancel" : "Add User"}
+          </Button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-border">
-              <tr>
-                {["User", "Email", "Role", "Status", "Actions"].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {users.map(u => (
-                <tr key={u.id} className={`hover:bg-gray-50 ${u.status === "Inactive" ? "opacity-60" : ""}`}>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {u.displayName.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                      </div>
-                      <span className="font-medium text-secondary">{u.displayName}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5" />
-                      {u.email}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {editing === u.id ? (
-                      <select
-                        value={editRole}
-                        onChange={e => setEditRole(e.target.value as UserRole)}
-                        className="text-xs border border-primary rounded-lg px-2 py-1 focus:outline-none"
-                      >
-                        {ROLES.map(r => (
-                          <option key={r} value={r}>{getRoleLabel(r)}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${getRoleBadgeColor(u.role)}`}>
-                        {getRoleLabel(u.role)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      u.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-                    }`}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      {editing === u.id ? (
-                        <>
-                          <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="h-7 px-2">
-                            <X className="w-3 h-3" />
-                          </Button>
-                          <Button size="sm" onClick={() => saveEdit(u.id)} className="h-7 px-3 text-xs">
-                            <Save className="w-3 h-3 mr-1" /> Save
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => startEdit(u)}
-                            className="text-xs px-2.5 py-1.5 rounded-lg border border-border hover:bg-gray-50 transition-colors text-secondary flex items-center gap-1"
-                          >
-                            <Edit2 className="w-3 h-3" /> Role
-                          </button>
-                          <button
-                            onClick={() => toggleStatus(u.id)}
-                            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors font-medium ${
-                              u.status === "Active"
-                                ? "border-red-200 text-red-600 hover:bg-red-50"
-                                : "border-green-200 text-green-600 hover:bg-green-50"
-                            }`}
-                          >
-                            {u.status === "Active" ? "Deactivate" : "Activate"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+        {/* Add user form */}
+        {showForm && (
+          <form onSubmit={createUser} className="px-5 py-5 border-b border-border bg-gray-50 grid sm:grid-cols-4 gap-4 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Full Name</Label>
+              <Input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Smt. Priya Sharma"
+                required
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Phone (10 digits)</Label>
+              <Input
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="7401234567"
+                inputMode="numeric"
+                required
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Role</Label>
+              <select
+                value={role}
+                onChange={e => setRole(e.target.value as "teacher" | "assistant")}
+                className="w-full h-9 text-sm border border-border rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="teacher">Teacher</option>
+                <option value="assistant">Assistant</option>
+              </select>
+            </div>
+            <Button type="submit" disabled={submitting} className="h-9 text-sm gap-1.5">
+              {submitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating…</> : <>Create &amp; Generate PIN</>}
+            </Button>
+          </form>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin" /> Loading users…
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground text-sm">
+            No users yet. Click <strong>Add User</strong> to create the first teacher or assistant.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-border">
+                <tr>
+                  {["User", "Phone (Login)", "Role", "Status", "Actions"].map(h => (
+                    <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {users.map(u => (
+                  <tr key={u.id} className={`hover:bg-gray-50 ${u.status === "inactive" ? "opacity-60" : ""}`}>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {u.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-secondary">{u.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5" />
+                        {formatPhone(u.phone)}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${getRoleBadgeColor(u.role as UserRole)}`}>
+                        {getRoleLabel(u.role as UserRole)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        u.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {u.status === "active" ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => resetPin(u)}
+                          disabled={resetting === u.id}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {resetting === u.id
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <RefreshCw className="w-3 h-3" />}
+                          Reset PIN
+                        </button>
+                        <button
+                          onClick={() => toggleStatus(u)}
+                          className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors font-medium ${
+                            u.status === "active"
+                              ? "border-orange-200 text-orange-600 hover:bg-orange-50"
+                              : "border-green-200 text-green-600 hover:bg-green-50"
+                          }`}
+                        >
+                          {u.status === "active" ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          onClick={() => deleteUser(u)}
+                          disabled={deleting === u.id}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {deleting === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Role Legend */}
-      <div className="bg-white rounded-xl shadow-sm border border-border p-5">
+      {/* ── Role permissions table ─────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-border p-5">
         <h3 className="text-sm font-semibold text-secondary mb-4 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4" /> Role Permissions Overview
         </h3>
@@ -197,29 +349,32 @@ export default function RoleManagement() {
                 <th className="text-left py-2 pr-4 font-semibold text-muted-foreground">Module</th>
                 <th className="text-center px-3 py-2 font-semibold text-red-700">Admin</th>
                 <th className="text-center px-3 py-2 font-semibold text-blue-700">Teacher</th>
-                <th className="text-center px-3 py-2 font-semibold text-green-700">Assistant</th>
+                <th className="text-center px-3 py-2 font-semibold text-purple-700">Assistant</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {[
-                ["Dashboard",             true,  false, false],
-                ["Announcements",         true,  false, false],
-                ["Calendar",              true,  false, false],
-                ["Courses & Classes",     true,  true,  true ],
-                ["Staff Management",      true,  false, false],
-                ["Students & Payments",   true,  false, false],
-                ["Inventory",             true,  false, false],
-                ["Course Documents",      true,  true,  true ],
-                ["Attendance",            true,  true,  true ],
-                ["Parent Notifications",  true,  true,  true ],
-                ["Role Management",       true,  false, false],
-                ["Settings",              true,  false, false],
+                ["Dashboard",            true,  false, false],
+                ["Announcements",        true,  false, false],
+                ["Calendar",             true,  false, false],
+                ["Courses & Classes",    true,  true,  true ],
+                ["Staff Management",     true,  false, false],
+                ["Students & Payments",  true,  false, false],
+                ["Inventory",            true,  false, false],
+                ["Course Documents",     true,  true,  true ],
+                ["Attendance",           true,  true,  true ],
+                ["Parent Notifications", true,  true,  true ],
+                ["Weekly Updates",       true,  true,  true ],
+                ["User Management",      true,  false, false],
+                ["Settings",             true,  false, false],
               ].map(([mod, admin, teacher, asst]) => (
                 <tr key={String(mod)} className="hover:bg-gray-50">
                   <td className="py-2.5 pr-4 font-medium text-secondary">{mod}</td>
                   {[admin, teacher, asst].map((v, i) => (
                     <td key={i} className="text-center px-3 py-2.5">
-                      {v ? <span className="text-green-600 font-bold">✓</span> : <span className="text-gray-300">–</span>}
+                      {v
+                        ? <span className="text-green-600 font-bold">✓</span>
+                        : <span className="text-gray-300">–</span>}
                     </td>
                   ))}
                 </tr>

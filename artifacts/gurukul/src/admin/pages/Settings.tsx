@@ -2,11 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Lock, Bell, Globe, School, CalendarDays, Loader2 } from "lucide-react";
+import { Check, Lock, Bell, Globe, School, CalendarDays, Loader2, Hash, AlertCircle } from "lucide-react";
 import { usePortalSettings } from "../contexts/PortalSettingsContext";
+import { useAuth } from "../AuthContext";
+import { changePin } from "../auth";
 
 export default function Settings() {
   const [saved, setSaved] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const {
     activeCurriculumYear,
@@ -18,6 +21,33 @@ export default function Settings() {
   const [pendingYear, setPendingYear] = useState<string | null>(null);
   const [yearSaving, setYearSaving] = useState(false);
   const [yearError, setYearError] = useState<string | null>(null);
+
+  // Change PIN state (for teachers / assistants who log in with phone+PIN)
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin,     setNewPin]     = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinSaving,  setPinSaving]  = useState(false);
+  const [pinError,   setPinError]   = useState<string | null>(null);
+  const [pinSaved,   setPinSaved]   = useState(false);
+
+  async function savePinChange(e: React.FormEvent) {
+    e.preventDefault();
+    setPinError(null);
+    if (!/^\d{4}$/.test(newPin)) { setPinError("New PIN must be exactly 4 digits."); return; }
+    if (newPin !== confirmPin)   { setPinError("New PIN and confirmation do not match."); return; }
+    if (!user?.phone)            { setPinError("No phone number found on your account."); return; }
+    setPinSaving(true);
+    try {
+      await changePin(user.phone, currentPin, newPin);
+      setPinSaved(true);
+      setCurrentPin(""); setNewPin(""); setConfirmPin("");
+      setTimeout(() => setPinSaved(false), 3000);
+    } catch (err: any) {
+      setPinError(err?.message ?? "Failed to change PIN.");
+    } finally {
+      setPinSaving(false);
+    }
+  }
 
   const displayYear = pendingYear ?? activeCurriculumYear;
 
@@ -152,25 +182,103 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ── Change Password ── */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-            <Lock className="w-4 h-4" />
+      {/* ── Change PIN (teachers / assistants only) ── */}
+      {user?.phone && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+              <Hash className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-secondary">Change PIN</h3>
+              <p className="text-xs text-muted-foreground">Update your 4-digit login PIN.</p>
+            </div>
           </div>
-          <h3 className="font-bold text-secondary">Change Password</h3>
+
+          <form onSubmit={savePinChange} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Current PIN</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="••••"
+                value={currentPin}
+                onChange={e => setCurrentPin(e.target.value)}
+                required
+                className="rounded-xl w-40"
+              />
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>New PIN</Label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="••••"
+                  value={newPin}
+                  onChange={e => setNewPin(e.target.value)}
+                  required
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Confirm New PIN</Label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="••••"
+                  value={confirmPin}
+                  onChange={e => setConfirmPin(e.target.value)}
+                  required
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+
+            {pinError && (
+              <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {pinError}
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={pinSaving} variant="outline" className="rounded-xl gap-2">
+                {pinSaving
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                  : pinSaved
+                    ? <><Check className="w-4 h-4" /> PIN Updated!</>
+                    : "Update PIN"
+                }
+              </Button>
+            </div>
+          </form>
         </div>
-        <div className="space-y-4">
-          <div className="space-y-1.5"><Label>Current Password</Label><Input type="password" placeholder="••••••••" className="rounded-xl" /></div>
-          <div className="space-y-1.5"><Label>New Password</Label><Input type="password" placeholder="••••••••" className="rounded-xl" /></div>
-          <div className="space-y-1.5"><Label>Confirm New Password</Label><Input type="password" placeholder="••••••••" className="rounded-xl" /></div>
+      )}
+
+      {/* ── Change Password (admin only) ── */}
+      {!user?.phone && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+              <Lock className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-secondary">Change Password</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Current Password</Label><Input type="password" placeholder="••••••••" className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label>New Password</Label><Input type="password" placeholder="••••••••" className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label>Confirm New Password</Label><Input type="password" placeholder="••••••••" className="rounded-xl" /></div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => save("password")} variant="outline" className="rounded-xl gap-2">
+              {saved === "password" ? <><Check className="w-4 h-4" /> Updated!</> : "Update Password"}
+            </Button>
+          </div>
         </div>
-        <div className="flex justify-end">
-          <Button onClick={() => save("password")} variant="outline" className="rounded-xl gap-2">
-            {saved === "password" ? <><Check className="w-4 h-4" /> Updated!</> : "Update Password"}
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* ── Notification Preferences ── */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-5">

@@ -2,9 +2,9 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 import { adminLogin, adminLogout, getAuthUser, type AuthUser } from "./auth";
 
 interface AuthContextValue {
-  user: AuthUser | null;
-  login: (emailOrUsername: string, password: string) => AuthUser | null;
-  logout: () => void;
+  user:    AuthUser | null;
+  login:   (credential: string, secret: string) => Promise<AuthUser | null>;
+  logout:  () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -12,8 +12,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => getAuthUser());
 
-  const login = useCallback((emailOrUsername: string, password: string): AuthUser | null => {
-    const u = adminLogin(emailOrUsername, password);
+  const login = useCallback(async (credential: string, secret: string): Promise<AuthUser | null> => {
+    const u = await adminLogin(credential, secret);
     setUser(u);
     return u;
   }, []);
