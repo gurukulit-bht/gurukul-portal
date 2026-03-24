@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Courses & Classes",   icon: BookOpen,        path: "/admin/courses",            permission: "courses",          section: "teacher" },
   { label: "Course Documents",    icon: FileText,        path: "/admin/documents",          permission: "documents",        section: "teacher" },
   { label: "Attendance",          icon: ClipboardList,   path: "/admin/attendance",         permission: "attendance",       section: "teacher" },
-  { label: "Weekly Updates",      icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
+  { label: "Messaging Center",     icon: Newspaper,       path: "/admin/weekly-updates",     permission: "weeklyUpdates",    section: "teacher" },
   // Admin-only management
   { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",              permission: "roles",            section: "admin-only" },
   { label: "Settings",            icon: Settings,        path: "/admin/settings",           permission: "settings",         section: "admin-only" },
