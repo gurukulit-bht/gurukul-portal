@@ -230,13 +230,20 @@ function LevelAccordion({
   level: LevelRow; courseId: number; isAdmin: boolean;
   onSectionsChange: (levelId: number, sections: SectionRow[]) => void;
 }) {
-  const [expanded, setExpanded]             = useState(false);
-  const [students, setStudents]             = useState<LevelStudent[]>([]);
+  const [expanded, setExpanded]               = useState(false);
+  const [students, setStudents]               = useState<LevelStudent[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const [addingSection, setAddingSection]   = useState(false);
-  const [editingSection, setEditingSection] = useState<SectionRow | null>(null);
-  const [saving, setSaving]                 = useState<Set<number>>(new Set());
-  const [allTeachers, setAllTeachers]       = useState<{ id: number; name: string }[]>([]);
+  const [addingSection, setAddingSection]     = useState(false);
+  const [editingSection, setEditingSection]   = useState<SectionRow | null>(null);
+  const [saving, setSaving]                   = useState<Set<number>>(new Set());
+  const [allTeachers, setAllTeachers]         = useState<{ id: number; name: string }[]>([]);
+
+  // Load teachers on mount so the Assign button works even when collapsed
+  useEffect(() => {
+    adminApi.teachers.list()
+      .then((data) => setAllTeachers((data as { id: number; name: string }[]).map(t => ({ id: t.id, name: t.name }))))
+      .catch(() => { /* silent */ });
+  }, []);
 
   async function handleSectionChange(s: LevelStudent, newSectionId: number | null) {
     setSaving(prev => new Set(prev).add(s.enrollmentId));
@@ -260,12 +267,8 @@ function LevelAccordion({
     if (!expanded) {
       setLoadingStudents(true);
       try {
-        const [studentData, teacherData] = await Promise.all([
-          adminApi.courses.levelStudents(level.id) as Promise<LevelStudent[]>,
-          adminApi.teachers.list() as Promise<{ id: number; name: string }[]>,
-        ]);
+        const studentData = await adminApi.courses.levelStudents(level.id) as LevelStudent[];
         setStudents(studentData);
-        setAllTeachers(teacherData.map(t => ({ id: t.id, name: t.name })));
       } catch { setStudents([]); }
       finally { setLoadingStudents(false); }
     }
