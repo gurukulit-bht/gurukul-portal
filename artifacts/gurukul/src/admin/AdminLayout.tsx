@@ -15,7 +15,7 @@ type NavItem = {
   icon: React.ElementType;
   path: string;
   permission: Permission;
-  section?: "main" | "teacher" | "admin-only";
+  section?: "main" | "teacher" | "admin-only" | "help";
 };
 
 const NAV_ITEMS: NavItem[] = [
