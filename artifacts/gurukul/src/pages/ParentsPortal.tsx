@@ -521,7 +521,7 @@ export default function ParentsPortal() {
           </motion.p>
 
           <motion.h1 variants={fadeUp} custom={2}
-            className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold leading-tight">
+            className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold leading-tight text-white">
             Nurture Your Child's{" "}
             <span className="text-primary">Heritage</span>{" "}
             &amp; Identity
@@ -854,7 +854,7 @@ export default function ParentsPortal() {
         >
           <motion.div variants={fadeUp} custom={0} className="text-5xl select-none">ॐ</motion.div>
           <motion.h2 variants={fadeUp} custom={1}
-            className="text-3xl sm:text-4xl font-display font-bold leading-tight">
+            className="text-3xl sm:text-4xl font-display font-bold leading-tight text-white">
             Ready to Begin Your Child's Journey?
           </motion.h2>
           <motion.p variants={fadeUp} custom={2} className="text-white/70 text-lg">
