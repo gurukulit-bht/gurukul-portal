@@ -1693,18 +1693,6 @@ export default function StudentsCorner() {
         </div>
 
         {/* Fun facts strip */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="flex flex-wrap justify-center gap-3 text-sm font-bold"
-        >
-          {["📖 2 Courses", "📚 12 Chapters", "🎮 48 Quiz Questions", "🏆 2 Certificates", "🔓 Unlock as you go"].map((fact) => (
-            <span key={fact} className="bg-white/70 backdrop-blur px-4 py-2 rounded-full border border-white/80 text-gray-700 shadow-sm">
-              {fact}
-            </span>
-          ))}
-        </motion.div>
       </div>
       <NaradMini />
     </div>
