@@ -93,17 +93,25 @@ export default function Attendance() {
     setLoadingLevels(true);
     adminApi.courses.levels()
       .then(data => {
-        const rows = (data as RawLevel[]);
+        const rows = data as RawLevel[];
         setAllLevels(rows);
-        // Auto-select course if teacher has only one
+
+        // Auto-cascade: if only one course → select it
         const names = Array.from(new Set(rows.map(l => l.courseName)));
-        if (names.length === 1) setSelectedCourse(names[0]);
+        if (names.length === 1) {
+          setSelectedCourse(names[0]);
+          // Auto-cascade: if only one level in that course → select it too
+          const levelsInCourse = rows.filter(l => l.courseName === names[0]);
+          if (levelsInCourse.length === 1) {
+            setSelectedLevelId(levelsInCourse[0].id);
+          }
+        }
       })
       .catch(() => toast.error("Failed to load classes"))
       .finally(() => setLoadingLevels(false));
   }, []);
 
-  // ── When level changes → load sections ──
+  // ── When level changes → load sections, auto-select if only one ──
   useEffect(() => {
     setSections([]);
     setSelectedSection(null);
@@ -115,7 +123,12 @@ export default function Attendance() {
 
     setLoadingSections(true);
     adminApi.courses.levelSections(selectedLevelId)
-      .then(data => setSections(data as SectionOption[]))
+      .then(data => {
+        const s = data as SectionOption[];
+        setSections(s);
+        // Auto-select section if only one exists
+        if (s.length === 1) setSelectedSection(s[0].id);
+      })
       .catch(() => setSections([]))
       .finally(() => setLoadingSections(false));
   }, [selectedLevelId]);
@@ -228,23 +241,29 @@ export default function Attendance() {
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Course
               </label>
-              <select
-                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary"
-                value={selectedCourse}
-                onChange={e => {
-                  setSelectedCourse(e.target.value);
-                  setSelectedLevelId(null);
-                  setSelectedSection(null);
-                  setSections([]);
-                  setStudents([]);
-                  setSaved(false);
-                }}
-              >
-                <option value="">Choose course…</option>
-                {courseNames.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              {courseNames.length === 1 ? (
+                <div className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-gray-50 text-secondary font-medium">
+                  {courseNames[0]}
+                </div>
+              ) : (
+                <select
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary"
+                  value={selectedCourse}
+                  onChange={e => {
+                    setSelectedCourse(e.target.value);
+                    setSelectedLevelId(null);
+                    setSelectedSection(null);
+                    setSections([]);
+                    setStudents([]);
+                    setSaved(false);
+                  }}
+                >
+                  <option value="">Choose course…</option>
+                  {courseNames.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Level */}
@@ -252,23 +271,30 @@ export default function Attendance() {
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Level / Class
               </label>
-              <select
-                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary disabled:opacity-50"
-                value={selectedLevelId ?? ""}
-                disabled={!selectedCourse}
-                onChange={e => {
-                  setSelectedLevelId(e.target.value ? Number(e.target.value) : null);
-                  setSelectedSection(null);
-                  setSaved(false);
-                }}
-              >
-                <option value="">Choose level…</option>
-                {levelsForCourse.map(l => (
-                  <option key={l.id} value={l.id}>
-                    {l.className}{l.schedule ? ` (${l.schedule})` : ""}
-                  </option>
-                ))}
-              </select>
+              {levelsForCourse.length === 1 ? (
+                <div className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-gray-50 text-secondary font-medium">
+                  {levelsForCourse[0].className}
+                  {levelsForCourse[0].schedule ? ` (${levelsForCourse[0].schedule})` : ""}
+                </div>
+              ) : (
+                <select
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary disabled:opacity-50"
+                  value={selectedLevelId ?? ""}
+                  disabled={!selectedCourse || levelsForCourse.length === 0}
+                  onChange={e => {
+                    setSelectedLevelId(e.target.value ? Number(e.target.value) : null);
+                    setSelectedSection(null);
+                    setSaved(false);
+                  }}
+                >
+                  <option value="">Choose level…</option>
+                  {levelsForCourse.map(l => (
+                    <option key={l.id} value={l.id}>
+                      {l.className}{l.schedule ? ` (${l.schedule})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Section */}
@@ -277,24 +303,31 @@ export default function Attendance() {
                 Section
                 {loadingSections && <span className="text-muted-foreground font-normal ml-1">(loading…)</span>}
               </label>
-              <select
-                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary disabled:opacity-50"
-                value={selectedSection ?? ""}
-                disabled={!selectedLevelId || loadingSections}
-                onChange={e => {
-                  setSelectedSection(e.target.value ? Number(e.target.value) : null);
-                  setSaved(false);
-                }}
-              >
-                <option value="">All Students</option>
-                {sections.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.sectionName}{s.schedule ? ` (${s.schedule})` : ""}
-                  </option>
-                ))}
-              </select>
+              {!loadingSections && sections.length === 1 ? (
+                <div className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-gray-50 text-secondary font-medium">
+                  {sections[0].sectionName}
+                  {sections[0].schedule ? ` (${sections[0].schedule})` : ""}
+                </div>
+              ) : (
+                <select
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-primary disabled:opacity-50"
+                  value={selectedSection ?? ""}
+                  disabled={!selectedLevelId || loadingSections}
+                  onChange={e => {
+                    setSelectedSection(e.target.value ? Number(e.target.value) : null);
+                    setSaved(false);
+                  }}
+                >
+                  <option value="">All Students</option>
+                  {sections.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.sectionName}{s.schedule ? ` (${s.schedule})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
               {selectedLevelId && !loadingSections && sections.length === 0 && (
-                <p className="text-xs text-muted-foreground">No sections — showing all enrolled students.</p>
+                <p className="text-xs text-muted-foreground mt-1">No sections — showing all enrolled students.</p>
               )}
             </div>
 
