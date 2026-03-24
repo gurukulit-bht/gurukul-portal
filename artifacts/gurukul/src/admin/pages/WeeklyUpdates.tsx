@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Send, Trash2, Pencil, Loader2, BookOpen, Lock, X, Check,
   Eye, AlertTriangle, Bell, ChevronDown, ChevronRight, Pin,
-  StickyNote, MessageSquare,
+  StickyNote, MessageSquare, CalendarDays, MapPin, Clock, RefreshCw,
 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 import { useAuth } from "../AuthContext";
@@ -198,6 +198,166 @@ function NoticeBoard() {
   );
 }
 
+// ─── Calendar Panel ──────────────────────────────────────────────────────────
+
+type GEvent = {
+  id: number;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  category: string;
+  isRecurring: boolean;
+};
+
+const EVENT_CAT_COLORS: Record<string, string> = {
+  General:   "bg-gray-100 text-gray-700",
+  Holiday:   "bg-purple-100 text-purple-700",
+  Festival:  "bg-orange-100 text-orange-700",
+  Exam:      "bg-red-100 text-red-700",
+  Workshop:  "bg-blue-100 text-blue-700",
+  Closure:   "bg-slate-100 text-slate-700",
+  Community: "bg-teal-100 text-teal-700",
+};
+
+function fmtTime(t: string) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hr = Number(h);
+  const ampm = hr >= 12 ? "PM" : "AM";
+  return `${hr % 12 || 12}:${m} ${ampm}`;
+}
+
+function CalendarPanel() {
+  const [events,  setEvents]  = useState<GEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminApi.events.list();
+      setEvents(data as GEvent[]);
+    } catch {
+      toast.error("Failed to load calendar events");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const today = todayStr();
+
+  const upcoming = useMemo(() => events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date)), [events, today]);
+  const past     = useMemo(() => events.filter(e => e.date <  today).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5), [events, today]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 text-muted-foreground py-16">
+        <Loader2 className="w-5 h-5 animate-spin" /> Loading calendar…
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center py-16 text-muted-foreground">
+        <CalendarDays className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="font-medium text-sm">No events scheduled</p>
+        <p className="text-xs mt-1">Admin will add events to the calendar from the Events section.</p>
+      </div>
+    );
+  }
+
+  function EventCard({ e }: { e: GEvent }) {
+    const catCls = EVENT_CAT_COLORS[e.category] ?? "bg-gray-100 text-gray-700";
+    const isPast = e.date < today;
+    return (
+      <div className={`bg-white rounded-2xl border shadow-sm px-5 py-4 ${isPast ? "opacity-60" : "border-border"}`}>
+        <div className="flex gap-4 items-start">
+          {/* Date badge */}
+          <div className={`shrink-0 w-12 text-center rounded-xl py-1.5 ${isPast ? "bg-gray-100" : "bg-primary/10"}`}>
+            <p className={`text-lg font-bold leading-none ${isPast ? "text-muted-foreground" : "text-primary"}`}>
+              {String(Number(e.date.split("-")[2]))}
+            </p>
+            <p className={`text-[10px] font-semibold uppercase tracking-wide ${isPast ? "text-muted-foreground" : "text-primary"}`}>
+              {new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short" })}
+            </p>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className="font-semibold text-secondary text-sm">{e.title}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catCls}`}>{e.category}</span>
+              {e.isRecurring && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                  <RefreshCw className="w-2.5 h-2.5" /> Recurring
+                </span>
+              )}
+            </div>
+
+            {e.description && (
+              <p className="text-sm text-secondary leading-relaxed mb-2">{e.description}</p>
+            )}
+
+            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+              {e.time && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {fmtTime(e.time)}
+                </span>
+              )}
+              {e.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> {e.location}
+                </span>
+              )}
+              <span>
+                {new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Refresh */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {upcoming.length} upcoming · {past.length} recent past event{past.length !== 1 ? "s" : ""}
+        </p>
+        <button
+          onClick={load}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      </div>
+
+      {/* Upcoming */}
+      {upcoming.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+            <CalendarDays className="w-3.5 h-3.5" /> Upcoming Events
+          </h3>
+          {upcoming.map(e => <EventCard key={e.id} e={e} />)}
+        </div>
+      )}
+
+      {/* Past */}
+      {past.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recent Past (last 5)</h3>
+          {past.map(e => <EventCard key={e.id} e={e} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function WeeklyUpdates() {
@@ -205,7 +365,7 @@ export default function WeeklyUpdates() {
   const isAdmin = user?.role === "admin";
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const [tab, setTab] = useState<"updates" | "notices" | "messages" | "notes">("updates");
+  const [tab, setTab] = useState<"updates" | "notices" | "calendar" | "messages" | "notes">("updates");
 
   // ── Admin Messages ──
   type AdminMsg = { id: number; subject: string; body: string; audienceType: string; sentAt: string; sentBy: string | null };
@@ -384,7 +544,7 @@ export default function WeeklyUpdates() {
       <div>
         <h1 className="text-2xl font-bold text-secondary">Messaging Center</h1>
         <p className="text-sm text-muted-foreground">
-          Post updates for parents and read announcements from the admin
+          Post updates for parents · read announcements · check the school calendar · sticky notes
         </p>
       </div>
 
@@ -414,6 +574,15 @@ export default function WeeklyUpdates() {
           Announcements
         </button>
         <button
+          onClick={() => setTab("calendar")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+            tab === "calendar" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+          }`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          Calendar
+        </button>
+        <button
           onClick={() => { setTab("messages"); loadAdminMessages(); }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
             tab === "messages" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
@@ -434,7 +603,7 @@ export default function WeeklyUpdates() {
           }`}
         >
           <StickyNote className="w-4 h-4" />
-          My Notes
+          Sticky Notes
         </button>
       </div>
 
@@ -677,6 +846,9 @@ export default function WeeklyUpdates() {
       {/* ── Notice Board Tab ── */}
       {tab === "notices" && <NoticeBoard />}
 
+      {/* ── Calendar Tab ── */}
+      {tab === "calendar" && <CalendarPanel />}
+
       {/* ── From Admin Tab ── */}
       {tab === "messages" && (
         <div className="space-y-4">
@@ -737,7 +909,7 @@ export default function WeeklyUpdates() {
         </div>
       )}
 
-      {/* ── My Notes Tab ── */}
+      {/* ── Sticky Notes Tab ── */}
       {tab === "notes" && <NotesTab />}
     </div>
   );
