@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Send, Trash2, Pencil, Loader2, BookOpen, Lock, X, Check,
   Eye, AlertTriangle, Bell, ChevronDown, ChevronRight, Pin,
+  StickyNote,
 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 import { useAuth } from "../AuthContext";
 import { toast } from "sonner";
+import NotesTab from "../components/NotesTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +69,7 @@ function fmtDateLong(d: string) {
 function initials(name: string) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "T";
 }
+
 
 // ─── Notice Board ─────────────────────────────────────────────────────────────
 
@@ -204,7 +207,7 @@ export default function WeeklyUpdates() {
   const isAdmin = user?.role === "admin";
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const [tab, setTab] = useState<"updates" | "notices">("updates");
+  const [tab, setTab] = useState<"updates" | "notices" | "notes">("updates");
 
   const [updates, setUpdates] = useState<Update[]>([]);
   const [meta, setMeta]       = useState<FormMeta>({ courses: [], levels: [], sections: [] });
@@ -364,6 +367,15 @@ export default function WeeklyUpdates() {
         >
           <Bell className="w-4 h-4" />
           Notice Board
+        </button>
+        <button
+          onClick={() => setTab("notes")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+            tab === "notes" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+          }`}
+        >
+          <StickyNote className="w-4 h-4" />
+          My Notes
         </button>
       </div>
 
@@ -602,6 +614,9 @@ export default function WeeklyUpdates() {
 
       {/* ── Notice Board Tab ── */}
       {tab === "notices" && <NoticeBoard />}
+
+      {/* ── My Notes Tab ── */}
+      {tab === "notes" && <NotesTab />}
     </div>
   );
 }

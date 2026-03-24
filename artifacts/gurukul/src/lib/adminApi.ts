@@ -117,6 +117,12 @@ export const adminApi = {
     publish:    (id: number) => request("PATCH", `/weekly-updates/${id}/publish`, {}),
     remove:     (id: number) => request("DELETE", `/weekly-updates/${id}`),
   },
+  teacherNotes: {
+    list:   () => request<unknown[]>("GET", "/teacher-notes"),
+    create: (data: { content: string; date: string; color: string }) => request("POST", "/teacher-notes", data),
+    update: (id: number, data: { content?: string; color?: string }) => request("PUT", `/teacher-notes/${id}`, data),
+    remove: (id: number) => request("DELETE", `/teacher-notes/${id}`),
+  },
   messaging: {
     recipients: (params: { course?: string; curricYear?: string; employer?: string }) => {
       const qs = new URLSearchParams();

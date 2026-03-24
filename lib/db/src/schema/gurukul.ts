@@ -484,6 +484,20 @@ export const insertPortalUserSchema = createInsertSchema(portalUsersTable).omit(
 export type PortalUser       = typeof portalUsersTable.$inferSelect;
 export type InsertPortalUser = z.infer<typeof insertPortalUserSchema>;
 
+// ─── Teacher Notes (private scratch pad, per teacher) ────────────────────────
+
+export const teacherNotesTable = pgTable("teacher_notes", {
+  id:        serial("id").primaryKey(),
+  ownerKey:  text("owner_key").notNull(),  // normalized email OR digits-only phone
+  content:   text("content").notNull(),
+  date:      text("date").notNull(),        // YYYY-MM-DD
+  color:     text("color").notNull().default("yellow"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type TeacherNote = typeof teacherNotesTable.$inferSelect;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Announcement = typeof announcementsTable.$inferSelect;

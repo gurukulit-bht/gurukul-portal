@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
   Mail, Send, Users, Filter, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Clock, RefreshCw, Eye, EyeOff,
-  X, Loader2, Info, Inbox, Phone, MailOpen, Trash2,
+  X, Loader2, Info, Inbox, Phone, MailOpen, Trash2, StickyNote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NotesTab from "../components/NotesTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ function formatDate(iso: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MessagingCenter() {
-  const [tab, setTab] = useState<"compose" | "history" | "inbox">("compose");
+  const [tab, setTab] = useState<"compose" | "history" | "inbox" | "notes">("compose");
 
   // ── Filters ──
   const [filterCourse,     setFilterCourse]     = useState("All");
@@ -262,6 +263,13 @@ export default function MessagingCenter() {
               tab === "history" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
           >
             <Clock className="w-4 h-4 inline mr-1.5" /> History
+          </button>
+          <button
+            onClick={() => setTab("notes")}
+            className={cn("px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
+              tab === "notes" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
+          >
+            <StickyNote className="w-4 h-4 inline mr-1.5" /> My Notes
           </button>
         </div>
       </div>
@@ -540,6 +548,9 @@ export default function MessagingCenter() {
           )}
         </div>
       )}
+
+      {/* ── MY NOTES TAB ────────────────────────────────────────────────────── */}
+      {tab === "notes" && <NotesTab />}
     </div>
   );
 }
