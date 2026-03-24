@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/adminApi";
 import {
-  Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck,
+  Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck, KeyRound, Eye, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,10 @@ export default function Teachers() {
   const [form,          setForm]          = useState<FormState>(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [error,         setError]         = useState("");
+  // PIN banner state — shown after create or reset
+  const [pinBanner,     setPinBanner]     = useState<{ name: string; pin: string } | null>(null);
+  const [showPin,       setShowPin]       = useState(false);
+  const [resettingPin,  setResettingPin]  = useState<number | null>(null);
 
   useEffect(() => {
     adminApi.teachers.list()
@@ -116,21 +120,37 @@ export default function Teachers() {
     try {
       const payload = { ...form };
       if (editing) {
-        const updated = await adminApi.teachers.update(editing.id, payload);
-        // Refresh the full list because pairing changes affect other rows too
+        await adminApi.teachers.update(editing.id, payload);
         const fresh = await adminApi.teachers.list();
         setTeachers(fresh as Teacher[]);
-        void updated;
       } else {
-        await adminApi.teachers.create(payload);
+        const result = await adminApi.teachers.create(payload) as { generatedPin?: string; name?: string };
         const fresh = await adminApi.teachers.list();
         setTeachers(fresh as Teacher[]);
+        // Show the generated PIN banner
+        if (result?.generatedPin) {
+          setPinBanner({ name: form.name.trim(), pin: result.generatedPin });
+          setShowPin(false);
+        }
       }
       setShowModal(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleResetPin(teacher: Teacher) {
+    setResettingPin(teacher.id);
+    try {
+      const result = await adminApi.teachers.resetPin(teacher.id);
+      setPinBanner({ name: teacher.name, pin: result.pin });
+      setShowPin(false);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to reset PIN");
+    } finally {
+      setResettingPin(null);
     }
   }
 
@@ -176,6 +196,43 @@ export default function Teachers() {
           <Plus className="w-4 h-4" /> Add Staff
         </Button>
       </div>
+
+      {/* PIN Banner — shown after create or reset */}
+      {pinBanner && (
+        <div className="bg-green-50 border border-green-300 rounded-2xl p-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold text-green-800 mb-1">
+              🔑 Login credentials for <span className="font-black">{pinBanner.name}</span>
+            </p>
+            <p className="text-xs text-green-700 mb-2">
+              Share these with the staff member. The PIN is shown <strong>once only</strong> and cannot be retrieved later.
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="bg-white border border-green-300 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+                <span className="text-xs text-green-600 font-semibold">PIN:</span>
+                <span className="font-black text-xl tracking-widest text-green-900 font-mono">
+                  {showPin ? pinBanner.pin : "••••"}
+                </span>
+                <button
+                  onClick={() => setShowPin((v) => !v)}
+                  className="text-green-600 hover:text-green-800 transition-colors"
+                >
+                  {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-green-600">
+                Login: phone number as username · {pinBanner.pin.length}-digit PIN as password
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setPinBanner(null)}
+            className="text-green-600 hover:text-green-800 shrink-0 mt-0.5"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Search + Category filter */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -289,12 +346,24 @@ export default function Teachers() {
 
                   {/* Actions */}
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={() => openEdit(t)}
+                        title="Edit profile"
                         className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleResetPin(t)}
+                        title="Reset login PIN"
+                        disabled={resettingPin === t.id}
+                        className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center transition-colors disabled:opacity-50"
+                      >
+                        {resettingPin === t.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <KeyRound className="w-3.5 h-3.5" />
+                        }
                       </button>
                       {deleteConfirm === t.id ? (
                         <div className="flex gap-1">
@@ -308,6 +377,7 @@ export default function Teachers() {
                       ) : (
                         <button
                           onClick={() => setDeleteConfirm(t.id)}
+                          title="Delete staff member"
                           className="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -346,7 +416,9 @@ export default function Teachers() {
             <div className="p-6 border-b border-border">
               <h3 className="text-lg font-bold text-secondary">{editing ? "Edit Staff Profile" : "Add Staff Member"}</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Assign teachers to specific sections from <strong>Course Management</strong>.
+                {editing
+                  ? "Update profile details. To change login PIN, use the 🔑 button on the table row."
+                  : "A 4-digit login PIN will be auto-generated and displayed once after saving."}
               </p>
             </div>
             <div className="p-6 space-y-4">

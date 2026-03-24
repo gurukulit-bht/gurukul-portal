@@ -2,12 +2,18 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
   teachersTable,
+  portalUsersTable,
   sectionAssignmentsTable,
   courseSectionsTable,
   courseLevelsTable,
   coursesTable,
 } from "@workspace/db/schema";
-import { eq, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+
+function generatePin(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
 const router: IRouter = Router();
 
@@ -95,9 +101,8 @@ router.get("/assistants", async (req, res) => {
 });
 
 // POST /api/admin/teachers
-// Body: { name, email, phone, category, assistantId? }
-//   assistantId  — if category=Teacher, the assistant paired with this teacher
-//   linkedTeacherId — if category=Assistant, the teacher to pair with (updates teacher row)
+// Body: { name, email, phone, category, assistantId?, linkedTeacherId? }
+// Also creates / upserts a portal_users login entry with a fresh 4-digit PIN.
 router.post("/", async (req, res) => {
   try {
     const { name, email, phone, category, assistantId, linkedTeacherId } = req.body;
@@ -106,7 +111,8 @@ router.post("/", async (req, res) => {
     if (!email?.trim()) return res.status(400).json({ error: "Email is required." });
     if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
 
-    const isAssistant = category === "Assistant";
+    const cleanPhone    = phone.trim().replace(/\D/g, "");
+    const isAssistant   = category === "Assistant";
     const parsedAssistantId = !isAssistant && assistantId ? parseInt(assistantId) : null;
 
     const [teacher] = await db
@@ -129,7 +135,23 @@ router.post("/", async (req, res) => {
         .where(eq(teachersTable.id, parseInt(linkedTeacherId)));
     }
 
-    res.json((await buildTeacherList()).find((t) => t.id === teacher.id));
+    // Create (or replace) the portal login entry for this staff member
+    const pin     = generatePin();
+    const pinHash = await bcrypt.hash(pin, 10);
+    const role    = isAssistant ? "assistant" : "teacher";
+
+    await db
+      .insert(portalUsersTable)
+      .values({ name: name.trim(), phone: cleanPhone, pinHash, role })
+      .onConflictDoUpdate({
+        target: portalUsersTable.phone,
+        set:    { name: name.trim(), pinHash, role },
+      });
+
+    res.json({
+      ...(await buildTeacherList()).find((t) => t.id === teacher.id),
+      generatedPin: pin,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to create teacher");
     res.status(500).json({ error: "Failed to create teacher" });
@@ -146,8 +168,13 @@ router.put("/:id", async (req, res) => {
     if (!email?.trim()) return res.status(400).json({ error: "Email is required." });
     if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
 
-    const isAssistant = category === "Assistant";
+    const cleanPhone    = phone.trim().replace(/\D/g, "");
+    const isAssistant   = category === "Assistant";
     const parsedAssistantId = !isAssistant && assistantId ? parseInt(assistantId) : null;
+
+    // Get old phone so we can update the portal user record
+    const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.id, id));
+    const oldCleanPhone = existing?.phone?.replace(/\D/g, "") ?? null;
 
     await db
       .update(teachersTable)
@@ -177,6 +204,21 @@ router.put("/:id", async (req, res) => {
       }
     }
 
+    // Sync the name (and phone if changed) in portal_users
+    const role = isAssistant ? "assistant" : "teacher";
+    if (oldCleanPhone && oldCleanPhone !== cleanPhone) {
+      // Phone changed — update the portal user row's phone
+      await db
+        .update(portalUsersTable)
+        .set({ name: name.trim(), phone: cleanPhone, role })
+        .where(eq(portalUsersTable.phone, oldCleanPhone));
+    } else if (cleanPhone) {
+      await db
+        .update(portalUsersTable)
+        .set({ name: name.trim(), role })
+        .where(eq(portalUsersTable.phone, cleanPhone));
+    }
+
     res.json((await buildTeacherList()).find((t) => t.id === id));
   } catch (err) {
     req.log.error({ err }, "Failed to update teacher");
@@ -184,10 +226,48 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+// POST /api/admin/teachers/:id/reset-pin
+// Generates a fresh 4-digit PIN for the given teacher/assistant.
+router.post("/:id/reset-pin", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, id));
+    if (!teacher) return res.status(404).json({ error: "Teacher not found." });
+
+    const cleanPhone = (teacher.phone ?? "").replace(/\D/g, "");
+    if (!cleanPhone) return res.status(400).json({ error: "Teacher has no phone number on record." });
+
+    const pin     = generatePin();
+    const pinHash = await bcrypt.hash(pin, 10);
+    const role    = teacher.category === "Assistant" ? "assistant" : "teacher";
+
+    await db
+      .insert(portalUsersTable)
+      .values({ name: teacher.name, phone: cleanPhone, pinHash, role })
+      .onConflictDoUpdate({
+        target: portalUsersTable.phone,
+        set:    { pinHash, name: teacher.name, role, loginAttempts: 0, lockedUntil: null },
+      });
+
+    res.json({ pin });
+  } catch (err) {
+    req.log.error({ err }, "Failed to reset PIN");
+    res.status(500).json({ error: "Failed to reset PIN." });
+  }
+});
+
 // DELETE /api/admin/teachers/:id
 router.delete("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
+    // Remove the portal login too
+    const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, id));
+    if (teacher?.phone) {
+      const cleanPhone = teacher.phone.replace(/\D/g, "");
+      await db.delete(portalUsersTable).where(eq(portalUsersTable.phone, cleanPhone));
+    }
+
     await db.delete(teachersTable).where(eq(teachersTable.id, id));
     res.json({ success: true });
   } catch (err) {

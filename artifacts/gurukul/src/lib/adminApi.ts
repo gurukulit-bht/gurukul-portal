@@ -39,6 +39,7 @@ export const adminApi = {
     assistants: () => request<{ id: number; name: string }[]>("GET", "/teachers/assistants"),
     create:     (data: unknown) => request("POST", "/teachers", data),
     update:     (id: number, data: unknown) => request("PUT", `/teachers/${id}`, data),
+    resetPin:   (id: number) => request<{ pin: string }>("POST", `/teachers/${id}/reset-pin`),
     remove:     (id: number) => request("DELETE", `/teachers/${id}`),
   },
   students: {
