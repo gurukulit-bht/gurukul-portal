@@ -7,16 +7,17 @@ import {
   courseLevelsTable,
   coursesTable,
 } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-// Build a rich teacher list using section_assignments as the single source of truth
-// for where teachers/assistants are assigned.
+// Build the full teacher list — uses section_assignments as the single source
+// of truth for course/section assignments.  The assistant↔teacher pairing is
+// stored directly on the teacher row (assistantId).
 async function buildTeacherList() {
   const teachers = await db.select().from(teachersTable).orderBy(teachersTable.id);
 
-  const rows = await db
+  const sectionRows = await db
     .select({
       teacherId:   sectionAssignmentsTable.teacherId,
       role:        sectionAssignmentsTable.role,
@@ -30,16 +31,32 @@ async function buildTeacherList() {
     .leftJoin(courseLevelsTable,   eq(courseSectionsTable.courseLevelId,  courseLevelsTable.id))
     .leftJoin(coursesTable,        eq(courseLevelsTable.courseId,          coursesTable.id));
 
+  // Build a lookup: id → name for all teachers (used for assistant/teacher name resolution)
+  const nameById = new Map(teachers.map((t) => [t.id, t.name]));
+
   return teachers.map((t) => {
-    const myRows = rows.filter((r) => r.teacherId === t.id);
+    const myRows = sectionRows.filter((r) => r.teacherId === t.id);
     const courseNames = [...new Set(myRows.map((r) => r.courseName).filter(Boolean))] as string[];
+
+    // For Teacher rows: which assistant is paired
+    const assistantName = t.assistantId ? (nameById.get(t.assistantId) ?? null) : null;
+
+    // For Assistant rows: which teacher they are paired with
+    const linkedTeacher = teachers.find(
+      (other) => other.category !== "Assistant" && other.assistantId === t.id
+    );
+
     return {
-      id:          t.id,
-      name:        t.name,
-      email:       t.email,
-      phone:       t.phone ?? "",
-      category:    t.category,
-      status:      t.status,
+      id:                t.id,
+      name:              t.name,
+      email:             t.email,
+      phone:             t.phone ?? "",
+      category:          t.category,
+      status:            t.status,
+      assistantId:       t.assistantId ?? null,
+      assistantName,
+      linkedTeacherId:   linkedTeacher?.id   ?? null,
+      linkedTeacherName: linkedTeacher?.name ?? null,
       courseNames,
       assignments: myRows.map((r) => ({
         sectionId:   r.sectionId,
@@ -62,7 +79,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/admin/teachers/assistants  — teachers with category="Assistant"
+// GET /api/admin/teachers/assistants
 router.get("/assistants", async (req, res) => {
   try {
     const rows = await db
@@ -77,25 +94,40 @@ router.get("/assistants", async (req, res) => {
   }
 });
 
-// POST /api/admin/teachers — create staff profile only (assignments managed in Course Mgmt)
+// POST /api/admin/teachers
+// Body: { name, email, phone, category, assistantId? }
+//   assistantId  — if category=Teacher, the assistant paired with this teacher
+//   linkedTeacherId — if category=Assistant, the teacher to pair with (updates teacher row)
 router.post("/", async (req, res) => {
   try {
-    const { name, email, phone, category } = req.body;
+    const { name, email, phone, category, assistantId, linkedTeacherId } = req.body;
 
     if (!name?.trim())  return res.status(400).json({ error: "Name is required." });
     if (!email?.trim()) return res.status(400).json({ error: "Email is required." });
     if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
 
+    const isAssistant = category === "Assistant";
+    const parsedAssistantId = !isAssistant && assistantId ? parseInt(assistantId) : null;
+
     const [teacher] = await db
       .insert(teachersTable)
       .values({
-        name:     name.trim(),
-        email:    email.trim(),
-        phone:    phone.trim(),
-        category: category || "Senior Teacher",
-        status:   "Active",
+        name:        name.trim(),
+        email:       email.trim(),
+        phone:       phone.trim(),
+        category:    category || "Teacher",
+        status:      "Active",
+        assistantId: parsedAssistantId,
       })
       .returning();
+
+    // If creating an assistant and a teacher was selected, update that teacher's assistantId
+    if (isAssistant && linkedTeacherId) {
+      await db
+        .update(teachersTable)
+        .set({ assistantId: teacher.id })
+        .where(eq(teachersTable.id, parseInt(linkedTeacherId)));
+    }
 
     res.json((await buildTeacherList()).find((t) => t.id === teacher.id));
   } catch (err) {
@@ -104,20 +136,46 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/admin/teachers/:id — update staff profile only
+// PUT /api/admin/teachers/:id
 router.put("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, email, phone, category } = req.body;
+    const { name, email, phone, category, assistantId, linkedTeacherId } = req.body;
 
     if (!name?.trim())  return res.status(400).json({ error: "Name is required." });
     if (!email?.trim()) return res.status(400).json({ error: "Email is required." });
     if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
 
+    const isAssistant = category === "Assistant";
+    const parsedAssistantId = !isAssistant && assistantId ? parseInt(assistantId) : null;
+
     await db
       .update(teachersTable)
-      .set({ name: name.trim(), email: email.trim(), phone: phone.trim(), category: category || "Senior Teacher" })
+      .set({
+        name:        name.trim(),
+        email:       email.trim(),
+        phone:       phone.trim(),
+        category:    category || "Teacher",
+        assistantId: parsedAssistantId,
+      })
       .where(eq(teachersTable.id, id));
+
+    // If editing an assistant, sync the teacher pairing:
+    // 1. Clear any teacher that currently points to this assistant
+    // 2. Set the newly selected teacher to point to this assistant
+    if (isAssistant) {
+      await db
+        .update(teachersTable)
+        .set({ assistantId: null })
+        .where(sql`${teachersTable.assistantId} = ${id}`);
+
+      if (linkedTeacherId) {
+        await db
+          .update(teachersTable)
+          .set({ assistantId: id })
+          .where(eq(teachersTable.id, parseInt(linkedTeacherId)));
+      }
+    }
 
     res.json((await buildTeacherList()).find((t) => t.id === id));
   } catch (err) {

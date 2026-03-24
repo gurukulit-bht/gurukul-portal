@@ -92,8 +92,10 @@ export const teachersTable = pgTable("teachers", {
   email: text("email").notNull().unique(),
   phone: text("phone"),
   bio: text("bio"),
-  category: text("category").notNull().default("Senior Teacher"), // "Senior Teacher" | "Assistant"
+  category: text("category").notNull().default("Teacher"), // "Teacher" | "Assistant"
   status: teacherStatusEnum("status").notNull().default("Active"),
+  // For Teacher rows: which assistant (if any) is paired with this teacher
+  assistantId: integer("assistant_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

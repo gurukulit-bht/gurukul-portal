@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/adminApi";
-import { Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen } from "lucide-react";
+import {
+  Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,28 +16,38 @@ type Assignment = {
 };
 
 type Teacher = {
-  id:          number;
-  name:        string;
-  email:       string;
-  phone:       string;
-  category:    string;
-  status:      "Active" | "Inactive";
-  courseNames: string[];
-  assignments: Assignment[];
+  id:                number;
+  name:              string;
+  email:             string;
+  phone:             string;
+  category:          string;
+  status:            "Active" | "Inactive";
+  assistantId:       number | null;
+  assistantName:     string | null;
+  linkedTeacherId:   number | null;
+  linkedTeacherName: string | null;
+  courseNames:       string[];
+  assignments:       Assignment[];
 };
 
-const CATEGORIES = ["Senior Teacher", "Assistant"];
+const CATEGORIES = ["Teacher", "Assistant"];
 
 type FormState = {
-  name:     string;
-  email:    string;
-  phone:    string;
-  category: string;
+  name:            string;
+  email:           string;
+  phone:           string;
+  category:        string;
+  // For Teachers: the assistant they are paired with
+  assistantId:     number | null;
+  // For Assistants: the teacher they are paired with
+  linkedTeacherId: number | null;
 };
 
 const emptyForm: FormState = {
   name: "", email: "", phone: "",
-  category: "Senior Teacher",
+  category: "Teacher",
+  assistantId:     null,
+  linkedTeacherId: null,
 };
 
 export default function Teachers() {
@@ -56,10 +68,15 @@ export default function Teachers() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Derive lists for dropdowns from loaded teachers
+  const assistantOptions = teachers.filter((t) => t.category === "Assistant");
+  const teacherOptions   = teachers.filter((t) => t.category !== "Assistant");
+
   const filtered = teachers.filter((t) => {
     const matchesCat    = filterCat === "All" || t.category === filterCat;
-    const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
-                          t.email.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch =
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.email.toLowerCase().includes(search.toLowerCase());
     return matchesCat && matchesSearch;
   });
 
@@ -72,9 +89,21 @@ export default function Teachers() {
 
   function openEdit(t: Teacher) {
     setEditing(t);
-    setForm({ name: t.name, email: t.email, phone: t.phone, category: t.category || "Senior Teacher" });
+    setForm({
+      name:            t.name,
+      email:           t.email,
+      phone:           t.phone,
+      category:        t.category || "Teacher",
+      assistantId:     t.assistantId,
+      linkedTeacherId: t.linkedTeacherId,
+    });
     setError("");
     setShowModal(true);
+  }
+
+  // When category changes, clear the pairing fields
+  function handleCategoryChange(cat: string) {
+    setForm((f) => ({ ...f, category: cat, assistantId: null, linkedTeacherId: null }));
   }
 
   async function handleSave() {
@@ -85,12 +114,17 @@ export default function Teachers() {
 
     setSaving(true);
     try {
+      const payload = { ...form };
       if (editing) {
-        const updated = await adminApi.teachers.update(editing.id, form);
-        setTeachers((prev) => prev.map((t) => t.id === editing.id ? updated as Teacher : t));
+        const updated = await adminApi.teachers.update(editing.id, payload);
+        // Refresh the full list because pairing changes affect other rows too
+        const fresh = await adminApi.teachers.list();
+        setTeachers(fresh as Teacher[]);
+        void updated;
       } else {
-        const created = await adminApi.teachers.create(form);
-        setTeachers((prev) => [...prev, created as Teacher]);
+        await adminApi.teachers.create(payload);
+        const fresh = await adminApi.teachers.list();
+        setTeachers(fresh as Teacher[]);
       }
       setShowModal(false);
     } catch (e: unknown) {
@@ -114,7 +148,7 @@ export default function Teachers() {
 
   const selectCls = "w-full border border-input rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring";
 
-  // Build course → assignments summary for the mapping panel
+  // Build course → assignments summary
   const courseMap = new Map<string, { name: string; teachers: string[] }>();
   for (const t of teachers.filter((t) => t.status === "Active")) {
     for (const a of t.assignments) {
@@ -124,6 +158,8 @@ export default function Teachers() {
       courseMap.get(cName)!.teachers.push(label);
     }
   }
+
+  const isAssistantForm = form.category === "Assistant";
 
   return (
     <div className="space-y-6">
@@ -137,7 +173,7 @@ export default function Teachers() {
           </p>
         </div>
         <Button onClick={openAdd} className="gap-2 rounded-xl shrink-0">
-          <Plus className="w-4 h-4" /> Add Teacher
+          <Plus className="w-4 h-4" /> Add Staff
         </Button>
       </div>
 
@@ -175,14 +211,14 @@ export default function Teachers() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-border">
               <tr>
-                {["Teacher", "Contact", "Category", "Assigned Sections", "Actions"].map((h) => (
+                {["Staff Member", "Contact", "Category", "Paired With", "Assigned Sections", "Actions"].map((h) => (
                   <th key={h} className="text-left font-semibold text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-12 text-muted-foreground">No teachers found.</td></tr>
+                <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No staff found.</td></tr>
               )}
               {filtered.map((t) => (
                 <tr key={t.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
@@ -204,21 +240,38 @@ export default function Teachers() {
                     </div>
                   </td>
 
-                  {/* Category badge */}
+                  {/* Category */}
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       t.category === "Assistant"
                         ? "bg-purple-100 text-purple-700"
                         : "bg-blue-100 text-blue-700"
                     }`}>
-                      {t.category || "Senior Teacher"}
+                      {t.category || "Teacher"}
                     </span>
+                  </td>
+
+                  {/* Paired with */}
+                  <td className="px-4 py-3">
+                    {t.category !== "Assistant" && t.assistantName ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
+                        <UserCheck className="w-3 h-3" /> {t.assistantName}
+                      </span>
+                    ) : t.category === "Assistant" && t.linkedTeacherName ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <UserCheck className="w-3 h-3" /> {t.linkedTeacherName}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </td>
 
                   {/* Section assignments */}
                   <td className="px-4 py-3">
                     {t.assignments.length === 0 ? (
-                      <span className="text-xs text-muted-foreground italic">Not yet assigned — use Course Management</span>
+                      <span className="text-xs text-muted-foreground italic">
+                        {t.category === "Assistant" ? "Follows paired teacher" : "Use Course Management"}
+                      </span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {t.assignments.map((a, i) => (
@@ -228,7 +281,6 @@ export default function Teachers() {
                           >
                             <BookOpen className="w-2.5 h-2.5 shrink-0" />
                             {[a.courseName, a.levelName, a.sectionName].filter(Boolean).join(" · ")}
-                            {a.role === "Assistant" && <span className="text-[9px] text-primary/70 ml-0.5">· Asst</span>}
                           </span>
                         ))}
                       </div>
@@ -270,7 +322,7 @@ export default function Teachers() {
         </div>
       </div>
 
-      {/* Staff–Course Mapping summary */}
+      {/* Staff–Course Mapping */}
       {courseMap.size > 0 && (
         <div className="bg-white rounded-2xl border border-border p-6">
           <h3 className="font-bold text-secondary mb-4">Staff–Course Overview</h3>
@@ -287,14 +339,14 @@ export default function Teachers() {
         </div>
       )}
 
-      {/* Add / Edit Modal — personal info only */}
+      {/* Add / Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="p-6 border-b border-border">
               <h3 className="text-lg font-bold text-secondary">{editing ? "Edit Staff Profile" : "Add Staff Member"}</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Assign this teacher to specific sections from <strong>Course Management</strong>.
+                Assign teachers to specific sections from <strong>Course Management</strong>.
               </p>
             </div>
             <div className="p-6 space-y-4">
@@ -305,7 +357,7 @@ export default function Teachers() {
               <div className="space-y-1.5">
                 <Label>Full Name <span className="text-red-500">*</span></Label>
                 <Input
-                  placeholder="Teacher name"
+                  placeholder="Full name"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   className="rounded-xl"
@@ -338,12 +390,53 @@ export default function Teachers() {
                 <Label>Category <span className="text-red-500">*</span></Label>
                 <select
                   value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   className={selectCls}
                 >
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+
+              {/* Pairing field — context-sensitive */}
+              {!isAssistantForm && (
+                <div className="space-y-1.5">
+                  <Label>Teaching Assistant <span className="text-xs text-muted-foreground ml-1">(optional)</span></Label>
+                  <select
+                    value={form.assistantId ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, assistantId: e.target.value ? parseInt(e.target.value) : null }))}
+                    className={selectCls}
+                  >
+                    <option value="">— None —</option>
+                    {assistantOptions
+                      .filter((a) => !editing || a.id !== editing.id)
+                      .map((a) => <option key={a.id} value={a.id}>{a.name}</option>)
+                    }
+                  </select>
+                  {assistantOptions.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No assistants found. Add a staff member with the "Assistant" category first.</p>
+                  )}
+                </div>
+              )}
+
+              {isAssistantForm && (
+                <div className="space-y-1.5">
+                  <Label>Assigned to Teacher <span className="text-xs text-muted-foreground ml-1">(optional)</span></Label>
+                  <select
+                    value={form.linkedTeacherId ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, linkedTeacherId: e.target.value ? parseInt(e.target.value) : null }))}
+                    className={selectCls}
+                  >
+                    <option value="">— None —</option>
+                    {teacherOptions
+                      .filter((t) => !editing || t.id !== editing.id)
+                      .map((t) => <option key={t.id} value={t.id}>{t.name}</option>)
+                    }
+                  </select>
+                  {teacherOptions.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No teachers found. Add a teacher first.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="p-6 border-t border-border flex justify-end gap-3">
