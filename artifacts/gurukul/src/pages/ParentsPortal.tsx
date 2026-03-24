@@ -415,6 +415,7 @@ function getInitials(name: string): string {
 
 export default function ParentsPortal() {
   const programsRef = useRef<HTMLDivElement>(null);
+  const weeklyRef   = useRef<HTMLDivElement>(null);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [testimonialsLoading, setTestimonialsLoading] = useState(true);
 
@@ -469,7 +470,7 @@ export default function ParentsPortal() {
           </motion.p>
 
           <motion.div variants={fadeUp} custom={4}
-            className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
+            className="flex flex-col sm:flex-row gap-4 justify-center pt-2 flex-wrap">
             <Link href={REGISTER_HREF}>
               <Button size="lg"
                 className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-base font-semibold rounded-full shadow-lg shadow-primary/30 hover:shadow-xl transition-all">
@@ -483,6 +484,14 @@ export default function ParentsPortal() {
               onClick={() => programsRef.current?.scrollIntoView({ behavior: "smooth" })}
             >
               Explore Programs <ChevronDown className="ml-2 w-5 h-5" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-base font-semibold rounded-full"
+              onClick={() => weeklyRef.current?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Weekly Updates <BookOpen className="ml-2 w-5 h-5" />
             </Button>
           </motion.div>
         </motion.div>
@@ -762,7 +771,9 @@ export default function ParentsPortal() {
       )}
 
       {/* ── WEEKLY UPDATES ───────────────────────────────────────────── */}
-      <WeeklyUpdatesSection />
+      <div ref={weeklyRef}>
+        <WeeklyUpdatesSection />
+      </div>
 
       {/* ── CTA BANNER ───────────────────────────────────────────────── */}
       <section className="py-20 px-4 bg-gradient-to-br from-secondary via-secondary to-secondary/90 text-white relative overflow-hidden">
