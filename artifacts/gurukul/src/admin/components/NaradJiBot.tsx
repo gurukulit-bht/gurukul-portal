@@ -184,6 +184,7 @@ let msgId = 0;
 
 export default function NaradJiBot() {
   const [open, setOpen]             = useState(false);
+  const [showBubble, setShowBubble] = useState(false);
   const [input, setInput]           = useState("");
   const [showQuickReplies, setShowQuickReplies] = useState(true);
   const [messages, setMessages]     = useState<Msg[]>([
@@ -195,6 +196,21 @@ export default function NaradJiBot() {
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
+
+  // Auto-pop the speech bubble after 3 s, auto-hide after 30 s
+  useEffect(() => {
+    const showTimer = setTimeout(() => {
+      setShowBubble(true);
+      const hideTimer = setTimeout(() => setShowBubble(false), 30000);
+      return () => clearTimeout(hideTimer);
+    }, 3000);
+    return () => clearTimeout(showTimer);
+  }, []);
+
+  // Hide bubble when chat opens
+  useEffect(() => {
+    if (open) setShowBubble(false);
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -323,6 +339,34 @@ export default function NaradJiBot() {
             >
               <Send className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Auto-pop speech bubble ───────────────────────────────────── */}
+      {showBubble && !open && (
+        <div className="fixed bottom-24 right-4 sm:right-6 z-50"
+          style={{ animation: "fadeSlideUp 0.4s ease-out" }}>
+          <div className="relative bg-white rounded-2xl shadow-xl border border-amber-200 px-4 py-3 max-w-[220px]">
+            <button
+              onClick={() => setShowBubble(false)}
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-gray-400 hover:bg-gray-500 flex items-center justify-center transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3 h-3 text-white" />
+            </button>
+            <p className="text-xs font-bold text-amber-800 mb-1">Narad Ji 🙏</p>
+            <p className="text-xs text-gray-700 leading-snug">
+              Need help navigating the portal? Ask me anything!
+            </p>
+            <button
+              onClick={() => { setShowBubble(false); setOpen(true); }}
+              className="mt-2 w-full text-xs font-semibold py-1.5 rounded-full text-white transition-colors"
+              style={{ background: "#7b1f1f" }}
+            >
+              Chat with me →
+            </button>
+            <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white border-r border-b border-amber-200 rotate-45" />
           </div>
         </div>
       )}
