@@ -126,7 +126,7 @@ export default function AdminLogin() {
                   <Input
                     id="credential"
                     type="text"
-                    placeholder="Phone number or admin@gurukul.org"
+                    placeholder="Username"
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
                     value={credential}
                     onChange={e => setCredential(e.target.value)}
