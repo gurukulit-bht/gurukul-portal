@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ShieldCheck, Users, Phone, UserPlus, RefreshCw,
-  Copy, Check, Eye, EyeOff, Loader2, Trash2, X
+  Copy, Check, Eye, EyeOff, Loader2, Trash2, X, ChevronDown
 } from "lucide-react";
 import { getRoleLabel, getRoleBadgeColor, type UserRole } from "../rbac";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,13 @@ type PortalUser = {
   createdAt: string;
 };
 
+type TeacherOption = {
+  id:       number;
+  name:     string;
+  phone:    string;
+  category: string;
+};
+
 type NewPin = { userId: number; pin: string; copied: boolean };
 
 const API = "/api/admin/portal-users";
@@ -25,6 +32,10 @@ const API = "/api/admin/portal-users";
 function formatPhone(p: string) {
   if (p.length === 10) return `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
   return p;
+}
+
+function categoryToRole(cat: string): "teacher" | "assistant" {
+  return cat === "Assistant" ? "assistant" : "teacher";
 }
 
 export default function UserManagement() {
@@ -36,6 +47,11 @@ export default function UserManagement() {
   const [showPin,    setShowPin]    = useState(false);
   const [resetting,  setResetting]  = useState<number | null>(null);
   const [deleting,   setDeleting]   = useState<number | null>(null);
+
+  // Staff auto-complete
+  const [staffList,       setStaffList]       = useState<TeacherOption[]>([]);
+  const [staffLoading,    setStaffLoading]    = useState(false);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
 
   // Form state
   const [name,  setName]  = useState("");
@@ -57,6 +73,40 @@ export default function UserManagement() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Load staff list when form opens
+  useEffect(() => {
+    if (!showForm) return;
+    setStaffLoading(true);
+    fetch("/api/admin/teachers")
+      .then(r => r.json())
+      .then((data: TeacherOption[]) => setStaffList(Array.isArray(data) ? data : []))
+      .catch(() => setStaffList([]))
+      .finally(() => setStaffLoading(false));
+  }, [showForm]);
+
+  // Pre-existing phones so we can mark already-added staff
+  const registeredPhones = new Set(users.map(u => u.phone));
+
+  function handleStaffSelect(staffId: string) {
+    setSelectedStaffId(staffId);
+    if (!staffId) return;
+    const staff = staffList.find(s => String(s.id) === staffId);
+    if (!staff) return;
+    setName(staff.name);
+    setPhone(staff.phone?.replace(/\D/g, "") ?? "");
+    setRole(categoryToRole(staff.category));
+  }
+
+  function openForm() {
+    setShowForm(true);
+    setName(""); setPhone(""); setRole("teacher"); setSelectedStaffId("");
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setName(""); setPhone(""); setRole("teacher"); setSelectedStaffId("");
+  }
+
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
     const clean = phone.replace(/\D/g, "");
@@ -73,8 +123,7 @@ export default function UserManagement() {
       setUsers(prev => [data, ...prev]);
       setNewPin({ userId: data.id, pin: data.pin, copied: false });
       setShowPin(true);
-      setShowForm(false);
-      setName(""); setPhone(""); setRole("teacher");
+      closeForm();
       toast.success(`User created! Share the PIN with ${data.name}.`);
     } catch {
       toast.error("Failed to create user.");
@@ -202,7 +251,7 @@ export default function UserManagement() {
           </div>
           <Button
             size="sm"
-            onClick={() => setShowForm(v => !v)}
+            onClick={() => showForm ? closeForm() : openForm()}
             className="gap-1.5 h-8 text-xs"
           >
             <UserPlus className="w-3.5 h-3.5" />
@@ -210,45 +259,82 @@ export default function UserManagement() {
           </Button>
         </div>
 
-        {/* Add user form */}
+        {/* ── Add user form ── */}
         {showForm && (
-          <form onSubmit={createUser} className="px-5 py-5 border-b border-border bg-gray-50 grid sm:grid-cols-4 gap-4 items-end">
+          <div className="px-5 py-5 border-b border-border bg-gray-50 space-y-4">
+
+            {/* Staff picker */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Full Name</Label>
-              <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Smt. Priya Sharma"
-                required
-                className="h-9 text-sm"
-              />
+              <Label className="text-xs font-semibold text-secondary flex items-center gap-1.5">
+                <ChevronDown className="w-3.5 h-3.5" />
+                Select from existing staff
+                <span className="font-normal text-muted-foreground">(optional — auto-fills the form)</span>
+              </Label>
+              {staffLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading staff…
+                </div>
+              ) : (
+                <select
+                  value={selectedStaffId}
+                  onChange={e => handleStaffSelect(e.target.value)}
+                  className="w-full h-9 text-sm border border-border rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                >
+                  <option value="">— Choose a teacher or assistant —</option>
+                  {staffList.map(s => {
+                    const alreadyAdded = s.phone && registeredPhones.has(s.phone.replace(/\D/g, ""));
+                    return (
+                      <option key={s.id} value={String(s.id)} disabled={!!alreadyAdded}>
+                        {s.name} ({s.category}){alreadyAdded ? " — already a portal user" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Phone (10 digits)</Label>
-              <Input
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="7401234567"
-                inputMode="numeric"
-                required
-                className="h-9 text-sm"
-              />
+
+            <div className="border-t border-dashed border-border pt-4">
+              <form onSubmit={createUser} className="grid sm:grid-cols-4 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Full Name</Label>
+                  <Input
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Smt. Priya Sharma"
+                    required
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Phone (10 digits)</Label>
+                  <Input
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="7401234567"
+                    inputMode="numeric"
+                    required
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Role</Label>
+                  <select
+                    value={role}
+                    onChange={e => setRole(e.target.value as "teacher" | "assistant")}
+                    className="w-full h-9 text-sm border border-border rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="teacher">Teacher</option>
+                    <option value="assistant">Assistant</option>
+                  </select>
+                </div>
+                <Button type="submit" disabled={submitting} className="h-9 text-sm gap-1.5">
+                  {submitting
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating…</>
+                    : <>Create &amp; Generate PIN</>}
+                </Button>
+              </form>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Role</Label>
-              <select
-                value={role}
-                onChange={e => setRole(e.target.value as "teacher" | "assistant")}
-                className="w-full h-9 text-sm border border-border rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="teacher">Teacher</option>
-                <option value="assistant">Assistant</option>
-              </select>
-            </div>
-            <Button type="submit" disabled={submitting} className="h-9 text-sm gap-1.5">
-              {submitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating…</> : <>Create &amp; Generate PIN</>}
-            </Button>
-          </form>
+          </div>
         )}
 
         {loading ? (
@@ -354,19 +440,18 @@ export default function UserManagement() {
             </thead>
             <tbody className="divide-y divide-border">
               {[
-                ["Dashboard",            true,  false, false],
-                ["Announcements",        true,  false, false],
-                ["Calendar",             true,  false, false],
-                ["Courses & Classes",    true,  true,  true ],
-                ["Staff Management",     true,  false, false],
-                ["Students & Payments",  true,  false, false],
-                ["Inventory",            true,  false, false],
-                ["Course Documents",     true,  true,  true ],
-                ["Attendance",           true,  true,  true ],
-                ["Parent Notifications", true,  true,  true ],
-                ["Weekly Updates",       true,  true,  true ],
-                ["User Management",      true,  false, false],
-                ["Settings",             true,  false, false],
+                ["Dashboard",           true,  false, false],
+                ["Announcements",       true,  false, false],
+                ["Calendar",            true,  false, false],
+                ["Courses & Classes",   true,  true,  true ],
+                ["Staff Management",    true,  false, false],
+                ["Students & Payments", true,  false, false],
+                ["Inventory",           true,  false, false],
+                ["Course Documents",    true,  true,  true ],
+                ["Attendance",          true,  true,  true ],
+                ["Weekly Updates",      true,  true,  true ],
+                ["User Management",     true,  false, false],
+                ["Settings",            true,  false, false],
               ].map(([mod, admin, teacher, asst]) => (
                 <tr key={String(mod)} className="hover:bg-gray-50">
                   <td className="py-2.5 pr-4 font-medium text-secondary">{mod}</td>
