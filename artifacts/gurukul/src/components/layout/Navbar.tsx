@@ -40,23 +40,23 @@ export function Navbar() {
       <div className="h-1 bg-gradient-to-r from-secondary via-primary to-accent w-full fixed top-0 z-50" />
       <header
         className={cn(
-          "fixed top-1 left-0 right-0 z-40 transition-all duration-300 border-b",
+          "fixed top-1 left-0 right-0 z-40 transition-all duration-300 border-b border-border/40",
           isScrolled
-            ? "bg-white/90 backdrop-blur-md shadow-sm border-border/50 py-3"
-            : "bg-transparent border-transparent py-5"
+            ? "bg-background/95 backdrop-blur-md shadow-md py-3"
+            : "bg-background/80 backdrop-blur-sm shadow-sm py-4"
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform ring-2 ring-primary/10">
                 <BookOpen className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="font-display font-bold text-xl leading-none text-secondary">
+                <span className="font-display font-bold text-xl leading-none text-secondary tracking-tight">
                   Bhartiya Hindu Temple
                 </span>
-                <span className="text-sm font-medium text-primary tracking-widest uppercase">
+                <span className="text-xs sm:text-sm font-semibold text-primary tracking-[0.24em] uppercase">
                   Gurukul
                 </span>
               </div>
@@ -71,8 +71,8 @@ export function Navbar() {
                   className={cn(
                     "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
                     location === link.href
-                      ? "text-primary bg-primary/5"
-                      : "text-foreground/80"
+                      ? "text-primary bg-primary/10"
+                      : "text-foreground/75"
                   )}
                 >
                   {link.label}
@@ -109,16 +109,16 @@ export function Navbar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-30 pt-24 bg-white/95 backdrop-blur-xl lg:hidden"
+            className="fixed inset-0 z-30 pt-24 bg-background/98 backdrop-blur-xl lg:hidden"
           >
-            <nav className="flex flex-col items-center gap-6 p-8">
+            <nav className="flex flex-col items-center gap-5 p-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "text-xl font-display font-bold transition-colors",
-                    location === link.href ? "text-primary" : "text-secondary"
+                    "text-xl font-display font-bold transition-colors px-4 py-2 rounded-full",
+                    location === link.href ? "text-primary bg-primary/10" : "text-secondary"
                   )}
                 >
                   {link.label}
@@ -131,7 +131,7 @@ export function Navbar() {
                 Register Now
               </Link>
             </nav>
-            <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-20 pointer-events-none">
+            <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-15 pointer-events-none">
                <img src={`${import.meta.env.BASE_URL}images/lotus-motif.png`} alt="" className="w-48 h-48 opacity-20" />
             </div>
           </motion.div>
