@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { ChevronRight, Lock, CheckCircle2, Star, Trophy, Download, RotateCcw, Home, ArrowLeft, Sparkles, Copy, Check, ExternalLink } from "lucide-react";
+import { NaradJi } from "@/components/NaradJi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1068,60 +1069,6 @@ function FloatingStars() {
   );
 }
 
-// ─── NaradJi Mini Assistant ───────────────────────────────────────────────────
-
-const NARAD_HINTS = [
-  "Hey! I'm Narad Ji! 😄 Tap any chapter to start your adventure!",
-  "Remember: Read the story first, then take the quiz! 📖✨",
-  "You need 70% to pass and unlock the next chapter! You got this! 💪",
-  "Fun fact: Ram's name has just 3 letters but infinite power! 🌟",
-  "Jai Shri Ram! Keep going, you're doing amazing! 🏹",
-  "The Geeta says: Your effort is in your hands — results are in God's! 💛",
-  "Take a deep breath before the quiz. Focus like Arjuna! 🎯",
-];
-
-function NaradMini() {
-  const [open, setOpen] = useState(false);
-  const [hintIdx, setHintIdx] = useState(0);
-
-  function nextHint() {
-    setHintIdx((h) => (h + 1) % NARAD_HINTS.length);
-  }
-
-  return (
-    <div className="fixed bottom-6 left-6 z-40">
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10 }}
-            className="absolute bottom-16 left-0 w-64 bg-white rounded-2xl shadow-2xl border-2 border-yellow-300 p-4"
-          >
-            <div className="text-2xl mb-2 text-center">🎺</div>
-            <p className="text-sm text-gray-700 text-center leading-relaxed">{NARAD_HINTS[hintIdx]}</p>
-            <button
-              onClick={nextHint}
-              className="mt-3 w-full text-xs bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-2 rounded-xl transition-colors"
-            >
-              Next Tip ➡️
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setOpen((o) => !o)}
-        className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full shadow-lg flex items-center justify-center text-2xl border-2 border-white"
-        title="Narad Ji - Help!"
-      >
-        🎺
-      </motion.button>
-      <p className="text-[10px] text-center text-gray-500 mt-1 font-semibold">Narad Ji</p>
-    </div>
-  );
-}
 
 // ─── Canvas badge helper ──────────────────────────────────────────────────────
 
@@ -1637,7 +1584,7 @@ export default function StudentsCorner() {
             </button>
           </Link>
         </div>
-        <NaradMini />
+        <NaradJi />
       </div>
     );
   }
@@ -1752,7 +1699,7 @@ export default function StudentsCorner() {
             </motion.div>
           )}
         </div>
-        <NaradMini />
+        <NaradJi />
       </div>
     );
   }
@@ -1827,7 +1774,7 @@ export default function StudentsCorner() {
           </motion.button>
           {done && <p className="text-center text-green-600 font-semibold text-sm mt-3">✅ You've already passed this quiz! Retake anytime.</p>}
         </div>
-        <NaradMini />
+        <NaradJi />
       </div>
     );
   }
@@ -1933,7 +1880,7 @@ export default function StudentsCorner() {
           )}
         </div>
         {showConfetti && <Confetti />}
-        <NaradMini />
+        <NaradJi />
       </div>
     );
   }
@@ -2146,7 +2093,7 @@ export default function StudentsCorner() {
           </div>
         </motion.div>
       </div>
-      <NaradMini />
+      <NaradJi />
     </div>
   );
 }
