@@ -1,15 +1,115 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { portalUsersTable } from "@workspace/db/schema";
+import { portalUsersTable, adminUsersTable } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 const MAX_ATTEMPTS  = 5;
 const LOCK_MINUTES  = 15;
+const SUPER_ADMIN_EMAIL = "admin@gurukul.org";
 
-// POST /api/auth/pin-login
+// ── Ensure super admin record exists ─────────────────────────────────────────
+// Called once at startup from index.ts. Idempotent.
+export async function seedSuperAdmin() {
+  const existing = await db
+    .select({ id: adminUsersTable.id })
+    .from(adminUsersTable)
+    .where(eq(adminUsersTable.role, "super_admin"))
+    .limit(1);
+  if (existing.length > 0) return;
+
+  const pinHash = await bcrypt.hash("JaiHanuman2026$", 10);
+  await db.insert(adminUsersTable).values({
+    name:    "Super Admin",
+    email:   SUPER_ADMIN_EMAIL,
+    phone:   null,
+    pinHash,
+    role:    "super_admin",
+    status:  "active",
+  });
+  console.log("[auth] Super admin seeded.");
+}
+
+// ── POST /api/auth/admin-login ────────────────────────────────────────────────
+// Unified admin login:
+//   - credential = "admin@gurukul.org"  → super admin (email + password)
+//   - credential = 10-digit phone       → regular admin (phone + 4-digit PIN)
+router.post("/admin-login", async (req, res) => {
+  try {
+    const { credential, secret } = req.body as { credential?: string; secret?: string };
+    if (!credential || !secret) {
+      return res.status(400).json({ error: "Credential and secret are required." });
+    }
+
+    const isSuperAdminAttempt = credential.toLowerCase().trim() === SUPER_ADMIN_EMAIL;
+
+    if (isSuperAdminAttempt) {
+      // Super admin: email + password
+      const [sa] = await db
+        .select()
+        .from(adminUsersTable)
+        .where(eq(adminUsersTable.role, "super_admin"))
+        .limit(1);
+
+      if (!sa) return res.status(401).json({ error: "Invalid credentials." });
+      if (sa.status !== "active") return res.status(403).json({ error: "Account is inactive." });
+
+      const valid = await bcrypt.compare(secret, sa.pinHash);
+      if (!valid) return res.status(401).json({ error: "Invalid email or password." });
+
+      return res.json({
+        id:           sa.id,
+        name:         sa.name,
+        email:        sa.email,
+        phone:        sa.phone ?? "",
+        role:         "admin",      // front-end role for RBAC
+        dbRole:       "super_admin",
+        isSuperAdmin: true,
+        initials:     sa.name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase(),
+      });
+    }
+
+    // Regular admin: phone + 4-digit PIN
+    const cleanPhone = credential.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ error: "Credential must be the super admin email or a 10-digit phone number." });
+    }
+    if (!/^\d{4}$/.test(secret)) {
+      return res.status(400).json({ error: "PIN must be exactly 4 digits." });
+    }
+
+    const [admin] = await db
+      .select()
+      .from(adminUsersTable)
+      .where(eq(adminUsersTable.phone, cleanPhone))
+      .limit(1);
+
+    if (!admin) return res.status(401).json({ error: "Invalid phone number or PIN." });
+    if (admin.status !== "active") return res.status(403).json({ error: "Account is inactive. Contact the super admin." });
+
+    const valid = await bcrypt.compare(secret, admin.pinHash);
+    if (!valid) return res.status(401).json({ error: "Invalid phone number or PIN." });
+
+    return res.json({
+      id:           admin.id,
+      name:         admin.name,
+      email:        admin.email ?? "",
+      phone:        admin.phone ?? "",
+      role:         "admin",
+      dbRole:       "admin",
+      isSuperAdmin: false,
+      initials:     admin.name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase(),
+    });
+  } catch (err) {
+    console.error("[admin-login]", err);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ── POST /api/auth/pin-login ──────────────────────────────────────────────────
+// Teacher / assistant login via portal_users table. Unchanged.
 router.post("/pin-login", async (req, res) => {
   try {
     const { phone, pin } = req.body as { phone?: string; pin?: string };
@@ -88,7 +188,8 @@ router.post("/pin-login", async (req, res) => {
   }
 });
 
-// POST /api/auth/change-pin
+// ── POST /api/auth/change-pin ─────────────────────────────────────────────────
+// Change a teacher/assistant PIN. Unchanged.
 router.post("/change-pin", async (req, res) => {
   try {
     const { phone, currentPin, newPin } = req.body as {

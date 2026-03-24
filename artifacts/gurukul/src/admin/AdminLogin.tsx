@@ -116,7 +116,7 @@ export default function AdminLogin() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* Username */}
+              {/* Username / Phone */}
               <div className="space-y-2">
                 <Label htmlFor="credential" className="text-secondary font-medium">
                   Username
@@ -126,7 +126,7 @@ export default function AdminLogin() {
                   <Input
                     id="credential"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder="Phone number or admin@gurukul.org"
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
                     value={credential}
                     onChange={e => setCredential(e.target.value)}
@@ -134,19 +134,22 @@ export default function AdminLogin() {
                     autoComplete="username"
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Admins: enter your 10-digit phone number &nbsp;·&nbsp; Super Admin: enter email
+                </p>
               </div>
 
-              {/* Password */}
+              {/* Password / PIN */}
               <div className="space-y-2">
                 <Label htmlFor="secret" className="text-secondary font-medium">
-                  Password
+                  Password / PIN
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="secret"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder="Password or 4-digit PIN"
                     className="pl-10 h-12 rounded-xl border-border focus:border-primary"
                     value={secret}
                     onChange={e => setSecret(e.target.value)}

@@ -123,6 +123,16 @@ export const adminApi = {
     update: (id: number, data: { content?: string; color?: string }) => request("PUT", `/teacher-notes/${id}`, data),
     remove: (id: number) => request("DELETE", `/teacher-notes/${id}`),
   },
+  adminUsers: {
+    list:             () => request<unknown[]>("GET", "/admin-users"),
+    create:           (data: unknown) => request<unknown>("POST", "/admin-users", data),
+    update:           (id: number, data: unknown) => request("PUT", `/admin-users/${id}`, data),
+    resetPin:         (id: number, data?: unknown) => request("PATCH", `/admin-users/${id}/reset-pin`, data ?? {}),
+    setStatus:        (id: number, status: string) => request("PATCH", `/admin-users/${id}/status`, { status }),
+    remove:           (id: number) => request("DELETE", `/admin-users/${id}`),
+    changeSuperAdminPassword: (overridePin: string, newPassword: string) =>
+      request("POST", "/admin-users/super-admin/change-password", { overridePin, newPassword }),
+  },
   messaging: {
     recipients: (params: { course?: string; curricYear?: string; employer?: string }) => {
       const qs = new URLSearchParams();

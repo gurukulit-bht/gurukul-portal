@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import adminUsersRouter from "./admin-users";
 import teachersRouter from "./teachers";
 import studentsRouter from "./students";
 import membersRouter from "./members";
@@ -17,6 +18,7 @@ import backfillRouter from "./backfill";
 
 const router: IRouter = Router();
 
+router.use("/admin-users", adminUsersRouter);
 router.use("/teachers", teachersRouter);
 router.use("/students", studentsRouter);
 router.use("/members", membersRouter);

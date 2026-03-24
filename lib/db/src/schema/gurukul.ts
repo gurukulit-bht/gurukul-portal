@@ -83,6 +83,25 @@ export const contactsTable = pgTable("contacts", {
   createdAt:      timestamp("created_at").defaultNow(),
 });
 
+// ─── Admin Users ──────────────────────────────────────────────────────────────
+// Portal admin accounts. Super admin is identified by role = 'super_admin'.
+// Regular admins authenticate with phone (= username) + 4-digit PIN.
+// Super admin authenticates with email + password.
+
+export const adminUsersTable = pgTable("admin_users", {
+  id:          serial("id").primaryKey(),
+  name:        text("name").notNull(),
+  email:       text("email"),             // only populated for super admin
+  phone:       text("phone"),             // 10-digit; = username for regular admins
+  pinHash:     text("pin_hash").notNull(), // bcrypt hash of password (super) or 4-digit PIN (admin)
+  role:        text("role").notNull().default("admin"), // "super_admin" | "admin"
+  status:      text("status").notNull().default("active"), // "active" | "inactive"
+  createdById: integer("created_by_id"),   // admin who created this account (null for super admin)
+  updatedById: integer("updated_by_id"),
+  createdAt:   timestamp("created_at").defaultNow(),
+  updatedAt:   timestamp("updated_at").defaultNow(),
+});
+
 // ─── Teachers ─────────────────────────────────────────────────────────────────
 // One row per teacher. Independent of courses.
 

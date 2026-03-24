@@ -17,7 +17,7 @@ import Settings from "./pages/Settings";
 import CourseDocuments from "./pages/CourseDocuments";
 import Attendance from "./pages/Attendance";
 import WeeklyUpdates from "./pages/WeeklyUpdates";
-import RoleManagement from "./pages/RoleManagement";
+import UserManagement from "./pages/UserManagement";
 import StudentRegistration from "./pages/StudentRegistration";
 import Testimonials from "./pages/Testimonials";
 import MessagingCenter from "./pages/MessagingCenter";
@@ -113,7 +113,7 @@ function AdminRoutes() {
       </Route>
 
       <Route path="/admin/roles">
-        <ProtectedRoute permission="roles"><RoleManagement /></ProtectedRoute>
+        <ProtectedRoute permission="roles"><UserManagement /></ProtectedRoute>
       </Route>
 
       <Route path="/admin/help">
