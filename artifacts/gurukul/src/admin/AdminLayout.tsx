@@ -97,7 +97,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   function handleLogout() {
     logout();
-    window.location.href = "/";
+    window.location.href = "/admin/login";
   }
 
   const isAdmin = user?.role === "admin";
