@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/announcements", label: "Announcements" },
   { href: "/calendar", label: "Calendar" },
   { href: "/parents", label: "Parents Portal" },
+  { href: "/students-corner", label: "🎉 Student's Corner" },
   { href: "/contact", label: "Contact Us" },
 ];
 
