@@ -140,8 +140,9 @@ export function NaradJi() {
     teachers: rawTeachers,
   };
 
+  const pagesWithBubble = ["/", "/students-corner"];
   useEffect(() => {
-    if (location !== "/") return;
+    if (!pagesWithBubble.includes(location)) return;
     const showTimer = setTimeout(() => {
       setShowBubble(true);
       const hideTimer = setTimeout(() => setShowBubble(false), 30000);
@@ -271,7 +272,9 @@ export function NaradJi() {
             </button>
             <p className="text-xs font-bold text-amber-800 mb-1">Narad Ji 🙏</p>
             <p className="text-xs text-gray-700 leading-snug">
-              Namaste! Ask me about courses, events & registration!
+              {location === "/students-corner"
+                ? "Namaste, little champ! 🎺 Need help finding a course or have a question? I'm here!"
+                : "Namaste! Ask me about courses, events & registration!"}
             </p>
             <button
               onClick={() => { setShowBubble(false); setOpen(true); }}
