@@ -72,6 +72,7 @@ export async function pinLogin(phone: string, pin: string): Promise<AuthUser | n
   const user: AuthUser = {
     id:          data.id,
     phone:       data.phone,
+    email:       data.email || undefined,   // teacher's email from teachersTable lookup
     displayName: data.name,
     role:        data.role as UserRole,
     initials:    data.initials,

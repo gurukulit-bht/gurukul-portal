@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { portalUsersTable, adminUsersTable } from "@workspace/db/schema";
+import { portalUsersTable, adminUsersTable, teachersTable } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -175,10 +175,19 @@ router.post("/pin-login", async (req, res) => {
       .set({ loginAttempts: 0, lockedUntil: null, updatedAt: new Date() })
       .where(eq(portalUsersTable.id, user.id));
 
+    // Look up the teacher's email so the frontend can send X-User-Email on subsequent requests
+    const [teacherRow] = await db
+      .select({ email: teachersTable.email })
+      .from(teachersTable)
+      .where(eq(teachersTable.phone, clean))
+      .limit(1)
+      .catch(() => []);
+
     return res.json({
       id:          user.id,
       name:        user.name,
       phone:       user.phone,
+      email:       teacherRow?.email ?? null,
       role:        user.role,
       initials:    user.name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase(),
     });

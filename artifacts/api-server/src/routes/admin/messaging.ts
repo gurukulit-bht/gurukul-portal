@@ -7,6 +7,7 @@ import {
   coursesTable,
   adminMessagesTable,
   contactsTable,
+  teachersTable,
 } from "@workspace/db/schema";
 import { eq, asc, isNotNull, sql, desc } from "drizzle-orm";
 
@@ -215,27 +216,34 @@ router.get("/messages", async (_req, res) => {
 // the teachers table, OR directly by X-User-Email if admin is viewing.
 
 router.get("/teacher-inbox", async (req, res) => {
-  const userEmail = (req.headers["x-user-email"] as string | undefined)?.toLowerCase().trim();
+  let userEmail = (req.headers["x-user-email"] as string | undefined)?.toLowerCase().trim();
   const userPhone = (req.headers["x-user-phone"] as string | undefined)?.replace(/\D/g, "");
 
   try {
+    // If email is missing but phone is present, look up the teacher's email from the teachers table.
+    // This handles teachers who logged in before the email was included in the login response.
+    if (!userEmail && userPhone) {
+      const [row] = await db
+        .select({ email: teachersTable.email })
+        .from(teachersTable)
+        .where(eq(teachersTable.phone, userPhone))
+        .limit(1);
+      if (row?.email) userEmail = row.email.toLowerCase().trim();
+    }
+
     const all = await db
       .select()
       .from(adminMessagesTable)
-      .where(
-        sql`${adminMessagesTable.audienceType} IN ('teachers', 'both')`
-      )
+      .where(sql`${adminMessagesTable.audienceType} IN ('teachers', 'both')`)
       .orderBy(desc(adminMessagesTable.sentAt));
 
-    // Filter to only messages where this teacher's email appears in teacherEmails
+    // Filter to messages where this teacher's email appears in teacherEmails.
+    // If teacherEmails is null the message was broadcast to all teachers.
     const filtered = all.filter(m => {
-      if (!m.teacherEmails) {
-        // If no specific teacher list — message was sent to all teachers
-        return true;
-      }
+      if (!m.teacherEmails) return true;   // broadcast to all teachers
+      if (!userEmail)        return false;  // can't identify teacher
       const list = m.teacherEmails.split(",").map(e => e.trim().toLowerCase());
-      if (userEmail && list.includes(userEmail)) return true;
-      return false;
+      return list.includes(userEmail as string);
     });
 
     return res.json(filtered);
