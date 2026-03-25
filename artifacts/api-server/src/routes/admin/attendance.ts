@@ -3,8 +3,9 @@ import { db } from "@workspace/db";
 import {
   attendanceRecordsTable, courseLevelsTable, coursesTable,
   studentsTable, teachersTable, teacherAssignmentsTable,
+  sectionAssignmentsTable, courseSectionsTable,
 } from "@workspace/db/schema";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -13,13 +14,22 @@ function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
 
 type Assignment = { courseId: number; levelFrom: number; levelTo: number };
 
-/** Returns assignments for the teacher matched by email OR phone (digits-normalized). */
-async function getTeacherAssignments(email?: string, phone?: string): Promise<Assignment[] | null> {
+/**
+ * Returns the set of course-level IDs this teacher may access.
+ * Combines two sources:
+ *   1. teacher_assignments  — course + level-range rows
+ *   2. section_assignments  — specific sections the teacher is assigned to
+ * Returns null if no teacher record found (admin fallback → show all).
+ */
+async function getAllowedLevelIds(
+  email?: string,
+  phone?: string,
+  allLevels?: { id: number; courseId: number; levelNumber: number }[],
+): Promise<Set<number> | null> {
   if (!email && !phone) return null;
 
   const conditions = [];
   if (email) conditions.push(eq(teachersTable.email, email));
-  // Normalize both sides so "(740) 555-0101" matches "7405550101"
   if (phone) conditions.push(
     eq(sql`regexp_replace(${teachersTable.phone}, '[^0-9]', '', 'g')`, digitsOnly(phone))
   );
@@ -30,7 +40,10 @@ async function getTeacherAssignments(email?: string, phone?: string): Promise<As
     .where(or(...conditions));
   if (!teacher) return null;
 
-  const rows = await db
+  const allowed = new Set<number>();
+
+  // ── 1. teacher_assignments (course + level range) ───────────────────────────
+  const rangeRows = await db
     .select({
       courseId:  teacherAssignmentsTable.courseId,
       levelFrom: teacherAssignmentsTable.levelFrom,
@@ -38,7 +51,32 @@ async function getTeacherAssignments(email?: string, phone?: string): Promise<As
     })
     .from(teacherAssignmentsTable)
     .where(eq(teacherAssignmentsTable.teacherId, teacher.id));
-  return rows;
+
+  if (rangeRows.length > 0 && allLevels) {
+    for (const lvl of allLevels) {
+      if (rangeRows.some(
+        (a: Assignment) =>
+          a.courseId === lvl.courseId &&
+          lvl.levelNumber >= a.levelFrom &&
+          lvl.levelNumber <= a.levelTo
+      )) {
+        allowed.add(lvl.id);
+      }
+    }
+  }
+
+  // ── 2. section_assignments (specific section → level) ───────────────────────
+  const sectionRows = await db
+    .select({ courseLevelId: courseSectionsTable.courseLevelId })
+    .from(sectionAssignmentsTable)
+    .innerJoin(courseSectionsTable, eq(courseSectionsTable.id, sectionAssignmentsTable.sectionId))
+    .where(eq(sectionAssignmentsTable.teacherId, teacher.id));
+
+  for (const row of sectionRows) {
+    allowed.add(row.courseLevelId);
+  }
+
+  return allowed;
 }
 
 // GET /api/admin/attendance/levels — course levels with course names (for dropdown)
@@ -47,12 +85,7 @@ router.get("/levels", async (req, res) => {
   const email = req.headers["x-user-email"] as string | undefined;
   const phone = req.headers["x-user-phone"] as string | undefined;
 
-  let assignments: Assignment[] | undefined;
-  if (role === "teacher" || role === "assistant") {
-    const rows = await getTeacherAssignments(email, phone);
-    if (rows !== null) assignments = rows;
-  }
-
+  // Fetch all levels first (needed to resolve range-based assignments)
   const levels = await db
     .select({
       id:          courseLevelsTable.id,
@@ -66,16 +99,14 @@ router.get("/levels", async (req, res) => {
     .innerJoin(coursesTable, eq(courseLevelsTable.courseId, coursesTable.id))
     .orderBy(coursesTable.name, courseLevelsTable.levelNumber);
 
-  const filtered = assignments !== undefined
-    ? levels.filter((l) =>
-        assignments!.some(
-          (a) =>
-            a.courseId === l.courseId &&
-            l.levelNumber >= a.levelFrom &&
-            l.levelNumber <= a.levelTo
-        )
-      )
-    : levels;
+  let filtered = levels;
+
+  if (role === "teacher" || role === "assistant") {
+    const allowedIds = await getAllowedLevelIds(email, phone, levels);
+    if (allowedIds !== null) {
+      filtered = levels.filter(l => allowedIds.has(l.id));
+    }
+  }
 
   return res.json(filtered.map(({ levelNumber: _n, ...rest }) => rest));
 });
