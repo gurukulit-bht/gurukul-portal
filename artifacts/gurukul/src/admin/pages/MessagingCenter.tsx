@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
   Mail, Send, Users, Filter, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Clock, RefreshCw, Eye, EyeOff,
-  X, Loader2, Info, Inbox, Phone, MailOpen, Trash2, StickyNote,
+  X, Loader2, Info, Inbox, Phone, MailOpen, Trash2,
   AlertTriangle, GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import NotesTab from "../components/NotesTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +63,7 @@ function formatDate(iso: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MessagingCenter() {
-  const [tab, setTab] = useState<"compose" | "history" | "inbox" | "notes">("compose");
+  const [tab, setTab] = useState<"compose" | "history" | "inbox">("compose");
 
   // ── Filters ──
   const [filterCourse,     setFilterCourse]     = useState("All");
@@ -282,44 +281,47 @@ export default function MessagingCenter() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="space-y-3">
         <div>
           <h2 className="text-xl font-bold text-secondary">Messaging Center</h2>
-          <p className="text-sm text-muted-foreground">Send emails to parents, teachers, or both — filtered by course, curriculum year, or employer.</p>
+          <p className="text-sm text-muted-foreground">Send messages to parents, teachers, or both — filtered by course, curriculum year, or employer.</p>
         </div>
-        <div className="flex gap-2">
+        {/* Tab bar — scrollable on mobile */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
           <button
             onClick={() => setTab("compose")}
-            className={cn("px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
-              tab === "compose" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0",
+              tab === "compose" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+            )}
           >
-            <Mail className="w-4 h-4 inline mr-1.5" /> Compose
+            <Mail className="w-4 h-4" />
+            <span>Compose</span>
           </button>
           <button
             onClick={() => setTab("inbox")}
-            className={cn("px-4 py-2 rounded-xl text-sm font-semibold transition-colors relative",
-              tab === "inbox" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0 relative",
+              tab === "inbox" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+            )}
           >
-            <Inbox className="w-4 h-4 inline mr-1.5" /> Inbox
+            <Inbox className="w-4 h-4" />
+            <span>Inbox</span>
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              <span className="ml-0.5 bg-red-500 text-white text-xs font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setTab("history")}
-            className={cn("px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
-              tab === "history" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0",
+              tab === "history" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+            )}
           >
-            <Clock className="w-4 h-4 inline mr-1.5" /> History
-          </button>
-          <button
-            onClick={() => setTab("notes")}
-            className={cn("px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
-              tab === "notes" ? "bg-primary text-white" : "bg-gray-100 text-secondary hover:bg-gray-200")}
-          >
-            <StickyNote className="w-4 h-4 inline mr-1.5" /> My Notes
+            <Clock className="w-4 h-4" />
+            <span>History</span>
           </button>
         </div>
       </div>
@@ -674,8 +676,6 @@ export default function MessagingCenter() {
         </div>
       )}
 
-      {/* ── MY NOTES TAB ────────────────────────────────────────────────────── */}
-      {tab === "notes" && <NotesTab />}
     </div>
   );
 }

@@ -365,7 +365,7 @@ export default function WeeklyUpdates() {
   const isAdmin = user?.role === "admin";
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const [tab, setTab] = useState<"updates" | "notices" | "calendar" | "messages" | "notes">("updates");
+  const [tab, setTab] = useState<"updates" | "notices" | "calendar" | "messages">("updates");
 
   // ── Admin Messages ──
   type AdminMsg = { id: number; subject: string; body: string; audienceType: string; sentAt: string; sentBy: string | null };
@@ -538,74 +538,71 @@ export default function WeeklyUpdates() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
 
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-secondary">Messaging Center</h1>
         <p className="text-sm text-muted-foreground">
-          Post updates for parents · read announcements · check the school calendar · sticky notes
+          Post updates for parents · read announcements · check the school calendar
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        <button
-          onClick={() => setTab("updates")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
-            tab === "updates" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
-          }`}
-        >
-          <Eye className="w-4 h-4" />
-          Weekly Updates
-          {updates.length > 0 && (
-            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
-              {updates.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab("notices")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
-            tab === "notices" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
-          }`}
-        >
-          <Bell className="w-4 h-4" />
-          Announcements
-        </button>
-        <button
-          onClick={() => setTab("calendar")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
-            tab === "calendar" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
-          }`}
-        >
-          <CalendarDays className="w-4 h-4" />
-          Calendar
-        </button>
-        <button
-          onClick={() => { setTab("messages"); loadAdminMessages(); }}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
-            tab === "messages" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          From Admin
-          {adminMsgs.length > 0 && (
-            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
-              {adminMsgs.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab("notes")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
-            tab === "notes" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
-          }`}
-        >
-          <StickyNote className="w-4 h-4" />
-          Sticky Notes
-        </button>
-      </div>
+      {/* Two-column layout: main content + sticky notes sidebar */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+
+        {/* ── Main content column ── */}
+        <div className="xl:col-span-2 space-y-4">
+
+          {/* Tabs */}
+          <div className="flex gap-0 border-b border-border overflow-x-auto">
+            <button
+              onClick={() => setTab("updates")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                tab === "updates" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Weekly </span>Updates
+              {updates.length > 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                  {updates.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab("notices")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                tab === "notices" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+              Announcements
+            </button>
+            <button
+              onClick={() => setTab("calendar")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                tab === "calendar" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+              }`}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Calendar
+            </button>
+            <button
+              onClick={() => { setTab("messages"); loadAdminMessages(); }}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                tab === "messages" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-secondary"
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              From Admin
+              {adminMsgs.length > 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                  {adminMsgs.length}
+                </span>
+              )}
+            </button>
+          </div>
 
       {/* ── Weekly Updates Tab ── */}
       {tab === "updates" && (
@@ -909,8 +906,21 @@ export default function WeeklyUpdates() {
         </div>
       )}
 
-      {/* ── Sticky Notes Tab ── */}
-      {tab === "notes" && <NotesTab />}
+        </div>{/* end main content column */}
+
+        {/* ── Sticky Notes sidebar ── */}
+        <div className="xl:col-span-1">
+          <div className="sticky top-4 space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <StickyNote className="w-4 h-4 text-amber-500" />
+              <h3 className="font-bold text-secondary text-sm">My Sticky Notes</h3>
+              <span className="text-xs text-muted-foreground">(private)</span>
+            </div>
+            <NotesTab />
+          </div>
+        </div>
+
+      </div>{/* end grid */}
     </div>
   );
 }
