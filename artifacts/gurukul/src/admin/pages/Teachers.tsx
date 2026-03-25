@@ -291,85 +291,86 @@ export default function Teachers() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-border">
               <tr>
-                {["Staff Member", "Contact", "Category", "Paired With", "Assigned Sections", "Actions"].map((h) => (
+                {["Staff Member", "Category / Paired", "Courses", "Actions"].map((h) => (
                   <th key={h} className="text-left font-semibold text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No staff found.</td></tr>
+                <tr><td colSpan={4} className="text-center py-12 text-muted-foreground">No staff found.</td></tr>
               )}
-              {filtered.map((t) => (
+              {filtered.map((t) => {
+                // Unique course names for compact display
+                const courseNames = [...new Set(t.assignments.map(a => a.courseName).filter(Boolean))] as string[];
+                const MAX_VISIBLE = 3;
+                const visible = courseNames.slice(0, MAX_VISIBLE);
+                const overflow = courseNames.length - MAX_VISIBLE;
+                const pairedName = t.category !== "Assistant" ? t.assistantName : t.linkedTeacherName;
+
+                return (
                 <tr key={t.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
-                  {/* Name */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                  {/* Name + Contact */}
+                  <td className="px-4 py-3 min-w-[200px]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                         {t.name.split(" ").pop()?.charAt(0) ?? "T"}
                       </div>
-                      <span className="font-medium text-secondary">{t.name}</span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-secondary truncate">{t.name}</div>
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+                          <Mail className="w-2.5 h-2.5 shrink-0" />
+                          <span className="truncate">{t.email}</span>
+                          {t.phone && <><span className="mx-0.5">·</span><Phone className="w-2.5 h-2.5 shrink-0" /><span>{t.phone}</span></>}
+                        </div>
+                      </div>
                     </div>
                   </td>
 
-                  {/* Contact */}
-                  <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{t.email}</div>
-                      {t.phone && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{t.phone}</div>}
+                  {/* Category + Paired */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <span className={`self-start text-xs px-2 py-0.5 rounded-full font-medium ${
+                        t.category === "Assistant" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                      }`}>
+                        {t.category || "Teacher"}
+                      </span>
+                      {pairedName && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <UserCheck className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-[120px]">{pairedName}</span>
+                        </span>
+                      )}
                     </div>
                   </td>
 
-                  {/* Category */}
+                  {/* Courses — compact, no-wrap chips with overflow count */}
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      t.category === "Assistant"
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}>
-                      {t.category || "Teacher"}
-                    </span>
-                  </td>
-
-                  {/* Paired with */}
-                  <td className="px-4 py-3">
-                    {t.category !== "Assistant" && t.assistantName ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
-                        <UserCheck className="w-3 h-3" /> {t.assistantName}
-                      </span>
-                    ) : t.category === "Assistant" && t.linkedTeacherName ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
-                        <UserCheck className="w-3 h-3" /> {t.linkedTeacherName}
-                      </span>
+                    {courseNames.length === 0 ? (
+                      <span className="text-xs text-muted-foreground italic">None assigned</span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-
-                  {/* Section assignments */}
-                  <td className="px-4 py-3">
-                    {t.assignments.length === 0 ? (
-                      <span className="text-xs text-muted-foreground italic">
-                        {t.category === "Assistant" ? "Follows paired teacher" : "Use Course Management"}
-                      </span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {t.assignments.map((a, i) => (
-                          <span
-                            key={i}
-                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium whitespace-nowrap"
-                          >
+                      <div className="flex items-center gap-1 flex-nowrap">
+                        {visible.map((name) => (
+                          <span key={name} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium whitespace-nowrap">
                             <BookOpen className="w-2.5 h-2.5 shrink-0" />
-                            {[a.courseName, a.levelName, a.sectionName].filter(Boolean).join(" · ")}
+                            {name}
                           </span>
                         ))}
+                        {overflow > 0 && (
+                          <span
+                            className="text-[11px] px-2 py-0.5 bg-gray-100 text-muted-foreground rounded-full font-medium whitespace-nowrap cursor-default"
+                            title={courseNames.slice(MAX_VISIBLE).join(", ")}
+                          >
+                            +{overflow} more
+                          </span>
+                        )}
                       </div>
                     )}
                   </td>
 
                   {/* Actions */}
                   <td className="px-4 py-3">
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-1.5">
                       <button
                         onClick={() => openEdit(t)}
                         title="Edit profile"
@@ -409,7 +410,8 @@ export default function Teachers() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
