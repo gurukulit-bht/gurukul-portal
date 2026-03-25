@@ -404,9 +404,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
   // ── Pre-fill Phase 2 fields from an existing student record ──
   function prefillFromStudent(s: LinkedStudent) {
     setPrefillSource(s);
-    // Student fields — clear so parent fills in fresh name/grade/year
-    setFirstName("");
-    setLastName("");
+    // Split stored full name into first / last
+    const nameParts = (s.name ?? "").trim().split(/\s+/);
+    setFirstName(nameParts[0] ?? "");
+    setLastName(nameParts.slice(1).join(" ") ?? "");
     setDob(s.dob ?? "");
     setGrade(s.grade ?? "");
     setCurricYear(s.curriculumYear ?? "2027-2028");
@@ -712,7 +713,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                     {prefillSource && (
                       <p className="text-xs text-blue-600 italic">
                         The form will be pre-filled with {prefillSource.name}'s details. You can edit any field before submitting.
-                        Student name and course enrollment must always be chosen fresh.
+                        Please choose the course enrollment fresh for this registration.
                       </p>
                     )}
                     <div className="pt-1 border-t border-blue-200">
