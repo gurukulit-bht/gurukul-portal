@@ -69,10 +69,6 @@ export default function Register() {
                   <span className="font-semibold text-secondary">{success.name}</span> has been
                   successfully registered.
                 </p>
-                <div className="mt-4 inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl">
-                  <span className="text-sm text-muted-foreground">Student ID:</span>
-                  <span className="font-mono font-bold text-primary text-lg">{success.code}</span>
-                </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-left space-y-2 max-w-md mx-auto">
                 <p className="text-sm font-semibold text-amber-800">What happens next?</p>
