@@ -18,12 +18,13 @@ function generatePin(): string {
 
 const router: IRouter = Router();
 
-// Build the full teacher list — uses section_assignments as the single source
-// of truth for course/section assignments.  The assistant↔teacher pairing is
-// stored directly on the teacher row (assistantId).
+// Build the full teacher list — combines section_assignments (specific section
+// assignments) and teacher_assignments (course-level assignments) so something
+// is always shown even before sections are individually assigned.
 async function buildTeacherList() {
   const teachers = await db.select().from(teachersTable).orderBy(teachersTable.id);
 
+  // Section-level assignments (Course Management UI)
   const sectionRows = await db
     .select({
       teacherId:   sectionAssignmentsTable.teacherId,
@@ -32,18 +33,62 @@ async function buildTeacherList() {
       sectionName: courseSectionsTable.sectionName,
       levelName:   courseLevelsTable.className,
       courseName:  coursesTable.name,
+      courseId:    coursesTable.id,
     })
     .from(sectionAssignmentsTable)
     .leftJoin(courseSectionsTable, eq(sectionAssignmentsTable.sectionId, courseSectionsTable.id))
     .leftJoin(courseLevelsTable,   eq(courseSectionsTable.courseLevelId,  courseLevelsTable.id))
     .leftJoin(coursesTable,        eq(courseLevelsTable.courseId,          coursesTable.id));
 
-  // Build a lookup: id → name for all teachers (used for assistant/teacher name resolution)
+  // Course-level assignments (teacher_assignments table)
+  const courseRows = await db
+    .select({
+      teacherId:  teacherAssignmentsTable.teacherId,
+      courseId:   teacherAssignmentsTable.courseId,
+      courseName: coursesTable.name,
+    })
+    .from(teacherAssignmentsTable)
+    .leftJoin(coursesTable, eq(teacherAssignmentsTable.courseId, coursesTable.id));
+
+  // Build a lookup: id → name for all teachers
   const nameById = new Map(teachers.map((t) => [t.id, t.name]));
 
   return teachers.map((t) => {
-    const myRows = sectionRows.filter((r) => r.teacherId === t.id);
-    const courseNames = [...new Set(myRows.map((r) => r.courseName).filter(Boolean))] as string[];
+    const mySectionRows = sectionRows.filter((r) => r.teacherId === t.id);
+
+    // Courses already covered by section-level assignments
+    const sectionCourseIds = new Set(mySectionRows.map((r) => r.courseId).filter(Boolean));
+
+    // Course-level rows for courses NOT already represented in section assignments
+    const myCourseRows = courseRows.filter(
+      (r) => r.teacherId === t.id && r.courseId !== null && !sectionCourseIds.has(r.courseId)
+    );
+
+    const allCourseNames = [
+      ...new Set([
+        ...mySectionRows.map((r) => r.courseName),
+        ...myCourseRows.map((r) => r.courseName),
+      ].filter(Boolean)),
+    ] as string[];
+
+    // Combine into a single assignments array for display
+    const assignments = [
+      ...mySectionRows.map((r) => ({
+        sectionId:   r.sectionId,
+        sectionName: r.sectionName,
+        levelName:   r.levelName,
+        courseName:  r.courseName,
+        role:        r.role,
+      })),
+      // Course-level entries shown without section/level detail
+      ...myCourseRows.map((r) => ({
+        sectionId:   null as number | null,
+        sectionName: null as string | null,
+        levelName:   null as string | null,
+        courseName:  r.courseName,
+        role:        "lead",
+      })),
+    ];
 
     // For Teacher rows: which assistant is paired
     const assistantName = t.assistantId ? (nameById.get(t.assistantId) ?? null) : null;
@@ -64,14 +109,8 @@ async function buildTeacherList() {
       assistantName,
       linkedTeacherId:   linkedTeacher?.id   ?? null,
       linkedTeacherName: linkedTeacher?.name ?? null,
-      courseNames,
-      assignments: myRows.map((r) => ({
-        sectionId:   r.sectionId,
-        sectionName: r.sectionName,
-        levelName:   r.levelName,
-        courseName:  r.courseName,
-        role:        r.role,
-      })),
+      courseNames:       allCourseNames,
+      assignments,
     };
   });
 }
