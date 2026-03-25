@@ -190,7 +190,8 @@ export default function Teachers() {
         <div>
           <h2 className="text-xl font-bold text-secondary">Staff Management</h2>
           <p className="text-sm text-muted-foreground">
-            {teachers.filter((t) => t.status === "Active").length} active staff · Expand a row to see their section assignments.
+            {teachers.filter((t) => t.status === "Active").length} active staff ·{" "}
+            <span className="text-orange-500 font-medium">Course assignments can be done in the course management section</span>
           </p>
         </div>
         <Button onClick={openAdd} className="gap-2 rounded-xl shrink-0">
