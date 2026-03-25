@@ -13,6 +13,10 @@ import { toast } from "sonner";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
+// DOB bounds: child must be at least 6 and at most 22 years old on the day of registration
+const MAX_DOB = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 6);  return d.toISOString().slice(0, 10); })();
+const MIN_DOB = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 22); return d.toISOString().slice(0, 10); })();
+
 const GRADES = [
   "Kindergarten","1st","2nd","3rd","4th","5th","6th",
   "7th","8th","9th","10th","11th","12th",
@@ -899,10 +903,12 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
               data-field-error={errors.lastName ? "true" : undefined}
             />
           </Field>
-          <Field label="Date of Birth" required error={errors.dob} hint="Student must be 6+ years of age">
+          <Field label="Date of Birth" required error={errors.dob} hint="Child must be at least 6 years old on the date of registration">
             <input
               type="date"
               value={dob}
+              min={MIN_DOB}
+              max={MAX_DOB}
               onChange={e => setDob(e.target.value)}
               onBlur={() => blurField("dob", dob)}
               className={inputClsFor("dob")}
