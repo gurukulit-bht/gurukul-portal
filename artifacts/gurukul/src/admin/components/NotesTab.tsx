@@ -34,7 +34,7 @@ function fmtDateLong(d: string) {
   });
 }
 
-export default function NotesTab() {
+export default function NotesTab({ standalone = false }: { standalone?: boolean }) {
   const [notes,   setNotes]   = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
@@ -110,6 +110,16 @@ export default function NotesTab() {
 
   return (
     <div className="space-y-5">
+
+      {/* Standalone page header */}
+      {standalone && (
+        <div>
+          <h2 className="text-xl font-bold text-secondary flex items-center gap-2">
+            <StickyNote className="w-5 h-5" /> My Sticky Notes
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Private notes — only visible to you.</p>
+        </div>
+      )}
 
       {/* Compose */}
       <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3">

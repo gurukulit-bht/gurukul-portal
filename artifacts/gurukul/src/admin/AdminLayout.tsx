@@ -5,7 +5,7 @@ import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./r
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
   Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
-  ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle,
+  ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle, StickyNote,
 } from "lucide-react";
 import NaradJiBot from "./components/NaradJiBot";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: "Announcements",        icon: Megaphone,       path: "/admin/announcements",     permission: "announcements" },
       { label: "Calendar",             icon: Calendar,        path: "/admin/calendar",          permission: "calendar" },
       { label: "Messaging Center",     icon: Mail,            path: "/admin/messaging",         permission: "messaging" },
+      { label: "My Sticky Notes",      icon: StickyNote,      path: "/admin/sticky-notes",      permission: "messaging" },
     ],
   },
   {
@@ -80,6 +81,7 @@ const TEACHER_NAV_ITEMS: NavItem[] = [
   { label: "Courses & Classes",  icon: BookOpen,      path: "/admin/courses",        permission: "courses" },
   { label: "Course Documents",   icon: FileText,      path: "/admin/documents",      permission: "documents" },
   { label: "Messaging Center",   icon: Newspaper,     path: "/admin/weekly-updates", permission: "weeklyUpdates" },
+  { label: "My Sticky Notes",   icon: StickyNote,    path: "/admin/sticky-notes",   permission: "messaging" },
   { label: "Settings",           icon: Settings,      path: "/admin/settings",       permission: "settings" },
   { label: "Help & Guide",       icon: HelpCircle,    path: "/admin/help",           permission: "help" },
 ];
