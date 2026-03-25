@@ -61,7 +61,11 @@ router.post("/", async (req, res) => {
       .returning();
 
     res.status(201).json(member);
-  } catch (err) {
+  } catch (err: unknown) {
+    const pg = err as { code?: string };
+    if (pg?.code === "23505") {
+      return res.status(409).json({ error: "A member with this email and phone number already exists." });
+    }
     req.log.error({ err }, "Member creation failed");
     res.status(500).json({ error: "Member creation failed" });
   }

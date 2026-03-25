@@ -170,7 +170,9 @@ export const membersTable = pgTable("members", {
   policyAgreed:     boolean("policy_agreed").default(false),
   membershipYear:   integer("membership_year"), // Year membership was last renewed/confirmed
   createdAt:        timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  unique("members_email_phone_uniq").on(table.email, table.phone),
+]);
 
 // ─── Students ─────────────────────────────────────────────────────────────────
 // One row per student (child). Parent info lives here too.

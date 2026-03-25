@@ -257,7 +257,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
 
   const [address, setAddress] = useState("");
 
-  const [volunteerParent, setVolunteerParent] = useState(false);
+  const [volunteerParent, setVolunteerParent] = useState<boolean | null>(null);
   const [volunteerArea,   setVolunteerArea]   = useState("");
 
   const [policyAgreed, setPolicyAgreed] = useState(false);
@@ -344,6 +344,8 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
       fatherEmployerOther: fatherEmployer === "Other (please specify)" && !fatherEmployerOther.trim()
         ? "Please specify your employer." : "",
       address:           validateAddress(address),
+      volunteerParent:   volunteerParent === null
+        ? "Please indicate whether a parent volunteers at the temple." : "",
       volunteerArea:     volunteerParent && !volunteerArea.trim()
         ? "Please describe the volunteer area." : "",
     };
@@ -459,7 +461,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
         fatherEmail:    fatherEmail.trim(),
         fatherEmployer: effectiveFatherEmployer || undefined,
         address:        address.trim(),
-        volunteerParent,
+        volunteerParent: volunteerParent ?? false,
         volunteerArea:  volunteerParent ? volunteerArea.trim() : undefined,
         enrollments:    validEnrollments.map(e => ({
           courseLevelId: Number(e.levelId),
@@ -907,21 +909,43 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
             />
           </Field>
 
-          {/* Volunteering */}
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-3">
-            <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">Volunteering</p>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={volunteerParent}
-                onChange={e => { setVolunteerParent(e.target.checked); if (!e.target.checked) setErrors(prev => ({ ...prev, volunteerArea: "" })); }}
-                className="mt-0.5 w-4 h-4 accent-primary"
-              />
-              <span className="text-sm text-secondary">
-                Do either of the parents currently volunteer at the Bharatiya Hindu Temple?
-              </span>
-            </label>
-            {volunteerParent && (
+          {/* Volunteering — required YES/NO */}
+          <div
+            className={`p-4 rounded-xl bg-amber-50 border space-y-3 ${errors.volunteerParent ? "border-red-400" : "border-amber-100"}`}
+            data-field-error={errors.volunteerParent ? "true" : undefined}
+          >
+            <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">
+              Volunteering <span className="text-red-500 ml-0.5">*</span>
+            </p>
+            <p className="text-sm text-secondary">
+              Do either of the parents currently volunteer at the Bharatiya Hindu Temple?
+            </p>
+            <div className="flex gap-6">
+              {(["Yes", "No"] as const).map(opt => (
+                <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="volunteerParent"
+                    value={opt}
+                    checked={volunteerParent === (opt === "Yes")}
+                    onChange={() => {
+                      const val = opt === "Yes";
+                      setVolunteerParent(val);
+                      setErrors(prev => ({ ...prev, volunteerParent: "", volunteerArea: val ? prev.volunteerArea : "" }));
+                      if (!val) setVolunteerArea("");
+                    }}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  <span className="text-sm font-medium text-secondary">{opt}</span>
+                </label>
+              ))}
+            </div>
+            {errors.volunteerParent && (
+              <p className="text-xs text-red-600 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" /> {errors.volunteerParent}
+              </p>
+            )}
+            {volunteerParent === true && (
               <Field label="In what area?" required error={errors.volunteerArea}>
                 <input
                   value={volunteerArea}
