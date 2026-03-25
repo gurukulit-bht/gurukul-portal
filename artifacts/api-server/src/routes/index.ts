@@ -10,6 +10,7 @@ import settingsRouter from "./settings";
 import weeklyUpdatesRouter from "./weekly-updates";
 import authRouter from "./auth";
 import adminMessagesRouter from "./admin-messages";
+import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/settings", settingsRouter);
 router.use("/weekly-updates", weeklyUpdatesRouter);
 router.use("/auth", authRouter);
 router.use("/admin-messages", adminMessagesRouter);
+router.use("/payments", paymentsRouter);
 
 export default router;

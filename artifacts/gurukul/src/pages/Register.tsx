@@ -1,22 +1,38 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { StudentRegistrationForm } from "@/components/StudentRegistrationForm";
+import { StudentRegistrationForm, type RegistrationPaymentInfo } from "@/components/StudentRegistrationForm";
 import { CaptchaGate } from "@/components/CaptchaGate";
+import { StripePaymentForm, PaymentSuccessCard } from "@/components/StripePaymentForm";
 import {
   CheckCircle2, BookOpen,
-  ShieldCheck, ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type SuccessState = {
+  code:        string;
+  name:        string;
+  payment:     RegistrationPaymentInfo;
+  paid:        boolean;
+  paidAmount?: number;
+};
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Register() {
   const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [success, setSuccess] = useState<{ code: string; name: string } | null>(null);
+  const [success, setSuccess] = useState<SuccessState | null>(null);
 
-  function handleSuccess(studentCode: string, studentName: string) {
-    setSuccess({ code: studentCode, name: studentName });
+  function handleSuccess(studentCode: string, studentName: string, paymentInfo: RegistrationPaymentInfo) {
+    setSuccess({ code: studentCode, name: studentName, payment: paymentInfo, paid: false });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handlePaymentDone(didPay: boolean, amount?: number) {
+    setSuccess(prev => prev ? { ...prev, paid: true, paidAmount: amount } : prev);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -24,6 +40,10 @@ export default function Register() {
   useEffect(() => {
     if (captchaVerified) window.scrollTo({ top: 0, behavior: "smooth" });
   }, [captchaVerified]);
+
+  const totalDue = success
+    ? success.payment.membershipFee + success.payment.courseCount * success.payment.courseFee
+    : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 to-white">
@@ -51,10 +71,10 @@ export default function Register() {
 
         <AnimatePresence mode="wait">
 
-          {/* ── Success State ── */}
-          {success && (
+          {/* ── Final confirmation (paid or skipped) ── */}
+          {success?.paid && (
             <motion.div
-              key="success"
+              key="final"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -64,21 +84,23 @@ export default function Register() {
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-secondary">Thank You!</h2>
+                <h2 className="text-2xl font-bold text-secondary">You're All Set!</h2>
                 <p className="text-muted-foreground mt-2 text-lg">
-                  <span className="font-semibold text-secondary">{success.name}</span> has been
-                  successfully registered.
+                  <span className="font-semibold text-secondary">{success.name}</span> has been successfully registered.
                 </p>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-left space-y-2 max-w-md mx-auto">
-                <p className="text-sm font-semibold text-amber-800">What happens next?</p>
-                <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
-                  <li>Our team will review your registration</li>
-                  <li>You'll receive a confirmation email with class details</li>
-                  <li>Payment can be made via Zelle, Check, or Cash on class day</li>
-                  <li>First class is Sunday, September 7, 2026</li>
-                </ul>
-              </div>
+
+              {success.paidAmount != null && success.paidAmount > 0 && (
+                <PaymentSuccessCard amount={success.paidAmount} />
+              )}
+
+              {(success.paidAmount == null || success.paidAmount === 0) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700 text-left space-y-1">
+                  <p className="font-semibold text-amber-800">Balance due: ${totalDue.toFixed(2)}</p>
+                  <p>Please bring payment (Zelle, Check, or Cash) to the first class or contact us at <a href="mailto:gurukul@bhtohio.org" className="underline">gurukul@bhtohio.org</a>.</p>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button variant="outline" onClick={() => { setSuccess(null); setCaptchaVerified(false); }}>
                   Register Another Child
@@ -87,6 +109,40 @@ export default function Register() {
                   <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
+            </motion.div>
+          )}
+
+          {/* ── Payment step ── */}
+          {success && !success.paid && (
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              {/* Registration confirmed banner */}
+              <div className="bg-white rounded-2xl border border-green-200 bg-green-50 px-5 py-4 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-green-800">Registration submitted!</p>
+                  <p className="text-sm text-green-700 mt-0.5">
+                    <span className="font-medium">{success.name}</span> has been registered.
+                    Please complete payment below to confirm your enrollment.
+                  </p>
+                </div>
+              </div>
+
+              <StripePaymentForm
+                studentCode={success.code}
+                studentName={success.name}
+                courseCount={success.payment.courseCount}
+                membershipFee={success.payment.membershipFee}
+                courseFee={success.payment.courseFee}
+                onPaymentDone={(didPay) =>
+                  handlePaymentDone(didPay, didPay ? totalDue : 0)
+                }
+              />
             </motion.div>
           )}
 

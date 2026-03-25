@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Lock, Bell, Globe, School, CalendarDays, Loader2, Hash, AlertCircle } from "lucide-react";
+import { Check, Lock, Bell, Globe, School, CalendarDays, Loader2, Hash, AlertCircle, CreditCard, Eye, EyeOff } from "lucide-react";
 import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import { useAuth } from "../AuthContext";
 import { changePin } from "../auth";
+import { adminApi } from "@/lib/adminApi";
 
 export default function Settings() {
   const [saved, setSaved] = useState<string | null>(null);
@@ -29,6 +30,50 @@ export default function Settings() {
   const [pinSaving,  setPinSaving]  = useState(false);
   const [pinError,   setPinError]   = useState<string | null>(null);
   const [pinSaved,   setPinSaved]   = useState(false);
+
+  // ── Stripe settings (admin only) ──
+  const [stripePubKey,     setStripePubKey]     = useState("");
+  const [stripeSecretKey,  setStripeSecretKey]  = useState("");
+  const [stripeMemberFee,  setStripeMemberFee]  = useState("150");
+  const [stripeCourseFee,  setStripeCourseFee]  = useState("35");
+  const [showSecret,       setShowSecret]       = useState(false);
+  const [stripeLoading,    setStripeLoading]    = useState(false);
+  const [stripeSaving,     setStripeSaving]     = useState(false);
+  const [stripeSaved,      setStripeSaved]      = useState(false);
+  const [stripeError,      setStripeError]      = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    setStripeLoading(true);
+    adminApi.settings.getAll()
+      .then((s: Record<string, string>) => {
+        setStripePubKey(s.stripe_publishable_key ?? "");
+        setStripeSecretKey(s.stripe_secret_key ?? "");
+        setStripeMemberFee(s.stripe_membership_fee ?? "150");
+        setStripeCourseFee(s.stripe_course_fee ?? "35");
+      })
+      .catch(() => setStripeError("Failed to load payment settings."))
+      .finally(() => setStripeLoading(false));
+  }, [isAdmin]);
+
+  async function saveStripeSettings() {
+    setStripeSaving(true);
+    setStripeError(null);
+    try {
+      await adminApi.settings.saveAll({
+        stripe_publishable_key: stripePubKey.trim(),
+        stripe_secret_key:      stripeSecretKey.trim(),
+        stripe_membership_fee:  stripeMemberFee.trim(),
+        stripe_course_fee:      stripeCourseFee.trim(),
+      });
+      setStripeSaved(true);
+      setTimeout(() => setStripeSaved(false), 3000);
+    } catch {
+      setStripeError("Failed to save payment settings. Please try again.");
+    } finally {
+      setStripeSaving(false);
+    }
+  }
 
   async function savePinChange(e: React.FormEvent) {
     e.preventDefault();
@@ -342,6 +387,120 @@ export default function Settings() {
               {saved === "academic" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Settings"}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* ── Stripe / Payment Gateway (admin only) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-secondary">Payment Gateway — Stripe</h3>
+              <p className="text-xs text-muted-foreground">
+                Configure your Stripe API keys. Get them from{" "}
+                <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  dashboard.stripe.com/apikeys
+                </a>.
+              </p>
+            </div>
+          </div>
+
+          {stripeLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading payment settings…
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Key status badge */}
+              {(stripePubKey === "pk_test_placeholder" || !stripePubKey) ? (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  Payment gateway is using placeholder keys — online payments are disabled until real keys are entered.
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+                  <Check className="w-4 h-4 shrink-0" />
+                  Stripe API keys are configured. Online payments are active.
+                </div>
+              )}
+
+              {/* Publishable key */}
+              <div className="space-y-1.5">
+                <Label>Publishable Key <span className="text-xs text-muted-foreground">(starts with pk_)</span></Label>
+                <Input
+                  value={stripePubKey}
+                  onChange={e => setStripePubKey(e.target.value)}
+                  placeholder="pk_live_... or pk_test_..."
+                  className="rounded-xl font-mono text-sm"
+                />
+              </div>
+
+              {/* Secret key */}
+              <div className="space-y-1.5">
+                <Label>Secret Key <span className="text-xs text-muted-foreground">(starts with sk_) — kept private</span></Label>
+                <div className="relative">
+                  <Input
+                    type={showSecret ? "text" : "password"}
+                    value={stripeSecretKey}
+                    onChange={e => setStripeSecretKey(e.target.value)}
+                    placeholder="sk_live_... or sk_test_..."
+                    className="rounded-xl font-mono text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-secondary"
+                  >
+                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Fee configuration */}
+              <div className="grid sm:grid-cols-2 gap-4 pt-1 border-t border-border">
+                <div className="space-y-1.5">
+                  <Label>Annual Membership Fee ($)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={stripeMemberFee}
+                    onChange={e => setStripeMemberFee(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Course Enrollment Fee per Course ($)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={stripeCourseFee}
+                    onChange={e => setStripeCourseFee(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+
+              {stripeError && (
+                <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {stripeError}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button onClick={saveStripeSettings} disabled={stripeSaving} className="rounded-xl gap-2">
+                  {stripeSaving
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                    : stripeSaved
+                      ? <><Check className="w-4 h-4" /> Saved!</>
+                      : "Save Payment Settings"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

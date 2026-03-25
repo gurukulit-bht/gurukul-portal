@@ -150,6 +150,10 @@ export const adminApi = {
     changeSuperAdminPassword: (overridePin: string, newPassword: string) =>
       request("POST", "/admin-users/super-admin/change-password", { overridePin, newPassword }),
   },
+  settings: {
+    getAll:  () => request<Record<string, string>>("GET", "/settings"),
+    saveAll: (settings: Record<string, string>) => request("PUT", "/settings", { settings }),
+  },
   messaging: {
     recipients: (params: { course?: string; curricYear?: string; employer?: string }) => {
       const qs = new URLSearchParams();

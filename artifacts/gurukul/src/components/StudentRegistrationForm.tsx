@@ -218,8 +218,14 @@ function EmployerSelect({
 
 // ─── Main Form Component ──────────────────────────────────────────────────────
 
+export type RegistrationPaymentInfo = {
+  courseCount:    number;
+  membershipFee:  number;  // in dollars
+  courseFee:      number;  // per course in dollars
+};
+
 type Props = {
-  onSuccess: (studentCode: string, studentName: string) => void;
+  onSuccess: (studentCode: string, studentName: string, paymentInfo: RegistrationPaymentInfo) => void;
   onBack?:   () => void;
   submitLabel?: string;
   adminMode?: boolean;
@@ -546,7 +552,11 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
         })),
       }) as { studentCode: string };
 
-      onSuccess(result.studentCode, `${firstName.trim()} ${lastName.trim()}`);
+      onSuccess(result.studentCode, `${firstName.trim()} ${lastName.trim()}`, {
+        courseCount:   validEnrollments.length,
+        membershipFee: 150,
+        courseFee:     35,
+      });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {

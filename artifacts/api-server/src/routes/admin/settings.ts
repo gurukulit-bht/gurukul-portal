@@ -8,6 +8,10 @@ const router: IRouter = Router();
 // Default settings seeded on first access
 const DEFAULTS: Record<string, string> = {
   active_curriculum_year: "2027-28",
+  stripe_publishable_key: "pk_test_placeholder",
+  stripe_secret_key:      "sk_test_placeholder",
+  stripe_membership_fee:  "150",
+  stripe_course_fee:      "35",
 };
 
 async function ensureDefaults() {
