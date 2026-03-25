@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { adminApi } from "@/lib/adminApi";
 import {
   Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck, KeyRound, Eye, EyeOff,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,8 +51,6 @@ const emptyForm: FormState = {
   linkedTeacherId: null,
 };
 
-type Course = { id: number; name: string };
-
 export default function Teachers() {
   const [teachers,        setTeachers]        = useState<Teacher[]>([]);
   const [loading,         setLoading]         = useState(true);
@@ -67,17 +66,12 @@ export default function Teachers() {
   const [pinBanner,       setPinBanner]       = useState<{ name: string; pin: string } | null>(null);
   const [showPin,         setShowPin]         = useState(false);
   const [resettingPin,    setResettingPin]    = useState<number | null>(null);
-  // Course assignment state
-  const [allCourses,      setAllCourses]      = useState<Course[]>([]);
-  const [selectedCourseIds, setSelectedCourseIds] = useState<Set<number>>(new Set());
+  // Expanded row for section assignments
+  const [expandedId,      setExpandedId]      = useState<number | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      adminApi.teachers.list(),
-      adminApi.courses.list(),
-    ]).then(([teacherData, courseData]) => {
-      setTeachers(teacherData as Teacher[]);
-      setAllCourses((courseData as Course[]).map((c) => ({ id: c.id, name: c.name })));
+    adminApi.teachers.list().then((data) => {
+      setTeachers(data as Teacher[]);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -96,7 +90,6 @@ export default function Teachers() {
   function openAdd() {
     setEditing(null);
     setForm(emptyForm);
-    setSelectedCourseIds(new Set());
     setError("");
     setShowModal(true);
   }
@@ -111,13 +104,8 @@ export default function Teachers() {
       assistantId:     t.assistantId,
       linkedTeacherId: t.linkedTeacherId,
     });
-    setSelectedCourseIds(new Set());
     setError("");
     setShowModal(true);
-    // Load existing course assignments
-    adminApi.teachers.getCourseAssignments(t.id)
-      .then((ids) => setSelectedCourseIds(new Set(ids)))
-      .catch(() => {});
   }
 
   // When category changes, clear the pairing fields
@@ -134,17 +122,13 @@ export default function Teachers() {
     setSaving(true);
     try {
       const payload = { ...form };
-      const courseIds = [...selectedCourseIds];
-      let teacherId: number;
 
       if (editing) {
         await adminApi.teachers.update(editing.id, payload);
-        teacherId = editing.id;
         const fresh = await adminApi.teachers.list();
         setTeachers(fresh as Teacher[]);
       } else {
         const result = await adminApi.teachers.create(payload) as { id?: number; generatedPin?: string; name?: string };
-        teacherId = result.id!;
         const fresh = await adminApi.teachers.list();
         setTeachers(fresh as Teacher[]);
         // Show the generated PIN banner
@@ -153,9 +137,6 @@ export default function Teachers() {
           setShowPin(false);
         }
       }
-
-      // Save course assignments
-      await adminApi.teachers.setCourseAssignments(teacherId, courseIds);
 
       setShowModal(false);
     } catch (e: unknown) {
@@ -212,7 +193,7 @@ export default function Teachers() {
         <div>
           <h2 className="text-xl font-bold text-secondary">Staff Management</h2>
           <p className="text-sm text-muted-foreground">
-            {teachers.filter((t) => t.status === "Active").length} active staff · Course assignments control which courses appear in their attendance dropdown.
+            {teachers.filter((t) => t.status === "Active").length} active staff · Expand a row to see their section assignments.
           </p>
         </div>
         <Button onClick={openAdd} className="gap-2 rounded-xl shrink-0">
@@ -308,11 +289,29 @@ export default function Teachers() {
                 const overflow = courseNames.length - MAX_VISIBLE;
                 const pairedName = t.category !== "Assistant" ? t.assistantName : t.linkedTeacherName;
 
+                const isExpanded = expandedId === t.id;
+                const hasAssignments = t.assignments.length > 0;
+
                 return (
-                <tr key={t.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors">
-                  {/* Name + Contact */}
+                <React.Fragment key={t.id}>
+                <tr className={`border-b ${isExpanded ? "border-primary/20" : "border-border/50"} hover:bg-gray-50 transition-colors`}>
+                  {/* Name + Contact + expand toggle */}
                   <td className="px-4 py-3 min-w-[200px]">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : t.id)}
+                        disabled={!hasAssignments}
+                        title={hasAssignments ? (isExpanded ? "Collapse sections" : "Expand sections") : "No sections assigned"}
+                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors ${
+                          hasAssignments
+                            ? "text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
+                            : "text-gray-200 cursor-default"
+                        }`}
+                      >
+                        {isExpanded
+                          ? <ChevronDown className="w-3.5 h-3.5" />
+                          : <ChevronRight className="w-3.5 h-3.5" />}
+                      </button>
                       <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                         {t.name.split(" ").pop()?.charAt(0) ?? "T"}
                       </div>
@@ -410,6 +409,51 @@ export default function Teachers() {
                     </div>
                   </td>
                 </tr>
+
+                {/* Expanded section assignments row */}
+                {isExpanded && hasAssignments && (
+                  <tr className="bg-primary/[0.03] border-b border-primary/20">
+                    <td colSpan={4} className="px-6 pb-3 pt-1">
+                      <div className="text-[11px] font-semibold text-primary/70 uppercase tracking-wide mb-2 ml-5">
+                        Section Assignments
+                      </div>
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted-foreground">
+                            <th className="text-left font-semibold pb-1 pl-5 pr-3">Course</th>
+                            <th className="text-left font-semibold pb-1 pr-3">Level</th>
+                            <th className="text-left font-semibold pb-1 pr-3">Section</th>
+                            <th className="text-left font-semibold pb-1">Role</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {t.assignments.map((a, i) => (
+                            <tr key={i} className="border-t border-border/30">
+                              <td className="py-1.5 pl-5 pr-3">
+                                <span className="inline-flex items-center gap-1 font-medium text-secondary">
+                                  <BookOpen className="w-2.5 h-2.5 text-primary shrink-0" />
+                                  {a.courseName ?? "—"}
+                                </span>
+                              </td>
+                              <td className="py-1.5 pr-3 text-muted-foreground">{a.levelName ?? "—"}</td>
+                              <td className="py-1.5 pr-3 text-muted-foreground">{a.sectionName ?? "—"}</td>
+                              <td className="py-1.5">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  a.role === "lead"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-purple-100 text-purple-700"
+                                }`}>
+                                  {a.role ?? "—"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
                 );
               })}
             </tbody>
@@ -535,44 +579,6 @@ export default function Teachers() {
                 </div>
               )}
 
-              {/* Course Assignments */}
-              {allCourses.length > 0 && (
-                <div className="space-y-2">
-                  <Label>
-                    Course Assignments
-                    <span className="text-xs text-muted-foreground ml-1.5 font-normal">(appears in attendance dropdown)</span>
-                  </Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {allCourses.map((course) => {
-                      const checked = selectedCourseIds.has(course.id);
-                      return (
-                        <label
-                          key={course.id}
-                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 cursor-pointer transition-colors text-sm font-medium select-none ${
-                            checked
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border bg-gray-50 text-secondary hover:border-primary/40"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            className="accent-primary"
-                            checked={checked}
-                            onChange={(e) => {
-                              setSelectedCourseIds((prev) => {
-                                const next = new Set(prev);
-                                e.target.checked ? next.add(course.id) : next.delete(course.id);
-                                return next;
-                              });
-                            }}
-                          />
-                          {course.name}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="p-6 border-t border-border flex justify-end gap-3 shrink-0">
