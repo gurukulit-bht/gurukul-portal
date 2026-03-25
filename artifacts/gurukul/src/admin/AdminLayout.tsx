@@ -52,7 +52,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: "Announcements",        icon: Megaphone,       path: "/admin/announcements",     permission: "announcements" },
       { label: "Calendar",             icon: Calendar,        path: "/admin/calendar",          permission: "calendar" },
       { label: "Messaging Center",     icon: Mail,            path: "/admin/messaging",         permission: "messaging" },
-      { label: "My Sticky Notes",      icon: StickyNote,      path: "/admin/sticky-notes",      permission: "messaging" },
     ],
   },
   {
@@ -68,6 +67,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     emoji: "⚙️",
     items: [
       { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",             permission: "roles" },
+      { label: "My Sticky Notes",      icon: StickyNote,      path: "/admin/sticky-notes",      permission: "messaging" },
       { label: "Settings",             icon: Settings,        path: "/admin/settings",          permission: "settings" },
       { label: "Help & Guide",         icon: HelpCircle,      path: "/admin/help",              permission: "help" },
     ],
