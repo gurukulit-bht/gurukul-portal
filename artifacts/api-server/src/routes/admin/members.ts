@@ -36,7 +36,9 @@ router.post("/lookup", async (req, res) => {
   }
 });
 
-// POST /api/admin/members — create a new temple member
+// POST /api/admin/members — create a new temple member or parent membership
+// isExistingMember=true → verified temple member
+// isExistingMember=false (default) → parent membership created during student registration
 router.post("/", async (req, res) => {
   try {
     const { name, email, phone, isExistingMember, policyAgreed } = req.body as {

@@ -57,7 +57,8 @@ export const adminApi = {
   },
   members: {
     lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null }>("POST", "/members/lookup", { emailOrPhone }),
-    create: (data: unknown) => request<{ id: number; name: string | null; email: string | null; phone: string | null }>("POST", "/members", data),
+    create: (data: { name: string; phone?: string | null; email?: string | null; isExistingMember?: boolean; policyAgreed?: boolean }) =>
+      request<{ id: number; isExistingMember: boolean; name: string | null; email: string | null; phone: string | null }>("POST", "/members", data),
     update: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
   },
   backfill: {

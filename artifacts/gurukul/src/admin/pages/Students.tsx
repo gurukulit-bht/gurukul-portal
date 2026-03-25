@@ -464,16 +464,16 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
     if (!newMemberName.trim()) { toast.error("Parent/member name is required"); return; }
     setCreatingMember(true);
     try {
-      const isExisting = membershipPath === "existing";
+      const isTemple = membershipPath === "existing";
       const m = await adminApi.members.create({
         name:             newMemberName.trim(),
         phone:            newMemberPhone.trim() || null,
         email:            newMemberEmail.trim() || null,
-        isExistingMember: isExisting,
+        isExistingMember: isTemple,
       });
       setLinkedMember({ id: m.id, name: newMemberName.trim(), phone: newMemberPhone.trim() || null, email: newMemberEmail.trim() || null });
       setMemberNotFound(false);
-      toast.success(isExisting ? "Member record created and linked!" : "Parent Membership created and linked!");
+      toast.success(isTemple ? "Temple member record created and linked!" : "Parent Membership created and linked!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create membership record");
     } finally {

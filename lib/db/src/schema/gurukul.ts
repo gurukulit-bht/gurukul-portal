@@ -165,6 +165,7 @@ export const membersTable = pgTable("members", {
   name:             text("name"),
   email:            text("email"),
   phone:            text("phone"),
+  // isExistingMember: true = verified temple member, false = parent membership created during registration
   isExistingMember: boolean("is_existing_member").default(false),
   policyAgreed:     boolean("policy_agreed").default(false),
   membershipYear:   integer("membership_year"), // Year membership was last renewed/confirmed

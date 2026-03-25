@@ -125,4 +125,43 @@ router.post("/members", async (req, res) => {
   }
 });
 
+// POST /api/admin/backfill/schema-migrate
+// Idempotent DDL migration: adds member_type column + indexes if not present.
+// Uses the existing DB connection pool so it works even when push-force can't connect.
+router.post("/schema-migrate", async (req, res) => {
+  try {
+    const steps: string[] = [];
+
+    // 1. Add member_type column (safe IF NOT EXISTS)
+    await db.execute(sql`
+      ALTER TABLE members
+        ADD COLUMN IF NOT EXISTS member_type TEXT NOT NULL DEFAULT 'parent'
+    `);
+    steps.push("member_type column ensured");
+
+    // 2. Back-fill existing rows: temple members → 'temple', rest stay 'parent'
+    const updated = await db.execute(sql`
+      UPDATE members
+         SET member_type = 'temple'
+       WHERE is_existing_member = true
+         AND member_type = 'parent'
+    `);
+    steps.push(`${(updated as unknown as { rowCount: number }).rowCount ?? 0} existing temple member rows updated to 'temple'`);
+
+    // 3. Indexes for fast phone / email lookup
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_members_phone ON members(phone)
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_members_email ON members(email)
+    `);
+    steps.push("indexes on phone and email ensured");
+
+    res.json({ ok: true, steps });
+  } catch (err) {
+    req.log.error({ err }, "Schema migration failed");
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 export default router;
