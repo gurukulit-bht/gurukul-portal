@@ -57,6 +57,13 @@ export const adminApi = {
   },
   members: {
     lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null }>("POST", "/members/lookup", { emailOrPhone }),
+    studentsByMember: (memberId: number) => request<Array<{
+      id: number; studentCode: string; name: string;
+      dob: string | null; grade: string | null; curriculumYear: string | null;
+      motherName: string | null; motherPhone: string | null; motherEmail: string | null; motherEmployer: string | null;
+      fatherName: string | null; fatherPhone: string | null; fatherEmail: string | null; fatherEmployer: string | null;
+      address: string | null; volunteerParent: boolean | null; volunteerArea: string | null;
+    }>>("GET", `/members/${memberId}/students`),
     create: (data: { name: string; phone?: string | null; email?: string | null; isExistingMember?: boolean; policyAgreed?: boolean }) =>
       request<{ id: number; isExistingMember: boolean; name: string | null; email: string | null; phone: string | null }>("POST", "/members", data),
     update: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),

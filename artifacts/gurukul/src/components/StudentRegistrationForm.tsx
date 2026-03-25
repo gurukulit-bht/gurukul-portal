@@ -91,12 +91,9 @@ function validateAddress(v: string): string {
 }
 
 function validateLookupInput(v: string): string {
-  if (!v.trim()) return "Please enter your email address or phone number.";
+  if (!v.trim()) return "Please enter your registered phone number.";
   const digits = v.replace(/\D/g, "");
-  const looksLikePhone = digits.length >= 10 && !/[@]/.test(v);
-  const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-  if (!looksLikePhone && !looksLikeEmail)
-    return "Please enter a valid email address (e.g. name@email.com) or 10-digit phone number.";
+  if (digits.length < 10) return "Please enter a valid 10-digit phone number.";
   return "";
 }
 
@@ -113,6 +110,26 @@ type FoundMember  = {
   email: string | null;
   phone: string | null;
   membershipYear: number | null;
+};
+
+type LinkedStudent = {
+  id: number;
+  studentCode: string;
+  name: string;
+  dob: string | null;
+  grade: string | null;
+  curriculumYear: string | null;
+  motherName: string | null;
+  motherPhone: string | null;
+  motherEmail: string | null;
+  motherEmployer: string | null;
+  fatherName: string | null;
+  fatherPhone: string | null;
+  fatherEmail: string | null;
+  fatherEmployer: string | null;
+  address: string | null;
+  volunteerParent: boolean | null;
+  volunteerArea: string | null;
 };
 
 type EnrollmentDraft = {
@@ -218,6 +235,9 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
   const [lookupLoading,    setLookupLoading]    = useState(false);
   const [foundMember,      setFoundMember]      = useState<FoundMember | null>(null);
   const [lookupError,      setLookupError]      = useState("");
+  const [linkedStudents,   setLinkedStudents]   = useState<LinkedStudent[]>([]);
+  const [linkedLoading,    setLinkedLoading]    = useState(false);
+  const [prefillSource,    setPrefillSource]    = useState<LinkedStudent | null>(null);
 
   // New member fields (if not existing)
   const [memberName,  setMemberName]  = useState("");
@@ -353,20 +373,72 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
 
   // ── Phase 1: Lookup ──
   async function handleLookup() {
-    const val = lookupValue.trim();
+    const val = lookupValue.trim().replace(/\D/g, ""); // digits only
     const err = validateLookupInput(val);
     if (err) { setLookupError(err); return; }
     setLookupError("");
+    setLinkedStudents([]);
+    setPrefillSource(null);
     setLookupLoading(true);
     try {
       const m = await adminApi.members.lookup(val);
       setFoundMember(m);
+      // Fetch any students already linked to this member
+      setLinkedLoading(true);
+      try {
+        const students = await adminApi.members.studentsByMember(m.id);
+        setLinkedStudents(students);
+      } catch {
+        setLinkedStudents([]);
+      } finally {
+        setLinkedLoading(false);
+      }
     } catch {
       setFoundMember(null);
-      setLookupError('No member found with that email or phone. Please check and try again, or select \u201cNo, I am new\u201d below.');
+      setLookupError("No member found with that phone number. Please check and try again, or select \u201cNo, I am new\u201d below.");
     } finally {
       setLookupLoading(false);
     }
+  }
+
+  // ── Pre-fill Phase 2 fields from an existing student record ──
+  function prefillFromStudent(s: LinkedStudent) {
+    setPrefillSource(s);
+    // Student fields — clear so parent fills in fresh name/grade/year
+    setFirstName("");
+    setLastName("");
+    setDob(s.dob ?? "");
+    setGrade(s.grade ?? "");
+    setCurricYear(s.curriculumYear ?? "2027-2028");
+    // Mother
+    setMotherName(s.motherName ?? "");
+    setMotherPhone(s.motherPhone ?? "");
+    setMotherEmail(s.motherEmail ?? "");
+    const mEmp = s.motherEmployer ?? "";
+    if (!mEmp || EMPLOYERS_LIST.includes(mEmp)) {
+      setMotherEmployer(mEmp);
+      setMotherEmployerOther("");
+    } else {
+      setMotherEmployer("Other (please specify)");
+      setMotherEmployerOther(mEmp);
+    }
+    // Father
+    setFatherName(s.fatherName ?? "");
+    setFatherPhone(s.fatherPhone ?? "");
+    setFatherEmail(s.fatherEmail ?? "");
+    const fEmp = s.fatherEmployer ?? "";
+    if (!fEmp || EMPLOYERS_LIST.includes(fEmp)) {
+      setFatherEmployer(fEmp);
+      setFatherEmployerOther("");
+    } else {
+      setFatherEmployer("Other (please specify)");
+      setFatherEmployerOther(fEmp);
+    }
+    // Address & volunteer
+    setAddress(s.address ?? "");
+    setVolunteerParent(s.volunteerParent ?? false);
+    setVolunteerArea(s.volunteerArea ?? "");
+    setErrors({});
   }
 
   // ── Phase 1 → Phase 2 ──
@@ -522,6 +594,8 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                   setFoundMember(null);
                   setLookupValue("");
                   setLookupError("");
+                  setLinkedStudents([]);
+                  setPrefillSource(null);
                   setMembershipConfirmed(false);
                   setMembershipError("");
                 }}
@@ -540,49 +614,129 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
           </div>
         </div>
 
-        {/* Existing member: lookup */}
+        {/* Existing member: lookup by phone */}
         {isExistingMember === true && (
-          <div className="p-4 rounded-xl bg-green-50 border border-green-200 space-y-3">
-            <p className="text-xs font-bold text-green-800 uppercase tracking-wide">Member Lookup</p>
-            <p className="text-sm text-green-700">
-              Enter your registered email address or phone number to locate your member record.
-            </p>
-            <div className="flex gap-2">
-              <div className="flex-1 space-y-1">
-                <input
-                  value={lookupValue}
-                  onChange={e => { setLookupValue(e.target.value); setLookupError(""); }}
-                  onKeyDown={e => e.key === "Enter" && handleLookup()}
-                  placeholder="Email address or 10-digit phone number"
-                  className={`${inputCls} ${lookupError ? "border-red-400" : ""}`}
-                />
-                <FieldError msg={lookupError} />
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl bg-green-50 border border-green-200 space-y-3">
+              <p className="text-xs font-bold text-green-800 uppercase tracking-wide">Member Lookup</p>
+              <p className="text-sm text-green-700">
+                Enter your registered phone number to locate your temple membership record.
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1 space-y-1">
+                  <input
+                    type="tel"
+                    value={lookupValue}
+                    onChange={e => { setLookupValue(e.target.value); setLookupError(""); }}
+                    onKeyDown={e => e.key === "Enter" && handleLookup()}
+                    placeholder="10-digit phone number"
+                    className={`${inputCls} ${lookupError ? "border-red-400" : ""}`}
+                  />
+                  <FieldError msg={lookupError} />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleLookup}
+                  disabled={lookupLoading}
+                  className="gap-1.5 shrink-0 self-start"
+                >
+                  {lookupLoading
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <><Search className="w-4 h-4" /> Find Me</>
+                  }
+                </Button>
               </div>
-              <Button
-                type="button"
-                onClick={handleLookup}
-                disabled={lookupLoading}
-                className="gap-1.5 shrink-0 self-start"
-              >
-                {lookupLoading
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <><Search className="w-4 h-4" /> Look Up</>
-                }
-              </Button>
+
+              {foundMember && (
+                <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-green-300">
+                  <UserCheck className="w-5 h-5 text-green-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-secondary">{foundMember.name ?? "Member"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[foundMember.email, foundMember.phone].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <span className="ml-auto text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full shrink-0">
+                    Verified ✓
+                  </span>
+                </div>
+              )}
             </div>
 
+            {/* Linked students — shown after member is found */}
             {foundMember && (
-              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-green-300">
-                <UserCheck className="w-5 h-5 text-green-600 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-secondary">{foundMember.name ?? "Member"}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {[foundMember.email, foundMember.phone].filter(Boolean).join(" · ")}
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-3">
+                <p className="text-xs font-bold text-blue-800 uppercase tracking-wide">
+                  {linkedLoading ? "Loading students…" : linkedStudents.length > 0 ? "Students in Your Account" : "No Students Registered Yet"}
+                </p>
+                {linkedLoading && (
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Fetching your students…
+                  </div>
+                )}
+                {!linkedLoading && linkedStudents.length > 0 && (
+                  <>
+                    <p className="text-sm text-blue-700">
+                      We found {linkedStudents.length} student{linkedStudents.length > 1 ? "s" : ""} linked to your account.
+                      Select a student to pre-fill the registration form, or register a new child.
+                    </p>
+                    <div className="space-y-2">
+                      {linkedStudents.map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => { prefillFromStudent(s); setMembershipConfirmed(false); setMembershipError(""); }}
+                          className={`w-full text-left p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                            prefillSource?.id === s.id
+                              ? "border-primary bg-primary/5"
+                              : "border-blue-200 bg-white hover:border-blue-400"
+                          }`}
+                        >
+                          <GraduationCap className={`w-5 h-5 shrink-0 ${prefillSource?.id === s.id ? "text-primary" : "text-blue-500"}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-secondary">{s.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {[s.grade ? `Grade: ${s.grade}` : null, s.curriculumYear ? `Year: ${s.curriculumYear}` : null].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                            prefillSource?.id === s.id
+                              ? "bg-primary text-white"
+                              : "bg-blue-100 text-blue-700"
+                          }`}>
+                            {prefillSource?.id === s.id ? "Selected ✓" : "Pre-fill Form"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    {prefillSource && (
+                      <p className="text-xs text-blue-600 italic">
+                        The form will be pre-filled with {prefillSource.name}'s details. You can edit any field before submitting.
+                        Student name and course enrollment must always be chosen fresh.
+                      </p>
+                    )}
+                    <div className="pt-1 border-t border-blue-200">
+                      <button
+                        type="button"
+                        onClick={() => { setPrefillSource(null); setErrors({}); }}
+                        className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                          prefillSource === null
+                            ? "text-primary font-semibold"
+                            : "text-blue-600 hover:text-primary"
+                        }`}
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Register a new child / start fresh
+                        {prefillSource === null && <span className="text-xs ml-1 bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">Selected</span>}
+                      </button>
+                    </div>
+                  </>
+                )}
+                {!linkedLoading && linkedStudents.length === 0 && (
+                  <p className="text-sm text-blue-700">
+                    You'll fill in all details on the next screen.
                   </p>
-                </div>
-                <span className="ml-auto text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full shrink-0">
-                  Found ✓
-                </span>
+                )}
               </div>
             )}
           </div>
@@ -707,6 +861,18 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} className="space-y-8" noValidate>
+
+      {/* ── Pre-fill banner ── */}
+      {prefillSource && (
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-sm">
+          <RefreshCw className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-blue-800">Form pre-filled from {prefillSource.name}'s record.</span>
+            <span className="text-blue-700"> Review and update any fields, then choose courses and submit.</span>
+          </div>
+          <button type="button" onClick={() => setPrefillSource(null)} className="ml-auto text-blue-500 hover:text-blue-700 text-xs shrink-0">Clear</button>
+        </div>
+      )}
 
       {/* ── Section 1: Student Info ── */}
       <div>
