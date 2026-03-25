@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/adminApi";
 import {
   Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck, KeyRound, Eye, EyeOff,
-  ChevronDown, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,8 +65,6 @@ export default function Teachers() {
   const [pinBanner,       setPinBanner]       = useState<{ name: string; pin: string } | null>(null);
   const [showPin,         setShowPin]         = useState(false);
   const [resettingPin,    setResettingPin]    = useState<number | null>(null);
-  // Expanded row for section assignments
-  const [expandedId,      setExpandedId]      = useState<number | null>(null);
 
   useEffect(() => {
     adminApi.teachers.list().then((data) => {
@@ -282,46 +279,27 @@ export default function Teachers() {
                 <tr><td colSpan={4} className="text-center py-12 text-muted-foreground">No staff found.</td></tr>
               )}
               {filtered.map((t) => {
-                // Unique course names for compact display
-                const courseNames = [...new Set(t.assignments.map(a => a.courseName).filter(Boolean))] as string[];
-                const MAX_VISIBLE = 3;
-                const visible = courseNames.slice(0, MAX_VISIBLE);
-                const overflow = courseNames.length - MAX_VISIBLE;
                 const pairedName = t.category !== "Assistant" ? t.assistantName : t.linkedTeacherName;
-
-                const isExpanded = expandedId === t.id;
-                const hasAssignments = t.assignments.length > 0;
-
                 return (
-                <React.Fragment key={t.id}>
-                <tr className={`border-b ${isExpanded ? "border-primary/20" : "border-border/50"} hover:bg-gray-50 transition-colors`}>
-                  {/* Name + Contact + expand toggle */}
+                <tr key={t.id} className="border-b border-border/50 hover:bg-gray-50 transition-colors align-top">
+                  {/* Name + Contact */}
                   <td className="px-4 py-3 min-w-[200px]">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : t.id)}
-                        disabled={!hasAssignments}
-                        title={hasAssignments ? (isExpanded ? "Collapse sections" : "Expand sections") : "No sections assigned"}
-                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors ${
-                          hasAssignments
-                            ? "text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
-                            : "text-gray-200 cursor-default"
-                        }`}
-                      >
-                        {isExpanded
-                          ? <ChevronDown className="w-3.5 h-3.5" />
-                          : <ChevronRight className="w-3.5 h-3.5" />}
-                      </button>
+                    <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                         {t.name.split(" ").pop()?.charAt(0) ?? "T"}
                       </div>
                       <div className="min-w-0">
                         <div className="font-medium text-secondary truncate">{t.name}</div>
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Mail className="w-2.5 h-2.5 shrink-0" />
                           <span className="truncate">{t.email}</span>
-                          {t.phone && <><span className="mx-0.5">·</span><Phone className="w-2.5 h-2.5 shrink-0" /><span>{t.phone}</span></>}
                         </div>
+                        {t.phone && (
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Phone className="w-2.5 h-2.5 shrink-0" />
+                            <span>{t.phone}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -343,26 +321,20 @@ export default function Teachers() {
                     </div>
                   </td>
 
-                  {/* Courses — compact, no-wrap chips with overflow count */}
+                  {/* Assigned sections — course · level · section per line */}
                   <td className="px-4 py-3">
-                    {courseNames.length === 0 ? (
+                    {t.assignments.length === 0 ? (
                       <span className="text-xs text-muted-foreground italic">None assigned</span>
                     ) : (
-                      <div className="flex items-center gap-1 flex-nowrap">
-                        {visible.map((name) => (
-                          <span key={name} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium whitespace-nowrap">
-                            <BookOpen className="w-2.5 h-2.5 shrink-0" />
-                            {name}
-                          </span>
+                      <div className="space-y-1">
+                        {t.assignments.map((a, i) => (
+                          <div key={i} className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+                            <BookOpen className="w-2.5 h-2.5 text-primary shrink-0" />
+                            <span className="font-medium text-secondary">{a.courseName}</span>
+                            {a.levelName  && <><span className="text-muted-foreground/50">·</span><span className="text-muted-foreground">{a.levelName}</span></>}
+                            {a.sectionName && <><span className="text-muted-foreground/50">·</span><span className="text-muted-foreground">{a.sectionName}</span></>}
+                          </div>
                         ))}
-                        {overflow > 0 && (
-                          <span
-                            className="text-[11px] px-2 py-0.5 bg-gray-100 text-muted-foreground rounded-full font-medium whitespace-nowrap cursor-default"
-                            title={courseNames.slice(MAX_VISIBLE).join(", ")}
-                          >
-                            +{overflow} more
-                          </span>
-                        )}
                       </div>
                     )}
                   </td>
@@ -409,51 +381,6 @@ export default function Teachers() {
                     </div>
                   </td>
                 </tr>
-
-                {/* Expanded section assignments row */}
-                {isExpanded && hasAssignments && (
-                  <tr className="bg-primary/[0.03] border-b border-primary/20">
-                    <td colSpan={4} className="px-6 pb-3 pt-1">
-                      <div className="text-[11px] font-semibold text-primary/70 uppercase tracking-wide mb-2 ml-5">
-                        Section Assignments
-                      </div>
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-muted-foreground">
-                            <th className="text-left font-semibold pb-1 pl-5 pr-3">Course</th>
-                            <th className="text-left font-semibold pb-1 pr-3">Level</th>
-                            <th className="text-left font-semibold pb-1 pr-3">Section</th>
-                            <th className="text-left font-semibold pb-1">Role</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {t.assignments.map((a, i) => (
-                            <tr key={i} className="border-t border-border/30">
-                              <td className="py-1.5 pl-5 pr-3">
-                                <span className="inline-flex items-center gap-1 font-medium text-secondary">
-                                  <BookOpen className="w-2.5 h-2.5 text-primary shrink-0" />
-                                  {a.courseName ?? "—"}
-                                </span>
-                              </td>
-                              <td className="py-1.5 pr-3 text-muted-foreground">{a.levelName ?? "—"}</td>
-                              <td className="py-1.5 pr-3 text-muted-foreground">{a.sectionName ?? "—"}</td>
-                              <td className="py-1.5">
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                  a.role === "lead"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-purple-100 text-purple-700"
-                                }`}>
-                                  {a.role ?? "—"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
-                )}
-                </React.Fragment>
                 );
               })}
             </tbody>
