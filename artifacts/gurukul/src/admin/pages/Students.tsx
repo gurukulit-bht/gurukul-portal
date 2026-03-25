@@ -992,7 +992,7 @@ export default function Students() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div>
-          <h2 className="text-xl font-bold text-secondary">Students & Payments</h2>
+          <h2 className="text-xl font-bold text-secondary">Student Management</h2>
           <p className="text-xs text-muted-foreground">
             {filtered.length} student{filtered.length !== 1 ? "s" : ""} found
             {filtered.length !== rawStudents.length && ` · ${rawStudents.length} total`}

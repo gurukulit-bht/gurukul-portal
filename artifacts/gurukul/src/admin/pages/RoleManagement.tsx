@@ -474,7 +474,7 @@ export default function UserManagement() {
                     ["Calendar",            true,  false, false],
                     ["Courses & Classes",   true,  true,  true ],
                     ["Staff Management",    true,  false, false],
-                    ["Students & Payments", true,  false, false],
+                    ["Student Management", true,  false, false],
                     ["Inventory",           true,  false, false],
                     ["Course Documents",    true,  true,  true ],
                     ["Attendance",          true,  true,  true ],

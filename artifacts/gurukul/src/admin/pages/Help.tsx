@@ -138,12 +138,12 @@ const SECTIONS: SpecSection[] = [
   },
   {
     id: "students",
-    title: "Students & Payments",
+    title: "Student Management",
     icon: Users,
     roles: ["admin"],
     color: "from-green-500 to-green-700",
     overview:
-      "The Students & Payments page gives the Admin a complete view of all enrolled students, their course placements, and fee payment status. You can record payments and track outstanding balances here.",
+      "The Student Management page gives the Admin a complete view of all enrolled students, their course placements, and fee payment status. You can record payments and track outstanding balances here.",
     steps: [
       { heading: "View students", detail: "The main table shows all students with their name, enrolled course/section, parent contact, and fee status." },
       { heading: "Filter", detail: "Use the dropdowns to filter by course, level, or section to see students in a specific class." },
@@ -164,7 +164,7 @@ const SECTIONS: SpecSection[] = [
       { heading: "Open the form", detail: "Go to Student Registration in the sidebar. Click New Registration." },
       { heading: "Fill student details", detail: "Enter: student name, date of birth, parent/guardian name, phone number, email address, and emergency contact." },
       { heading: "Choose enrollment", detail: "Select the course, level, and section the student is joining." },
-      { heading: "Submit", detail: "Click Register. The student now appears in Students & Payments and in the teacher's class roster for attendance." },
+      { heading: "Submit", detail: "Click Register. The student now appears in Student Management and in the teacher's class roster for attendance." },
     ],
     tips: ["Double-check the phone number — it's used for parent portal verification.", "You can register a student without selecting a section if placement is pending."],
   },

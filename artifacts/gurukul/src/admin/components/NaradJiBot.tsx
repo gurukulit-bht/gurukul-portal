@@ -49,12 +49,12 @@ const KB: KBEntry[] = [
   {
     keywords: ["student", "enrollment", "enroll", "fee", "payment", "fee status", "tuition"],
     response:
-      "🎓 Students & Payments\n\nThis page shows all enrolled students with:\n• Course/section assignment\n• Parent contact info\n• Fee payment status (paid / pending)\n\nClick a student to view their profile or record a payment.\n\nTo register a new student use Student Registration in the sidebar.",
+      "🎓 Student Management\n\nThis page shows all enrolled students with:\n• Course/section assignment\n• Parent contact info\n• Fee payment status (paid / pending)\n\nClick a student to view their profile or record a payment.\n\nTo register a new student use Student Registration in the sidebar.",
   },
   {
     keywords: ["register student", "new student", "add student", "student registration", "admission", "enroll student"],
     response:
-      "📝 Registering a New Student\n\n1. Go to Student Registration\n2. Enter: student name, date of birth, parent/guardian name, phone, email, emergency contact\n3. Choose the course, level, and section to enroll in\n4. Submit\n\nThe student then appears in Students & Payments and in the teacher's class roster for attendance.",
+      "📝 Registering a New Student\n\n1. Go to Student Registration\n2. Enter: student name, date of birth, parent/guardian name, phone, email, emergency contact\n3. Choose the course, level, and section to enroll in\n4. Submit\n\nThe student then appears in Student Management and in the teacher's class roster for attendance.",
   },
   {
     keywords: ["attendance", "mark attendance", "present", "absent", "roll call", "take attendance", "class attendance"],
