@@ -35,12 +35,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const adminApi = {
   teachers: {
-    list:       () => request<unknown[]>("GET", "/teachers"),
-    assistants: () => request<{ id: number; name: string }[]>("GET", "/teachers/assistants"),
-    create:     (data: unknown) => request("POST", "/teachers", data),
-    update:     (id: number, data: unknown) => request("PUT", `/teachers/${id}`, data),
-    resetPin:   (id: number) => request<{ pin: string }>("POST", `/teachers/${id}/reset-pin`),
-    remove:     (id: number) => request("DELETE", `/teachers/${id}`),
+    list:              () => request<unknown[]>("GET", "/teachers"),
+    assistants:        () => request<{ id: number; name: string }[]>("GET", "/teachers/assistants"),
+    create:            (data: unknown) => request("POST", "/teachers", data),
+    update:            (id: number, data: unknown) => request("PUT", `/teachers/${id}`, data),
+    resetPin:          (id: number) => request<{ pin: string }>("POST", `/teachers/${id}/reset-pin`),
+    remove:            (id: number) => request("DELETE", `/teachers/${id}`),
+    getCourseAssignments: (id: number) => request<number[]>("GET", `/teachers/${id}/course-assignments`),
+    setCourseAssignments: (id: number, courseIds: number[]) => request("PUT", `/teachers/${id}/course-assignments`, { courseIds }),
   },
   students: {
     list:            () => request<unknown[]>("GET", "/students"),

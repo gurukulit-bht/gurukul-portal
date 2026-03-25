@@ -50,26 +50,35 @@ const emptyForm: FormState = {
   linkedTeacherId: null,
 };
 
+type Course = { id: number; name: string };
+
 export default function Teachers() {
-  const [teachers,      setTeachers]      = useState<Teacher[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [saving,        setSaving]        = useState(false);
-  const [search,        setSearch]        = useState("");
-  const [filterCat,     setFilterCat]     = useState("All");
-  const [showModal,     setShowModal]     = useState(false);
-  const [editing,       setEditing]       = useState<Teacher | null>(null);
-  const [form,          setForm]          = useState<FormState>(emptyForm);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [error,         setError]         = useState("");
+  const [teachers,        setTeachers]        = useState<Teacher[]>([]);
+  const [loading,         setLoading]         = useState(true);
+  const [saving,          setSaving]          = useState(false);
+  const [search,          setSearch]          = useState("");
+  const [filterCat,       setFilterCat]       = useState("All");
+  const [showModal,       setShowModal]       = useState(false);
+  const [editing,         setEditing]         = useState<Teacher | null>(null);
+  const [form,            setForm]            = useState<FormState>(emptyForm);
+  const [deleteConfirm,   setDeleteConfirm]   = useState<number | null>(null);
+  const [error,           setError]           = useState("");
   // PIN banner state — shown after create or reset
-  const [pinBanner,     setPinBanner]     = useState<{ name: string; pin: string } | null>(null);
-  const [showPin,       setShowPin]       = useState(false);
-  const [resettingPin,  setResettingPin]  = useState<number | null>(null);
+  const [pinBanner,       setPinBanner]       = useState<{ name: string; pin: string } | null>(null);
+  const [showPin,         setShowPin]         = useState(false);
+  const [resettingPin,    setResettingPin]    = useState<number | null>(null);
+  // Course assignment state
+  const [allCourses,      setAllCourses]      = useState<Course[]>([]);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    adminApi.teachers.list()
-      .then((d) => setTeachers(d as Teacher[]))
-      .finally(() => setLoading(false));
+    Promise.all([
+      adminApi.teachers.list(),
+      adminApi.courses.list(),
+    ]).then(([teacherData, courseData]) => {
+      setTeachers(teacherData as Teacher[]);
+      setAllCourses((courseData as Course[]).map((c) => ({ id: c.id, name: c.name })));
+    }).finally(() => setLoading(false));
   }, []);
 
   // Derive lists for dropdowns from loaded teachers
@@ -87,6 +96,7 @@ export default function Teachers() {
   function openAdd() {
     setEditing(null);
     setForm(emptyForm);
+    setSelectedCourseIds(new Set());
     setError("");
     setShowModal(true);
   }
@@ -101,8 +111,13 @@ export default function Teachers() {
       assistantId:     t.assistantId,
       linkedTeacherId: t.linkedTeacherId,
     });
+    setSelectedCourseIds(new Set());
     setError("");
     setShowModal(true);
+    // Load existing course assignments
+    adminApi.teachers.getCourseAssignments(t.id)
+      .then((ids) => setSelectedCourseIds(new Set(ids)))
+      .catch(() => {});
   }
 
   // When category changes, clear the pairing fields
@@ -119,12 +134,17 @@ export default function Teachers() {
     setSaving(true);
     try {
       const payload = { ...form };
+      const courseIds = [...selectedCourseIds];
+      let teacherId: number;
+
       if (editing) {
         await adminApi.teachers.update(editing.id, payload);
+        teacherId = editing.id;
         const fresh = await adminApi.teachers.list();
         setTeachers(fresh as Teacher[]);
       } else {
-        const result = await adminApi.teachers.create(payload) as { generatedPin?: string; name?: string };
+        const result = await adminApi.teachers.create(payload) as { id?: number; generatedPin?: string; name?: string };
+        teacherId = result.id!;
         const fresh = await adminApi.teachers.list();
         setTeachers(fresh as Teacher[]);
         // Show the generated PIN banner
@@ -133,6 +153,10 @@ export default function Teachers() {
           setShowPin(false);
         }
       }
+
+      // Save course assignments
+      await adminApi.teachers.setCourseAssignments(teacherId, courseIds);
+
       setShowModal(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -188,8 +212,7 @@ export default function Teachers() {
         <div>
           <h2 className="text-xl font-bold text-secondary">Staff Management</h2>
           <p className="text-sm text-muted-foreground">
-            {teachers.filter((t) => t.status === "Active").length} active staff ·{" "}
-            <span className="text-primary font-medium">Assign teachers to classes in Course Management →</span>
+            {teachers.filter((t) => t.status === "Active").length} active staff · Course assignments control which courses appear in their attendance dropdown.
           </p>
         </div>
         <Button onClick={openAdd} className="gap-2 rounded-xl shrink-0">
@@ -412,8 +435,8 @@ export default function Teachers() {
       {/* Add / Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 border-b border-border">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-border shrink-0">
               <h3 className="text-lg font-bold text-secondary">{editing ? "Edit Staff Profile" : "Add Staff Member"}</h3>
               <p className="text-xs text-muted-foreground mt-1">
                 {editing
@@ -421,7 +444,7 @@ export default function Teachers() {
                   : "A 4-digit login PIN will be auto-generated and displayed once after saving."}
               </p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{error}</div>
               )}
@@ -509,9 +532,48 @@ export default function Teachers() {
                   )}
                 </div>
               )}
+
+              {/* Course Assignments */}
+              {allCourses.length > 0 && (
+                <div className="space-y-2">
+                  <Label>
+                    Course Assignments
+                    <span className="text-xs text-muted-foreground ml-1.5 font-normal">(appears in attendance dropdown)</span>
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {allCourses.map((course) => {
+                      const checked = selectedCourseIds.has(course.id);
+                      return (
+                        <label
+                          key={course.id}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 cursor-pointer transition-colors text-sm font-medium select-none ${
+                            checked
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-border bg-gray-50 text-secondary hover:border-primary/40"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-primary"
+                            checked={checked}
+                            onChange={(e) => {
+                              setSelectedCourseIds((prev) => {
+                                const next = new Set(prev);
+                                e.target.checked ? next.add(course.id) : next.delete(course.id);
+                                return next;
+                              });
+                            }}
+                          />
+                          {course.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="p-6 border-t border-border flex justify-end gap-3">
+            <div className="p-6 border-t border-border flex justify-end gap-3 shrink-0">
               <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-xl" disabled={saving}>
                 Cancel
               </Button>

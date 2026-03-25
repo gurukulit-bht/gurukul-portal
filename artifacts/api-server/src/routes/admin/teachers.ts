@@ -7,6 +7,7 @@ import {
   courseSectionsTable,
   courseLevelsTable,
   coursesTable,
+  teacherAssignmentsTable,
 } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -155,6 +156,45 @@ router.post("/", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to create teacher");
     res.status(500).json({ error: "Failed to create teacher" });
+  }
+});
+
+// GET /api/admin/teachers/:id/course-assignments — returns courseIds assigned via teacher_assignments
+router.get("/:id/course-assignments", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const rows = await db
+      .select({ courseId: teacherAssignmentsTable.courseId })
+      .from(teacherAssignmentsTable)
+      .where(eq(teacherAssignmentsTable.teacherId, id));
+    res.json(rows.map((r) => r.courseId));
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch course assignments");
+    res.status(500).json({ error: "Failed to fetch course assignments" });
+  }
+});
+
+// PUT /api/admin/teachers/:id/course-assignments — replaces all teacher_assignments for this teacher
+// Body: { courseIds: number[] }
+router.put("/:id/course-assignments", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const courseIds: number[] = Array.isArray(req.body.courseIds) ? req.body.courseIds.map(Number) : [];
+
+    // Delete existing assignments
+    await db.delete(teacherAssignmentsTable).where(eq(teacherAssignmentsTable.teacherId, id));
+
+    // Insert new ones — assign to all levels (levelFrom=1, levelTo=99)
+    if (courseIds.length > 0) {
+      await db.insert(teacherAssignmentsTable).values(
+        courseIds.map((courseId) => ({ teacherId: id, courseId, levelFrom: 1, levelTo: 99 }))
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update course assignments");
+    res.status(500).json({ error: "Failed to update course assignments" });
   }
 });
 
