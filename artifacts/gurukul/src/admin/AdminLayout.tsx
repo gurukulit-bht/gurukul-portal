@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import NaradJiBot from "./components/NaradJiBot";
 import NotesTab from "./components/NotesTab";
+import Help from "./pages/Help";
 import { Button } from "@/components/ui/button";
 
 type Permission_ = Permission;
@@ -69,7 +70,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",             permission: "roles" },
       { label: "Settings",             icon: Settings,        path: "/admin/settings",          permission: "settings" },
-      { label: "Help & Guide",         icon: HelpCircle,      path: "/admin/help",              permission: "help" },
     ],
   },
 ];
@@ -82,7 +82,6 @@ const TEACHER_NAV_ITEMS: NavItem[] = [
   { label: "Course Documents",   icon: FileText,      path: "/admin/documents",      permission: "documents" },
   { label: "Messaging Center",   icon: Newspaper,     path: "/admin/weekly-updates", permission: "weeklyUpdates" },
   { label: "Settings",           icon: Settings,      path: "/admin/settings",       permission: "settings" },
-  { label: "Help & Guide",       icon: HelpCircle,    path: "/admin/help",           permission: "help" },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notesOpen,   setNotesOpen]   = useState(false);
+  const [helpOpen,    setHelpOpen]    = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -240,28 +240,50 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           {user && (
-            <div className="flex items-center gap-3">
-              {/* Sticky Notes link */}
-              <button
-                onClick={() => setNotesOpen(v => !v)}
-                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ${
-                  notesOpen
-                    ? "bg-amber-100 text-amber-700"
-                    : "text-muted-foreground hover:text-secondary hover:bg-gray-100"
-                }`}
-              >
-                <StickyNote className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">My Sticky Notes</span>
-                <span className="sm:hidden">Notes</span>
-              </button>
+            <div className="flex items-center gap-2.5">
 
+              {/* ── Quick-action buttons ── */}
+              <div className="flex items-center gap-1 bg-gray-100 rounded-2xl p-1">
+                {/* Help & Guide */}
+                <button
+                  onClick={() => { setHelpOpen(v => !v); setNotesOpen(false); }}
+                  title="Help & Guide"
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all ${
+                    helpOpen
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-muted-foreground hover:text-secondary hover:bg-white hover:shadow-sm"
+                  }`}
+                >
+                  <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Help</span>
+                </button>
+
+                {/* My Sticky Notes */}
+                <button
+                  onClick={() => { setNotesOpen(v => !v); setHelpOpen(false); }}
+                  title="My Sticky Notes"
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all ${
+                    notesOpen
+                      ? "bg-amber-500 text-white shadow-sm"
+                      : "text-muted-foreground hover:text-secondary hover:bg-white hover:shadow-sm"
+                  }`}
+                >
+                  <StickyNote className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Notes</span>
+                </button>
+              </div>
+
+              {/* divider */}
+              <div className="h-6 w-px bg-border hidden sm:block" />
+
+              {/* User info */}
               <div className="text-right hidden sm:block">
-                <div className="text-sm font-semibold text-secondary">{user.displayName}</div>
+                <div className="text-sm font-semibold text-secondary leading-tight">{user.displayName}</div>
                 <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleBadgeColor(user.role)}`}>
                   {getRoleLabel(user.role)}
                 </div>
               </div>
-              <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-sm font-bold">
+              <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0">
                 {user.initials}
               </div>
             </div>
@@ -275,23 +297,52 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <NaradJiBot />
 
-      {/* ── Sticky Notes drawer ── */}
-      {notesOpen && (
+      {/* ── shared backdrop ── */}
+      {(notesOpen || helpOpen) && (
         <div
           className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px]"
-          onClick={() => setNotesOpen(false)}
+          onClick={() => { setNotesOpen(false); setHelpOpen(false); }}
         />
       )}
+
+      {/* ── Help & Guide drawer ── */}
+      <div className={`
+        fixed inset-y-0 right-0 z-50 w-full sm:w-[680px] bg-white shadow-2xl flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${helpOpen ? "translate-x-0" : "translate-x-full"}
+      `}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0 bg-gradient-to-r from-indigo-50 to-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+              <HelpCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-secondary text-sm">Help & Guide</h2>
+              <p className="text-xs text-muted-foreground">Portal features, how-tos, and tips</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setHelpOpen(false)}
+            className="w-8 h-8 rounded-xl hover:bg-indigo-100 flex items-center justify-center text-muted-foreground hover:text-indigo-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          <Help />
+        </div>
+      </div>
+
+      {/* ── Sticky Notes drawer ── */}
       <div className={`
         fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-white shadow-2xl flex flex-col
         transform transition-transform duration-300 ease-in-out
         ${notesOpen ? "translate-x-0" : "translate-x-full"}
       `}>
-        {/* Drawer header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0 bg-gradient-to-r from-amber-50 to-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-              <StickyNote className="w-4 h-4" />
+            <div className="w-9 h-9 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+              <StickyNote className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-bold text-secondary text-sm">My Sticky Notes</h2>
@@ -300,13 +351,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <button
             onClick={() => setNotesOpen(false)}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center text-muted-foreground hover:text-secondary transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-amber-100 flex items-center justify-center text-muted-foreground hover:text-amber-600 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Drawer body */}
         <div className="flex-1 overflow-y-auto p-5">
           <NotesTab />
         </div>
