@@ -1,7 +1,16 @@
 import { Link } from "wouter";
 import { BookOpen, MapPin, Phone, Mail, Facebook, Instagram } from "lucide-react";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 export function Footer() {
+  const { get } = useSiteContent();
+
+  const fbUrl  = get("footer_facebook_url");
+  const igUrl  = get("footer_instagram_url");
+  const address = get("contact_address");
+  const phone   = get("contact_phone");
+  const email   = get("contact_email");
+
   return (
     <footer className="bg-secondary text-secondary-foreground pt-16 pb-8 relative overflow-hidden">
       {/* Decorative background element */}
@@ -22,15 +31,29 @@ export function Footer() {
               </span>
             </div>
             <p className="text-white/70 text-sm leading-relaxed">
-              Nurturing the next generation with the profound wisdom, culture, and values of Sanatana Dharma in a welcoming community environment.
+              {get("footer_tagline")}
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent hover:text-secondary transition-colors text-white">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent hover:text-secondary transition-colors text-white">
-                <Instagram className="w-5 h-5" />
-              </a>
+              {fbUrl ? (
+                <a href={fbUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent hover:text-secondary transition-colors text-white">
+                  <Facebook className="w-5 h-5" />
+                </a>
+              ) : (
+                <span className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/30 cursor-default">
+                  <Facebook className="w-5 h-5" />
+                </span>
+              )}
+              {igUrl ? (
+                <a href={igUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent hover:text-secondary transition-colors text-white">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              ) : (
+                <span className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/30 cursor-default">
+                  <Instagram className="w-5 h-5" />
+                </span>
+              )}
             </div>
           </div>
 
@@ -49,16 +72,20 @@ export function Footer() {
             <h3 className="font-display font-bold text-lg text-accent mb-6">Contact Info</h3>
             <ul className="space-y-4">
               <li className="flex gap-3 text-white/80">
-                <MapPin className="w-5 h-5 text-accent shrink-0" />
-                <span>3671 Hyatts Rd<br/>Powell, OH 43065</span>
+                <MapPin className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                <span>
+                  {address.split("\n").map((line, i) => (
+                    <span key={i}>{line}{i < address.split("\n").length - 1 && <br />}</span>
+                  ))}
+                </span>
               </li>
               <li className="flex gap-3 text-white/80">
                 <Phone className="w-5 h-5 text-accent shrink-0" />
-                <span>(740) 369-0717</span>
+                <span>{phone}</span>
               </li>
               <li className="flex gap-3 text-white/80">
                 <Mail className="w-5 h-5 text-accent shrink-0" />
-                <span>gurukul@bhtohio.org</span>
+                <span>{email}</span>
               </li>
             </ul>
           </div>

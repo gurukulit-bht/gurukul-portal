@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MapPin, Phone, Mail, Send, CheckCircle2, Loader2, ShieldCheck, RefreshCw } from "lucide-react";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -106,6 +107,7 @@ function CaptchaWidget({ onVerified }: { onVerified: () => void }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Contact() {
+  const { get } = useSiteContent();
   const [name,    setName]    = useState("");
   const [email,   setEmail]   = useState("");
   const [phone,   setPhone]   = useState("");
@@ -151,7 +153,7 @@ export default function Contact() {
     <div className="min-h-screen bg-background pb-24">
       <PageHeader
         title="Contact Us"
-        description="We are here to answer your questions and welcome you to our community."
+        description={get("contact_header_desc")}
       />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
@@ -178,7 +180,9 @@ export default function Contact() {
                   <div>
                     <h4 className="font-bold text-lg mb-1">Temple Location</h4>
                     <p className="text-white/80 leading-relaxed">
-                      3671 Hyatts Rd<br />Powell, OH 43065
+                      {get("contact_address").split("\n").map((line, i) => (
+                        <span key={i}>{line}{i === 0 && <br />}</span>
+                      ))}
                     </p>
                   </div>
                 </div>
@@ -189,7 +193,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h4 className="font-bold text-lg mb-1">Phone</h4>
-                    <p className="text-white/80">(740) 369-0717</p>
+                    <p className="text-white/80">{get("contact_phone")}</p>
                   </div>
                 </div>
 
@@ -199,7 +203,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h4 className="font-bold text-lg mb-1">Email</h4>
-                    <p className="text-white/80">gurukul@bhtohio.org</p>
+                    <p className="text-white/80">{get("contact_email")}</p>
                   </div>
                 </div>
               </div>

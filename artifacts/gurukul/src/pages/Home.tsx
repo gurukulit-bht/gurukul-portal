@@ -5,6 +5,7 @@ import { Calendar, Bell, Users, BookOpen, ArrowRight, MapPin, Clock } from "luci
 import { useListAnnouncements, useListCourses, useListEvents } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 const shlokas = [
   {
@@ -33,6 +34,7 @@ export default function Home() {
   const { data: courses = [], isLoading: loadingCourses } = useListCourses();
   const { data: announcements = [] } = useListAnnouncements();
   const { data: events = [], isLoading: loadingEvents } = useListEvents();
+  const { get } = useSiteContent();
 
   const [shlokaIndex, setShlokaIndex] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -88,11 +90,10 @@ export default function Home() {
                 Admissions open for {new Date().getFullYear()}
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight mb-4">
-                Rooted in <span className="text-gradient">Tradition</span>,<br />
-                Growing in Wisdom.
+                {get("home_hero_headline")}
               </h1>
               <p className="text-base md:text-lg text-muted-foreground mb-6 leading-relaxed max-w-xl">
-                Empowering the next generation with cultural knowledge, spiritual values, and a profound understanding of Sanatana Dharma.
+                {get("home_hero_subtitle")}
               </p>
               <div className="flex flex-wrap gap-3 mb-8">
                 <Button size="lg" asChild>
@@ -277,9 +278,11 @@ export default function Home() {
               {/* Contact info strip */}
               <div className="mt-5 bg-primary/5 border border-primary/15 rounded-2xl p-4 space-y-2">
                 <p className="text-xs font-semibold text-secondary uppercase tracking-widest">Contact Us</p>
-                <p className="text-sm text-muted-foreground">3671 Hyatts Rd, Powell, OH 43065</p>
-                <p className="text-sm text-muted-foreground">(740) 369-0717</p>
-                <p className="text-sm text-primary font-medium">gurukul@bhtohio.org</p>
+                {get("contact_address").split("\n").map((line, i) => (
+                  <p key={i} className="text-sm text-muted-foreground">{line}</p>
+                ))}
+                <p className="text-sm text-muted-foreground">{get("contact_phone")}</p>
+                <p className="text-sm text-primary font-medium">{get("contact_email")}</p>
                 <Button size="sm" className="w-full mt-2 rounded-xl" asChild>
                   <Link href="/contact">Get In Touch</Link>
                 </Button>
@@ -294,8 +297,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h3 className="text-xl font-display font-bold text-accent">Ready to join the Gurukul family?</h3>
-              <p className="text-white/70 text-sm mt-1">Enroll today and give your child the gift of cultural heritage.</p>
+              <h3 className="text-xl font-display font-bold text-accent">{get("home_cta_title")}</h3>
+              <p className="text-white/70 text-sm mt-1">{get("home_cta_subtitle")}</p>
             </div>
             <div className="flex gap-3 shrink-0">
               <Button asChild className="bg-accent text-secondary hover:bg-accent/90 font-bold">

@@ -2,16 +2,19 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Check, Lock, Bell, Globe, School, CalendarDays,
   Loader2, Hash, AlertCircle, CreditCard, Eye, EyeOff,
+  Home, Info, Phone,
 } from "lucide-react";
 import { usePortalSettings } from "../contexts/PortalSettingsContext";
 import { useAuth } from "../AuthContext";
 import { changePin } from "../auth";
 import { adminApi } from "@/lib/adminApi";
+import { invalidateSiteContentCache } from "@/hooks/useSiteContent";
 
-type AdminTab = "general" | "account" | "payments" | "notifications" | "organization";
+type AdminTab = "general" | "account" | "payments" | "notifications" | "organization" | "content";
 
 const ADMIN_TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "general",       label: "General",       icon: <CalendarDays className="w-4 h-4" /> },
@@ -19,6 +22,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "payments",      label: "Payments",       icon: <CreditCard className="w-4 h-4" /> },
   { id: "notifications", label: "Notifications",  icon: <Bell className="w-4 h-4" /> },
   { id: "organization",  label: "Organization",   icon: <School className="w-4 h-4" /> },
+  { id: "content",       label: "Site Content",   icon: <Globe className="w-4 h-4" /> },
 ];
 
 export default function Settings() {
@@ -84,6 +88,67 @@ export default function Settings() {
   const [stripeSaving,    setStripeSaving]    = useState(false);
   const [stripeSaved,     setStripeSaved]     = useState(false);
   const [stripeError,     setStripeError]     = useState<string | null>(null);
+
+  // ── Site Content state ──────────────────────────────────────────────────────
+  const [scHomeHeadline,    setScHomeHeadline]    = useState("Rooted in Tradition, Growing in Wisdom.");
+  const [scHomeSubtitle,    setScHomeSubtitle]    = useState("Empowering the next generation with cultural knowledge, spiritual values, and a profound understanding of Sanatana Dharma.");
+  const [scCtaTitle,        setScCtaTitle]        = useState("Ready to join the Gurukul family?");
+  const [scCtaSubtitle,     setScCtaSubtitle]     = useState("Enroll today and give your child the gift of cultural heritage.");
+  const [scAboutHeader,     setScAboutHeader]     = useState("Preserving and passing on the rich heritage of Sanatana Dharma to the next generation.");
+  const [scAboutMission1,   setScAboutMission1]   = useState("The Bhartiya Hindu Temple Gurukul is dedicated to providing a nurturing environment where children can learn, appreciate, and practice the values, culture, and traditions of Sanatana Dharma.");
+  const [scAboutMission2,   setScAboutMission2]   = useState("We believe that early exposure to our spiritual heritage builds character, instills confidence, and creates a strong foundation for a meaningful life.");
+  const [scAboutValues,     setScAboutValues]     = useState("Dharma (Righteousness & Duty)\nVidya (True Knowledge)\nSeva (Selfless Service)\nBhakti (Devotion)");
+  const [scContactHeader,   setScContactHeader]   = useState("We are here to answer your questions and welcome you to our community.");
+  const [scContactAddress,  setScContactAddress]  = useState("3671 Hyatts Rd\nPowell, OH 43065");
+  const [scContactPhone,    setScContactPhone]    = useState("(740) 369-0717");
+  const [scContactEmail,    setScContactEmail]    = useState("gurukul@bhtohio.org");
+  const [scFooterTagline,   setScFooterTagline]   = useState("Nurturing the next generation with the profound wisdom, culture, and values of Sanatana Dharma in a welcoming community environment.");
+  const [scFacebook,        setScFacebook]        = useState("");
+  const [scInstagram,       setScInstagram]       = useState("");
+  const [scLoading,         setScLoading]         = useState(false);
+  const [scSaving,          setScSaving]          = useState<string | null>(null);
+  const [scSaved,           setScSaved]           = useState<string | null>(null);
+  const [scError,           setScError]           = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    setScLoading(true);
+    adminApi.settings.getAll()
+      .then((s: Record<string, string>) => {
+        if (s.home_hero_headline)  setScHomeHeadline(s.home_hero_headline);
+        if (s.home_hero_subtitle)  setScHomeSubtitle(s.home_hero_subtitle);
+        if (s.home_cta_title)      setScCtaTitle(s.home_cta_title);
+        if (s.home_cta_subtitle)   setScCtaSubtitle(s.home_cta_subtitle);
+        if (s.about_header_desc)   setScAboutHeader(s.about_header_desc);
+        if (s.about_mission_p1)    setScAboutMission1(s.about_mission_p1);
+        if (s.about_mission_p2)    setScAboutMission2(s.about_mission_p2);
+        if (s.about_core_values)   setScAboutValues(s.about_core_values);
+        if (s.contact_header_desc) setScContactHeader(s.contact_header_desc);
+        if (s.contact_address)     setScContactAddress(s.contact_address);
+        if (s.contact_phone)       setScContactPhone(s.contact_phone);
+        if (s.contact_email)       setScContactEmail(s.contact_email);
+        if (s.footer_tagline)      setScFooterTagline(s.footer_tagline);
+        if (s.footer_facebook_url !== undefined) setScFacebook(s.footer_facebook_url);
+        if (s.footer_instagram_url !== undefined) setScInstagram(s.footer_instagram_url);
+      })
+      .catch(() => setScError("Failed to load site content."))
+      .finally(() => setScLoading(false));
+  }, [isAdmin]);
+
+  async function saveSiteSection(section: string, settings: Record<string, string>) {
+    setScSaving(section);
+    setScError(null);
+    try {
+      await adminApi.settings.saveAll(settings);
+      invalidateSiteContentCache();
+      setScSaved(section);
+      setTimeout(() => setScSaved(null), 3000);
+    } catch {
+      setScError("Failed to save. Please try again.");
+    } finally {
+      setScSaving(null);
+    }
+  }
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -622,6 +687,284 @@ export default function Settings() {
               {saved === "gurukul" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* ── Site Content tab ─────────────────────────────────────────────────── */}
+      {isAdmin && activeTab === "content" && (
+        <div className="space-y-5">
+
+          {scError && (
+            <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 shrink-0" /> {scError}
+            </div>
+          )}
+
+          {scLoading ? (
+            <div className="flex justify-center py-12 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading site content…
+            </div>
+          ) : (
+            <>
+              {/* ── Home Page ── */}
+              <div className={card}>
+                <div className="flex items-center gap-3">
+                  {sectionIcon("bg-orange-100", "text-orange-600", <Home className="w-4 h-4" />)}
+                  <div>
+                    <h3 className="font-bold text-secondary">Home Page</h3>
+                    <p className="text-xs text-muted-foreground">Hero headline, subtitle, and the bottom call-to-action strip.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Hero Headline</Label>
+                    <Input
+                      value={scHomeHeadline}
+                      onChange={e => setScHomeHeadline(e.target.value)}
+                      className="rounded-xl"
+                      placeholder="Main headline on the homepage"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Hero Subtitle</Label>
+                    <Textarea
+                      value={scHomeSubtitle}
+                      onChange={e => setScHomeSubtitle(e.target.value)}
+                      className="rounded-xl resize-none"
+                      rows={2}
+                      placeholder="Tagline below the headline"
+                    />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>CTA Banner Title</Label>
+                      <Input
+                        value={scCtaTitle}
+                        onChange={e => setScCtaTitle(e.target.value)}
+                        className="rounded-xl"
+                        placeholder="e.g. Ready to join the Gurukul family?"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>CTA Banner Subtitle</Label>
+                      <Input
+                        value={scCtaSubtitle}
+                        onChange={e => setScCtaSubtitle(e.target.value)}
+                        className="rounded-xl"
+                        placeholder="Short supporting line under the CTA title"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    disabled={scSaving === "home"}
+                    onClick={() => saveSiteSection("home", {
+                      home_hero_headline: scHomeHeadline,
+                      home_hero_subtitle: scHomeSubtitle,
+                      home_cta_title:     scCtaTitle,
+                      home_cta_subtitle:  scCtaSubtitle,
+                    })}
+                    className="rounded-xl gap-2"
+                  >
+                    {scSaving === "home" ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                      : scSaved === "home" ? <><Check className="w-4 h-4" /> Saved!</>
+                      : "Save Home Content"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* ── About Page ── */}
+              <div className={card}>
+                <div className="flex items-center gap-3">
+                  {sectionIcon("bg-blue-100", "text-blue-600", <Info className="w-4 h-4" />)}
+                  <div>
+                    <h3 className="font-bold text-secondary">About Page</h3>
+                    <p className="text-xs text-muted-foreground">Page description, mission paragraphs, and core values list.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Page Description <span className="text-xs text-muted-foreground font-normal">(shown below page title)</span></Label>
+                    <Input
+                      value={scAboutHeader}
+                      onChange={e => setScAboutHeader(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Mission — First Paragraph</Label>
+                    <Textarea
+                      value={scAboutMission1}
+                      onChange={e => setScAboutMission1(e.target.value)}
+                      className="rounded-xl resize-none"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Mission — Second Paragraph</Label>
+                    <Textarea
+                      value={scAboutMission2}
+                      onChange={e => setScAboutMission2(e.target.value)}
+                      className="rounded-xl resize-none"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>
+                      Core Values
+                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">— one value per line</span>
+                    </Label>
+                    <Textarea
+                      value={scAboutValues}
+                      onChange={e => setScAboutValues(e.target.value)}
+                      className="rounded-xl resize-none font-mono text-xs"
+                      rows={5}
+                      placeholder={"Dharma (Righteousness & Duty)\nVidya (True Knowledge)\nSeva (Selfless Service)\nBhakti (Devotion)"}
+                    />
+                    <p className="text-xs text-muted-foreground">Each line becomes a bullet point on the About page.</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    disabled={scSaving === "about"}
+                    onClick={() => saveSiteSection("about", {
+                      about_header_desc:  scAboutHeader,
+                      about_mission_p1:   scAboutMission1,
+                      about_mission_p2:   scAboutMission2,
+                      about_core_values:  scAboutValues,
+                    })}
+                    className="rounded-xl gap-2"
+                  >
+                    {scSaving === "about" ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                      : scSaved === "about" ? <><Check className="w-4 h-4" /> Saved!</>
+                      : "Save About Content"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* ── Contact & Footer ── */}
+              <div className={card}>
+                <div className="flex items-center gap-3">
+                  {sectionIcon("bg-green-100", "text-green-600", <Phone className="w-4 h-4" />)}
+                  <div>
+                    <h3 className="font-bold text-secondary">Contact, Footer & Social</h3>
+                    <p className="text-xs text-muted-foreground">Contact page info, footer tagline, and social media links.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Contact Page Description</Label>
+                    <Input
+                      value={scContactHeader}
+                      onChange={e => setScContactHeader(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+
+                  <div className="border-t border-border pt-4">
+                    <p className="text-xs font-semibold text-secondary mb-3 uppercase tracking-widest">Contact Information</p>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label>
+                          Address
+                          <span className="ml-1.5 text-xs text-muted-foreground font-normal">— two lines</span>
+                        </Label>
+                        <Textarea
+                          value={scContactAddress}
+                          onChange={e => setScContactAddress(e.target.value)}
+                          className="rounded-xl resize-none font-mono text-sm"
+                          rows={2}
+                          placeholder={"3671 Hyatts Rd\nPowell, OH 43065"}
+                        />
+                      </div>
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label>Phone Number</Label>
+                          <Input
+                            value={scContactPhone}
+                            onChange={e => setScContactPhone(e.target.value)}
+                            className="rounded-xl"
+                            placeholder="(740) 369-0717"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Email Address</Label>
+                          <Input
+                            type="email"
+                            value={scContactEmail}
+                            onChange={e => setScContactEmail(e.target.value)}
+                            className="rounded-xl"
+                            placeholder="gurukul@bhtohio.org"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-4">
+                    <p className="text-xs font-semibold text-secondary mb-3 uppercase tracking-widest">Footer</p>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label>Footer Tagline</Label>
+                        <Textarea
+                          value={scFooterTagline}
+                          onChange={e => setScFooterTagline(e.target.value)}
+                          className="rounded-xl resize-none"
+                          rows={2}
+                        />
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label>Facebook URL <span className="text-xs text-muted-foreground font-normal">(leave blank to hide)</span></Label>
+                          <Input
+                            value={scFacebook}
+                            onChange={e => setScFacebook(e.target.value)}
+                            className="rounded-xl"
+                            placeholder="https://facebook.com/yourpage"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Instagram URL <span className="text-xs text-muted-foreground font-normal">(leave blank to hide)</span></Label>
+                          <Input
+                            value={scInstagram}
+                            onChange={e => setScInstagram(e.target.value)}
+                            className="rounded-xl"
+                            placeholder="https://instagram.com/yourhandle"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    disabled={scSaving === "contact"}
+                    onClick={() => saveSiteSection("contact", {
+                      contact_header_desc:  scContactHeader,
+                      contact_address:      scContactAddress,
+                      contact_phone:        scContactPhone,
+                      contact_email:        scContactEmail,
+                      footer_tagline:       scFooterTagline,
+                      footer_facebook_url:  scFacebook,
+                      footer_instagram_url: scInstagram,
+                    })}
+                    className="rounded-xl gap-2"
+                  >
+                    {scSaving === "contact" ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                      : scSaved === "contact" ? <><Check className="w-4 h-4" /> Saved!</>
+                      : "Save Contact & Footer"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

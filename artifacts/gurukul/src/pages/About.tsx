@@ -1,13 +1,21 @@
 import { PageHeader } from "@/components/layout/PageHeader";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 export default function About() {
+  const { get } = useSiteContent();
+
+  const coreValues = get("about_core_values")
+    .split("\n")
+    .map(v => v.trim())
+    .filter(Boolean);
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader 
         title="About Our Gurukul" 
-        description="Preserving and passing on the rich heritage of Sanatana Dharma to the next generation."
+        description={get("about_header_desc")}
       />
 
       <section className="py-20">
@@ -20,20 +28,15 @@ export default function About() {
             >
               <h2 className="text-3xl font-display font-bold text-secondary mb-6">Our Mission</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                The Bhartiya Hindu Temple Gurukul is dedicated to providing a nurturing environment where children can learn, appreciate, and practice the values, culture, and traditions of Sanatana Dharma.
+                {get("about_mission_p1")}
               </p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                We believe that early exposure to our spiritual heritage builds character, instills confidence, and creates a strong foundation for a meaningful life.
+                {get("about_mission_p2")}
               </p>
 
               <h3 className="text-2xl font-bold text-foreground mb-4">Core Values</h3>
               <ul className="space-y-4">
-                {[
-                  "Dharma (Righteousness & Duty)",
-                  "Vidya (True Knowledge)",
-                  "Seva (Selfless Service)",
-                  "Bhakti (Devotion)"
-                ].map((value, idx) => (
+                {coreValues.map((value, idx) => (
                   <li key={idx} className="flex items-center gap-3 text-foreground font-medium">
                     <CheckCircle2 className="text-primary w-6 h-6 shrink-0" />
                     {value}
