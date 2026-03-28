@@ -166,31 +166,11 @@ export default function Settings() {
                 <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{yearError}</p>
               )}
 
-              <div className="flex items-center justify-between">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    activeCurriculumYear,
-                    (() => { const [s] = activeCurriculumYear.split("-"); const n = parseInt(s) + 1; return `${n}-${String(n + 1).slice(-2)}`; })(),
-                    (() => { const [s] = activeCurriculumYear.split("-"); const n = parseInt(s) - 1; return `${n}-${String(n + 1).slice(-2)}`; })(),
-                  ].filter((y, i, arr) => arr.indexOf(y) === i).map(y => (
-                    <button
-                      key={y}
-                      type="button"
-                      onClick={() => { setPendingYear(y); setSaved(null); }}
-                      className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                        displayYear === y
-                          ? "bg-primary text-white border-primary"
-                          : "border-border text-secondary hover:border-primary/50"
-                      }`}
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex justify-end">
                 <Button
                   onClick={saveYear}
                   disabled={yearSaving || displayYear === activeCurriculumYear}
-                  className="rounded-xl gap-2 shrink-0"
+                  className="rounded-xl gap-2"
                 >
                   {yearSaving
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
@@ -201,29 +181,6 @@ export default function Settings() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── Gurukul Information (admin only) ── */}
-      {isAdmin && (
-        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-              <School className="w-4 h-4" />
-            </div>
-            <h3 className="font-bold text-secondary">Gurukul Information</h3>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Organization Name</Label><Input defaultValue="Bhartiya Hindu Temple Gurukul" className="rounded-xl" /></div>
-            <div className="space-y-1.5"><Label>Address</Label><Input defaultValue="3671 Hyatts Rd, Powell, OH 43065" className="rounded-xl" /></div>
-            <div className="space-y-1.5"><Label>Phone</Label><Input defaultValue="(740) 369-0717" className="rounded-xl" /></div>
-            <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label><Input defaultValue="gurukul@bhtohio.org" className="rounded-xl" /></div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={() => save("gurukul")} className="rounded-xl gap-2">
-              {saved === "gurukul" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
-            </Button>
-          </div>
         </div>
       )}
 
@@ -497,6 +454,32 @@ export default function Settings() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Gurukul Information (admin only) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+              <School className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-secondary">Gurukul Information</h3>
+              <p className="text-xs text-muted-foreground">Rarely changed — organization details displayed across the portal.</p>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>Organization Name</Label><Input defaultValue="Bhartiya Hindu Temple Gurukul" className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label>Address</Label><Input defaultValue="3671 Hyatts Rd, Powell, OH 43065" className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label>Phone</Label><Input defaultValue="(740) 369-0717" className="rounded-xl" /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label><Input defaultValue="gurukul@bhtohio.org" className="rounded-xl" /></div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => save("gurukul")} className="rounded-xl gap-2">
+              {saved === "gurukul" ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
+            </Button>
+          </div>
         </div>
       )}
 
