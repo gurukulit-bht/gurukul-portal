@@ -10,6 +10,7 @@ router.get("/", async (req, res) => {
   try {
     const {
       q        = "",
+      employer = "",
       type     = "all",     // "all" | "temple" | "parent"
       policy   = "all",     // "all" | "agreed" | "not_agreed"
       year     = "",
@@ -65,6 +66,14 @@ router.get("/", async (req, res) => {
       conditions.push(sql`members.created_at >= NOW() - INTERVAL '1 year' AND members.created_at < NOW() - INTERVAL '335 days'` as ReturnType<typeof eq>);
     } else if (status === "expired") {
       conditions.push(sql`members.created_at < NOW() - INTERVAL '1 year'` as ReturnType<typeof eq>);
+    }
+
+    // Employer filter — search across mother_employer and father_employer in linked students
+    if (employer.trim()) {
+      const empTerm = `%${employer.trim()}%`;
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM students s WHERE s.member_id = members.id AND (s.mother_employer ILIKE ${empTerm} OR s.father_employer ILIKE ${empTerm}))` as ReturnType<typeof eq>
+      );
     }
 
     // Students filter

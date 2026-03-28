@@ -468,8 +468,9 @@ export default function Members() {
   const [page, setPage]                   = useState(1);
   const [loading, setLoading]             = useState(false);
   const [search, setSearch]               = useState("");
-  const [statusFilter, setStatusFilter]   = useState("all");
+  const [statusFilter, setStatusFilter]     = useState("all");
   const [studentsFilter, setStudentsFilter] = useState("all");
+  const [employerFilter, setEmployerFilter] = useState("");
   const [sortCol, setSortCol]             = useState<"id" | "name" | "email" | "createdAt">("id");
   const [sortDir, setSortDir]             = useState<"asc" | "desc">("desc");
   const [modalOpen, setModalOpen]         = useState(false);
@@ -481,13 +482,14 @@ export default function Members() {
 
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const activeFilters = [statusFilter !== "all", studentsFilter !== "all"].filter(Boolean).length;
+  const activeFilters = [statusFilter !== "all", studentsFilter !== "all", employerFilter.trim() !== ""].filter(Boolean).length;
 
   const fetchMembers = useCallback(async (p: number) => {
     setLoading(true);
     try {
       const res = await adminApi.members.list({
         q: search,
+        employer: employerFilter,
         sort: sortCol,
         dir: sortDir,
         page: String(p),
@@ -513,7 +515,7 @@ export default function Members() {
       fetchMembers(1);
     }, 350);
     return () => clearTimeout(searchTimer.current ?? 0);
-  }, [search, sortCol, sortDir, statusFilter, studentsFilter]);
+  }, [search, sortCol, sortDir, statusFilter, studentsFilter, employerFilter]);
 
   // Fetch when page changes
   useEffect(() => { fetchMembers(page); }, [page]);
@@ -674,9 +676,31 @@ export default function Members() {
                   { value: "without", label: "Without Students" },
                 ]}
               />
+              {/* Employer text filter */}
+              <div className="relative">
+                <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-medium text-gray-500 leading-none z-10">Employer</label>
+                <div className="relative">
+                  <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={employerFilter}
+                    onChange={(e) => setEmployerFilter(e.target.value)}
+                    placeholder="e.g. Ohio State"
+                    className="h-9 pl-8 pr-8 text-sm rounded-lg border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 w-44"
+                  />
+                  {employerFilter && (
+                    <button
+                      onClick={() => setEmployerFilter("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
               {activeFilters > 0 && (
                 <button
-                  onClick={() => { setStatusFilter("all"); setStudentsFilter("all"); }}
+                  onClick={() => { setStatusFilter("all"); setStudentsFilter("all"); setEmployerFilter(""); }}
                   className="text-xs text-red-600 hover:text-red-800 font-medium"
                 >
                   Clear filters
