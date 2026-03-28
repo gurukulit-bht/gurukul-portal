@@ -6,7 +6,6 @@ import { canAccess, getDefaultRoute, type Permission } from "./rbac";
 import AdminLogin from "./AdminLogin";
 import AdminLayout from "./AdminLayout";
 import Dashboard from "./pages/Dashboard";
-import AdminAnnouncements from "./pages/Announcements";
 import CalendarAdmin from "./pages/CalendarAdmin";
 import CourseManagement from "./pages/CourseManagement";
 import CoursesAdmin from "./pages/CoursesAdmin";
@@ -19,7 +18,6 @@ import Attendance from "./pages/Attendance";
 import WeeklyUpdates from "./pages/WeeklyUpdates";
 import UserManagement from "./pages/UserManagement";
 import StudentRegistration from "./pages/StudentRegistration";
-import Testimonials from "./pages/Testimonials";
 import MessagingCenter from "./pages/MessagingCenter";
 import NotesTab from "./components/NotesTab";
 import Help from "./pages/Help";
@@ -62,7 +60,7 @@ function AdminRoutes() {
         <ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>
       </Route>
       <Route path="/admin/announcements">
-        <ProtectedRoute permission="announcements"><AdminAnnouncements /></ProtectedRoute>
+        <Redirect to="/admin/messaging" />
       </Route>
       <Route path="/admin/calendar">
         <ProtectedRoute permission="calendar"><CalendarAdmin /></ProtectedRoute>
@@ -106,7 +104,7 @@ function AdminRoutes() {
       </Route>
 
       <Route path="/admin/testimonials">
-        <ProtectedRoute permission="testimonials"><Testimonials /></ProtectedRoute>
+        <Redirect to="/admin/messaging" />
       </Route>
 
       <Route path="/admin/messaging">

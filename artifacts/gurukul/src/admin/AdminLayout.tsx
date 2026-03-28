@@ -5,7 +5,7 @@ import { canAccess, getRoleLabel, getRoleBadgeColor, type Permission } from "./r
 import {
   LayoutDashboard, Megaphone, Calendar, BookOpen, Users, GraduationCap,
   Package, Settings, LogOut, Menu, X, ChevronRight, FileText, ClipboardList,
-  ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle, StickyNote,
+  ShieldCheck, UserPlus, Layers, Mail, Newspaper, HelpCircle, StickyNote,
 } from "lucide-react";
 import NaradJiBot from "./components/NaradJiBot";
 import NotesTab from "./components/NotesTab";
@@ -51,9 +51,8 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Communication",
     emoji: "📢",
     items: [
-      { label: "Announcements",        icon: Megaphone,       path: "/admin/announcements",     permission: "announcements" },
+      { label: "Communication Hub",    icon: Megaphone,       path: "/admin/messaging",         permission: "messaging" },
       { label: "Calendar",             icon: Calendar,        path: "/admin/calendar",          permission: "calendar" },
-      { label: "Messaging Center",     icon: Mail,            path: "/admin/messaging",         permission: "messaging" },
     ],
   },
   {
@@ -61,7 +60,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     emoji: "🧾",
     items: [
       { label: "Inventory",            icon: Package,         path: "/admin/inventory",         permission: "inventory" },
-      { label: "Testimonials",         icon: Quote,           path: "/admin/testimonials",      permission: "testimonials" },
     ],
   },
   {
