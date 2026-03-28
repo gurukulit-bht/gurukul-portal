@@ -62,7 +62,7 @@ export const adminApi = {
     list: (params?: Record<string, string>) => {
       const qs = params ? "?" + new URLSearchParams(params).toString() : "";
       return request<{
-        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number; isActive: boolean; expiringSoon: boolean }>;
+        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number; isActive: boolean; expiringSoon: boolean; employer: string | null }>;
         total: number; page: number; limit: number;
         stats: { totalMembers: number; activeCount: number; expiredCount: number; withStudents: number; withoutStudents: number; addedThisMonth: number };
       }>("GET", `/members${qs}`);

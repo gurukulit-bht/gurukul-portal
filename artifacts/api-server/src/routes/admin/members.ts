@@ -13,8 +13,10 @@ router.get("/", async (req, res) => {
       type     = "all",     // "all" | "temple" | "parent"
       policy   = "all",     // "all" | "agreed" | "not_agreed"
       year     = "",
+      status   = "all",     // "all" | "active" | "expiring" | "expired"
+      students = "all",     // "all" | "with" | "without"
       page     = "1",
-      limit    = "50",
+      limit    = "100",
       sort     = "id",
       dir      = "desc",
     } = req.query as Record<string, string>;
@@ -56,6 +58,22 @@ router.get("/", async (req, res) => {
       conditions.push(eq(membersTable.membershipYear, parseInt(year)));
     }
 
+    // Status filter (active = within 335 days, expiring = 335-365 days, expired = >365 days)
+    if (status === "active") {
+      conditions.push(sql`members.created_at >= NOW() - INTERVAL '335 days'` as ReturnType<typeof eq>);
+    } else if (status === "expiring") {
+      conditions.push(sql`members.created_at >= NOW() - INTERVAL '1 year' AND members.created_at < NOW() - INTERVAL '335 days'` as ReturnType<typeof eq>);
+    } else if (status === "expired") {
+      conditions.push(sql`members.created_at < NOW() - INTERVAL '1 year'` as ReturnType<typeof eq>);
+    }
+
+    // Students filter
+    if (students === "with") {
+      conditions.push(sql`(SELECT COUNT(*) FROM students WHERE students.member_id = members.id) > 0` as ReturnType<typeof eq>);
+    } else if (students === "without") {
+      conditions.push(sql`(SELECT COUNT(*) FROM students WHERE students.member_id = members.id) = 0` as ReturnType<typeof eq>);
+    }
+
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Sort
@@ -79,6 +97,7 @@ router.get("/", async (req, res) => {
         studentCount:     sql<number>`(SELECT COUNT(*)::int FROM students WHERE students.member_id = members.id)`.as("student_count"),
         isActive:         sql<boolean>`(members.created_at >= NOW() - INTERVAL '1 year')`.as("is_active"),
         expiringSoon:     sql<boolean>`(members.created_at >= NOW() - INTERVAL '1 year' AND members.created_at < NOW() - INTERVAL '335 days')`.as("expiring_soon"),
+        employer:         sql<string | null>`(SELECT COALESCE(NULLIF(TRIM(s.mother_employer), ''), NULLIF(TRIM(s.father_employer), '')) FROM students s WHERE s.member_id = members.id LIMIT 1)`.as("employer"),
       })
       .from(membersTable)
       .where(where)
