@@ -5,6 +5,7 @@ import {
   Search, Download, ChevronUp, ChevronDown, Filter, Loader2,
   X, Plus, Trash2, UserPlus, BookOpen, GraduationCap, Users,
   Pencil, ChevronLeft, ChevronRight, UserX, UserCheck, AlertTriangle,
+  Phone, Mail,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1228,7 +1229,7 @@ export default function Students() {
                   { label: "Course",  key: "primaryCourse"as SortKey, w: "w-40"  },
                   { label: "Level",   key: "primaryLevel" as SortKey, w: "w-16"  },
                   { label: "Section",                                  w: "w-24", noSort: true },
-                  { label: "Parent Phone",                             w: "w-28", noSort: true },
+                  { label: "Parent Contact",                           w: "w-52", noSort: true },
                   { label: "Payment", key: "worstPayStatus"as SortKey,w: "w-20"  },
                   { label: "Paid",    key: "totalPaid"    as SortKey, w: "w-16"  },
                   { label: "Method",                                   w: "w-20", noSort: true },
@@ -1285,8 +1286,26 @@ export default function Students() {
                       : <span className="text-muted-foreground">—</span>
                     }
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                    {s.parentPhone || <span className="text-muted-foreground/50">—</span>}
+                  <td className="px-3 py-2">
+                    <div className="space-y-0.5">
+                      {(s.motherName || s.motherPhone || s.motherEmail) && (
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px]">
+                          <span className="font-semibold text-pink-500 shrink-0">M</span>
+                          {s.motherPhone && <span className="flex items-center gap-0.5 text-muted-foreground whitespace-nowrap"><Phone className="w-2.5 h-2.5" />{s.motherPhone}</span>}
+                          {s.motherEmail && <span className="flex items-center gap-0.5 text-muted-foreground truncate max-w-[160px]"><Mail className="w-2.5 h-2.5 shrink-0" />{s.motherEmail}</span>}
+                        </div>
+                      )}
+                      {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px]">
+                          <span className="font-semibold text-blue-500 shrink-0">F</span>
+                          {s.fatherPhone && <span className="flex items-center gap-0.5 text-muted-foreground whitespace-nowrap"><Phone className="w-2.5 h-2.5" />{s.fatherPhone}</span>}
+                          {s.fatherEmail && <span className="flex items-center gap-0.5 text-muted-foreground truncate max-w-[160px]"><Mail className="w-2.5 h-2.5 shrink-0" />{s.fatherEmail}</span>}
+                        </div>
+                      )}
+                      {!s.motherPhone && !s.motherEmail && !s.fatherPhone && !s.fatherEmail && (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <span className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${statusBadge[s.worstPayStatus]}`}>

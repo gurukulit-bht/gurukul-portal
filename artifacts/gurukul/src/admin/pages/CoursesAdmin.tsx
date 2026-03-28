@@ -181,6 +181,25 @@ function StudentTable({ students }: { students: LevelStudent[] }) {
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ENROLL_COLORS[s.enrollStatus] ?? "bg-gray-100 text-gray-500"}`}>
                     {s.enrollStatus}
                   </span>
+                  {/* Mobile-only parent contact (hidden sm+) */}
+                  <div className="sm:hidden mt-1.5 space-y-0.5">
+                    {(s.motherName || s.motherPhone || s.motherEmail) && (
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                        <span className="font-semibold text-pink-500 shrink-0">M</span>
+                        {s.motherName  && <span className="font-medium text-secondary">{s.motherName}</span>}
+                        {s.motherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.motherPhone}</span>}
+                        {s.motherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail  className="w-3 h-3" />{s.motherEmail}</span>}
+                      </div>
+                    )}
+                    {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                        <span className="font-semibold text-blue-500 shrink-0">F</span>
+                        {s.fatherName  && <span className="font-medium text-secondary">{s.fatherName}</span>}
+                        {s.fatherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.fatherPhone}</span>}
+                        {s.fatherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail  className="w-3 h-3" />{s.fatherEmail}</span>}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-2.5 hidden sm:table-cell">
                   <div className="space-y-1">
@@ -384,6 +403,25 @@ export default function CoursesAdmin() {
                             <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ENROLL_COLORS[s.enrollStatus] ?? "bg-gray-100 text-gray-500"}`}>
                               {s.enrollStatus}
                             </span>
+                            {/* Mobile-only parent contact (hidden md+) */}
+                            <div className="md:hidden mt-1.5 space-y-0.5">
+                              {(s.motherName || s.motherPhone || s.motherEmail) && (
+                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                                  <span className="font-semibold text-pink-500 shrink-0">M</span>
+                                  {s.motherName  && <span className="font-medium text-secondary">{s.motherName}</span>}
+                                  {s.motherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.motherPhone}</span>}
+                                  {s.motherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail  className="w-3 h-3" />{s.motherEmail}</span>}
+                                </div>
+                              )}
+                              {(s.fatherName || s.fatherPhone || s.fatherEmail) && (
+                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                                  <span className="font-semibold text-blue-500 shrink-0">F</span>
+                                  {s.fatherName  && <span className="font-medium text-secondary">{s.fatherName}</span>}
+                                  {s.fatherPhone && <span className="flex items-center gap-0.5 text-muted-foreground"><Phone className="w-3 h-3" />{s.fatherPhone}</span>}
+                                  {s.fatherEmail && <span className="flex items-center gap-0.5 text-muted-foreground"><Mail  className="w-3 h-3" />{s.fatherEmail}</span>}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 hidden sm:table-cell">
                             <div className="text-xs font-medium text-secondary">{s.courseName}</div>
