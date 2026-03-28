@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { adminApi } from "@/lib/adminApi";
 import { CURRICULUM_YEARS_LONG as CURRICULUM_YEARS } from "@/admin/contexts/PortalSettingsContext";
 import {
+  validateUSPhone as _validateUSPhone,
+  validateEmail as _validateEmail,
+  validatePersonName as _validatePersonName,
+  validateAddress as _validateAddress,
+  formatUSPhone,
+} from "@/lib/validators";
+import {
   Loader2, Plus, Trash2, BookOpen, GraduationCap, Users,
   Search, UserCheck, UserPlus, ChevronRight, ShieldCheck,
   AlertCircle, BadgeDollarSign, RefreshCw,
@@ -54,27 +61,9 @@ const EMPLOYERS_LIST = [
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
 
-function validatePhone(v: string): string {
-  if (!v.trim()) return "Phone number is required.";
-  const digits = v.replace(/\D/g, "");
-  if (digits.length < 10) return "Please enter a valid 10-digit US phone number, e.g. (614) 555-0100.";
-  if (digits.length > 11) return "Phone number is too long. Please enter a 10-digit US number.";
-  return "";
-}
-
-function validateEmail(v: string): string {
-  if (!v.trim()) return "Email address is required.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()))
-    return "Please enter a valid email address, e.g. name@example.com.";
-  return "";
-}
-
-function validatePersonName(v: string, label: string): string {
-  if (!v.trim()) return `${label} is required.`;
-  if (v.trim().length < 2) return `${label} must be at least 2 characters.`;
-  if (/\d/.test(v)) return `${label} should not contain numbers.`;
-  return "";
-}
+function validatePhone(v: string): string { return _validateUSPhone(v, true); }
+function validateEmail(v: string): string { return _validateEmail(v, true); }
+function validatePersonName(v: string, label: string): string { return _validatePersonName(v, label); }
 
 function validateDob(v: string): string {
   if (!v) return "Date of birth is required.";
@@ -88,18 +77,9 @@ function validateDob(v: string): string {
   return "";
 }
 
-function validateAddress(v: string): string {
-  if (!v.trim()) return "Home address is required.";
-  if (v.trim().length < 8) return "Please enter your full street address including city and state.";
-  return "";
-}
+function validateAddress(v: string): string { return _validateAddress(v); }
 
-function validateLookupInput(v: string): string {
-  if (!v.trim()) return "Please enter your registered phone number.";
-  const digits = v.replace(/\D/g, "");
-  if (digits.length < 10) return "Please enter a valid 10-digit phone number.";
-  return "";
-}
+function validateLookupInput(v: string): string { return _validateUSPhone(v, true); }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -442,7 +422,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
     setCurricYear(s.curriculumYear ?? "2027-2028");
     // Mother
     setMotherName(s.motherName ?? "");
-    setMotherPhone(s.motherPhone ?? "");
+    setMotherPhone(formatUSPhone(s.motherPhone ?? ""));
     setMotherEmail(s.motherEmail ?? "");
     const mEmp = s.motherEmployer ?? "";
     if (!mEmp || EMPLOYERS_LIST.includes(mEmp)) {
@@ -454,7 +434,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
     }
     // Father
     setFatherName(s.fatherName ?? "");
-    setFatherPhone(s.fatherPhone ?? "");
+    setFatherPhone(formatUSPhone(s.fatherPhone ?? ""));
     setFatherEmail(s.fatherEmail ?? "");
     const fEmp = s.fatherEmployer ?? "";
     if (!fEmp || EMPLOYERS_LIST.includes(fEmp)) {
@@ -534,7 +514,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
         const created = await adminApi.members.create({
           name:           memberName.trim() || null,
           email:          memberEmail.trim() || null,
-          phone:          memberPhone.trim() || null,
+          phone:          memberPhone.replace(/\D/g, "") || null,
           isExistingMember: false,
           policyAgreed:     true,
           membershipYear:   CURRENT_YEAR,
@@ -553,11 +533,11 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
         isNewStudent:   isNew,
         memberId:       memberId ?? undefined,
         motherName:     motherName.trim(),
-        motherPhone:    motherPhone.trim(),
+        motherPhone:    motherPhone.replace(/\D/g, ""),
         motherEmail:    motherEmail.trim(),
         motherEmployer: effectiveMotherEmployer || undefined,
         fatherName:     fatherName.trim(),
-        fatherPhone:    fatherPhone.trim(),
+        fatherPhone:    fatherPhone.replace(/\D/g, ""),
         fatherEmail:    fatherEmail.trim(),
         fatherEmployer: effectiveFatherEmployer || undefined,
         address:        address.trim(),
@@ -661,9 +641,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                   <input
                     type="tel"
                     value={lookupValue}
-                    onChange={e => { setLookupValue(e.target.value); setLookupError(""); }}
+                    onChange={e => { setLookupValue(formatUSPhone(e.target.value)); setLookupError(""); }}
                     onKeyDown={e => e.key === "Enter" && handleLookup()}
-                    placeholder="10-digit phone number"
+                    placeholder="(614) 555-0100"
+                    maxLength={14}
                     className={`${inputCls} ${lookupError ? "border-red-400" : ""}`}
                   />
                   <FieldError msg={lookupError} />
@@ -806,9 +787,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                 <input
                   type="tel"
                   value={memberPhone}
-                  onChange={e => { setMemberPhone(e.target.value); setP1Errors(prev => ({ ...prev, memberPhone: "" })); }}
+                  onChange={e => { setMemberPhone(formatUSPhone(e.target.value)); setP1Errors(prev => ({ ...prev, memberPhone: "" })); }}
                   onBlur={() => memberPhone && setP1Errors(prev => ({ ...prev, memberPhone: validatePhone(memberPhone) }))}
                   placeholder="(614) 555-0100"
+                  maxLength={14}
                   className={`${inputCls} ${p1Errors.memberPhone ? "border-red-400" : ""}`}
                 />
               </Field>
@@ -1013,9 +995,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                 <input
                   type="tel"
                   value={motherPhone}
-                  onChange={e => setMotherPhone(e.target.value)}
+                  onChange={e => setMotherPhone(formatUSPhone(e.target.value))}
                   onBlur={() => blurField("motherPhone", motherPhone)}
                   placeholder="(614) 555-0100"
+                  maxLength={14}
                   className={inputClsFor("motherPhone")}
                   data-field-error={errors.motherPhone ? "true" : undefined}
                 />
@@ -1066,9 +1049,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                 <input
                   type="tel"
                   value={fatherPhone}
-                  onChange={e => setFatherPhone(e.target.value)}
+                  onChange={e => setFatherPhone(formatUSPhone(e.target.value))}
                   onBlur={() => blurField("fatherPhone", fatherPhone)}
                   placeholder="(614) 555-0101"
+                  maxLength={14}
                   className={inputClsFor("fatherPhone")}
                   data-field-error={errors.fatherPhone ? "true" : undefined}
                 />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/adminApi";
+import { validatePersonName, validateEmail, validateUSPhone, formatUSPhone } from "@/lib/validators";
 import {
   Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck, KeyRound, Eye, EyeOff, Clock,
 } from "lucide-react";
@@ -97,7 +98,7 @@ export default function Teachers() {
     setForm({
       name:            t.name,
       email:           t.email,
-      phone:           t.phone,
+      phone:           formatUSPhone(t.phone),
       category:        t.category || "Teacher",
       assistantId:     t.assistantId,
       linkedTeacherId: t.linkedTeacherId,
@@ -112,14 +113,17 @@ export default function Teachers() {
   }
 
   async function handleSave() {
-    if (!form.name.trim())  { setError("Full name is required."); return; }
-    if (!form.email.trim()) { setError("Email is required."); return; }
-    if (!form.phone.trim()) { setError("Phone number is required. It is used as the teacher's login identifier."); return; }
+    const nameErr  = validatePersonName(form.name, "Full name");
+    if (nameErr)  { setError(nameErr); return; }
+    const emailErr = validateEmail(form.email);
+    if (emailErr) { setError(emailErr); return; }
+    const phoneErr = validateUSPhone(form.phone);
+    if (phoneErr) { setError(`Phone: ${phoneErr} — This is used as the staff member's login identifier.`); return; }
     if (!form.category)     { setError("Category is required."); return; }
 
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload = { ...form, phone: form.phone.replace(/\D/g, "") };
 
       if (editing) {
         await adminApi.teachers.update(editing.id, payload);
@@ -480,12 +484,14 @@ export default function Teachers() {
               <div className="space-y-1.5">
                 <Label>Phone <span className="text-red-500">*</span></Label>
                 <Input
-                  placeholder="e.g. (614) 555-0101"
+                  type="tel"
+                  placeholder="(614) 555-0101"
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: formatUSPhone(e.target.value) }))}
+                  maxLength={14}
                   className="rounded-xl"
                 />
-                <p className="text-xs text-muted-foreground">Used as the primary login identifier for portal access.</p>
+                <p className="text-xs text-muted-foreground">US 10-digit number — used as the login identifier for portal access.</p>
               </div>
 
               <div className="space-y-1.5">

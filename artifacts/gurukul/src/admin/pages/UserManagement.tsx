@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/adminApi";
 import { useAuth } from "../AuthContext";
+import { validatePersonName, validateUSPhone, validatePIN, formatUSPhone } from "@/lib/validators";
 
 type AdminUser = {
   id:          number;
@@ -119,15 +120,17 @@ export default function UserManagement() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
-    const cleanPhone = form.phone.replace(/\D/g, "");
-    if (!form.name.trim()) { setFormError("Name is required."); return; }
-    if (cleanPhone.length !== 10) { setFormError("Phone must be exactly 10 digits."); return; }
-
+    const nameErr  = validatePersonName(form.name, "Full name");
+    if (nameErr)  { setFormError(nameErr); return; }
+    const phoneErr = validateUSPhone(form.phone);
+    if (phoneErr) { setFormError(phoneErr); return; }
     if (!editTarget) {
       // Create
-      if (!/^\d{4}$/.test(form.pin)) { setFormError("PIN must be exactly 4 digits."); return; }
+      const pinErr = validatePIN(form.pin);
+      if (pinErr) { setFormError(pinErr); return; }
     }
 
+    const cleanPhone = form.phone.replace(/\D/g, "");
     setSubmitting(true);
     try {
       if (editTarget) {
@@ -293,13 +296,14 @@ export default function UserManagement() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">
                   Phone / Username <span className="text-red-500">*</span>
-                  <span className="font-normal text-muted-foreground ml-1">(10 digits)</span>
+                  <span className="font-normal text-muted-foreground ml-1">(US 10-digit)</span>
                 </Label>
                 <Input
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  placeholder="6141234567"
-                  inputMode="numeric"
+                  onChange={(e) => setForm((f) => ({ ...f, phone: formatUSPhone(e.target.value) }))}
+                  placeholder="(614) 123-4567"
+                  type="tel"
+                  maxLength={14}
                   required
                   className="h-9 text-sm"
                 />

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MapPin, Phone, Mail, Send, CheckCircle2, Loader2, ShieldCheck, RefreshCw } from "lucide-react";
 import { useSiteContent } from "@/hooks/useSiteContent";
+import { validatePersonName, validateEmail, validateUSPhone, validateRequired, formatUSPhone } from "@/lib/validators";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -119,10 +120,14 @@ export default function Contact() {
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!name.trim())        e.name    = "Your name is required.";
-    if (!message.trim())     e.message = "Please write a message.";
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-      e.email = "Please enter a valid email address.";
+    const nameErr = validatePersonName(name, "Your name");
+    if (nameErr) e.name = nameErr;
+    const msgErr = validateRequired(message, "Message");
+    if (msgErr) e.message = msgErr;
+    const emailErr = validateEmail(email, false); // optional
+    if (emailErr) e.email = emailErr;
+    const phoneErr = validateUSPhone(phone, false); // optional
+    if (phoneErr) e.phone = phoneErr;
     return e;
   }
 
@@ -267,10 +272,15 @@ export default function Contact() {
                       <input
                         type="tel"
                         value={phone}
-                        onChange={e => setPhone(e.target.value)}
+                        onChange={e => {
+                          setPhone(formatUSPhone(e.target.value));
+                          setErrors(prev => ({ ...prev, phone: "" }));
+                        }}
                         placeholder="(614) 555-0100"
                         className={inputCls("phone")}
+                        maxLength={14}
                       />
+                      {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                     </div>
                   </div>
 
