@@ -308,8 +308,10 @@ function DetailPanel({ member, onClose, onEdit, onDelete, onRenew, canEdit }: {
   onDelete: () => void; onRenew: () => void; canEdit: boolean;
 }) {
   const [renewing, setRenewing] = useState(false);
-  const exp    = expiresOn(member.createdAt);
-  const active = member.isActive;
+  const exp          = expiresOn(member.createdAt);
+  const now          = new Date();
+  const active       = exp > now;
+  const expiringSoon = active && (exp.getTime() - now.getTime() < 30 * 24 * 60 * 60 * 1000);
 
   async function handleRenew() {
     if (!confirm(`Renew membership for "${member.name}"? This resets the 1-year membership clock to today.`)) return;
