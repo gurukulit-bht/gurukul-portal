@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  ShieldCheck, Shield, Users, Phone, UserPlus, RefreshCw,
+  ShieldCheck, Users, Phone, UserPlus, RefreshCw,
   Copy, Check, Eye, EyeOff, Loader2, Trash2, X, Edit2,
-  Lock, KeyRound, AlertCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,155 +41,6 @@ function Initials({ name }: { name: string }) {
   );
 }
 
-// ── Super Admin Section ────────────────────────────────────────────────────────
-function SuperAdminSection({ admin, isSelf }: { admin: AdminUser; isSelf: boolean }) {
-  const [showChange, setShowChange]   = useState(false);
-  const [overridePin, setOverridePin] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPw,   setConfirmPw]   = useState("");
-  const [submitting,  setSubmitting]  = useState(false);
-  const [showPw,      setShowPw]      = useState(false);
-  const [error,       setError]       = useState("");
-
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (newPassword.length < 8) { setError("Password must be at least 8 characters."); return; }
-    if (newPassword !== confirmPw) { setError("Passwords do not match."); return; }
-    if (!overridePin.trim()) { setError("Override PIN is required."); return; }
-    setSubmitting(true);
-    try {
-      await adminApi.adminUsers.changeSuperAdminPassword(overridePin.trim(), newPassword);
-      toast.success("Super admin password updated successfully.");
-      setShowChange(false);
-      setOverridePin(""); setNewPassword(""); setConfirmPw("");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to change password.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border border-border overflow-hidden">
-      <div className="px-5 py-4 border-b border-border flex items-center gap-3 bg-gradient-to-r from-secondary/5 to-primary/5">
-        <div className="w-8 h-8 bg-secondary/10 rounded-lg flex items-center justify-center">
-          <Shield className="w-4 h-4 text-secondary" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-secondary">Super Admin</h3>
-          <p className="text-xs text-muted-foreground">Reserved system account — cannot be deleted</p>
-        </div>
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-secondary text-white flex items-center justify-center font-bold text-sm shrink-0">
-            SA
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-secondary">{admin.name}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary font-medium">Super Admin</span>
-              {isSelf && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">You</span>}
-            </div>
-            <p className="text-sm text-muted-foreground mt-0.5">{admin.email}</p>
-            <p className="text-xs text-muted-foreground mt-1">Username: <span className="font-medium text-secondary">{admin.email}</span></p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => { setShowChange((v) => !v); setError(""); }}
-            className="gap-1.5 shrink-0 text-xs"
-          >
-            <Lock className="w-3.5 h-3.5" />
-            {showChange ? "Cancel" : "Change Password"}
-          </Button>
-        </div>
-
-        {showChange && (
-          <form onSubmit={handleChangePassword} className="mt-5 border border-border rounded-xl p-5 space-y-4 bg-gray-50">
-            <p className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              <AlertCircle className="w-3.5 h-3.5 inline mr-1 text-amber-600" />
-              Changing the Super Admin password requires the special system override PIN.
-            </p>
-
-            {error && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-xs">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {error}
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">System Override PIN <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  type={showPw ? "text" : "password"}
-                  placeholder="Enter override PIN"
-                  value={overridePin}
-                  onChange={(e) => setOverridePin(e.target.value)}
-                  className="pl-9 h-9 text-sm rounded-xl"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">New Password <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <Input
-                    type={showPw ? "text" : "password"}
-                    placeholder="Min 8 characters"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="h-9 text-sm rounded-xl pr-9"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-secondary"
-                  >
-                    {showPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Confirm Password <span className="text-red-500">*</span></Label>
-                <Input
-                  type={showPw ? "text" : "password"}
-                  placeholder="Repeat new password"
-                  value={confirmPw}
-                  onChange={(e) => setConfirmPw(e.target.value)}
-                  className="h-9 text-sm rounded-xl"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => { setShowChange(false); setError(""); setOverridePin(""); setNewPassword(""); setConfirmPw(""); }}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={submitting} className="text-xs gap-1.5">
-                {submitting && <Loader2 className="w-3 h-3 animate-spin" />}
-                Update Password
-              </Button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function UserManagement() {
@@ -225,7 +76,6 @@ export default function UserManagement() {
 
   useEffect(() => { load(); }, [load]);
 
-  const superAdmin   = admins.find((a) => a.role === "super_admin");
   const regularAdmins = admins.filter((a) => a.role !== "super_admin");
 
   // ── Form helpers ────────────────────────────────────────────────────────────
@@ -339,8 +189,6 @@ export default function UserManagement() {
     });
   }
 
-  const isSuperAdminSelf = currentUser?.isSuperAdmin === true;
-
   return (
     <div className="space-y-6">
 
@@ -389,11 +237,6 @@ export default function UserManagement() {
           </Button>
         </div>
       </div>
-
-      {/* ── Super Admin section ─────────────────────────────────────────── */}
-      {superAdmin && (
-        <SuperAdminSection admin={superAdmin} isSelf={isSuperAdminSelf} />
-      )}
 
       {/* ── Admin Management ───────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-border overflow-hidden">
