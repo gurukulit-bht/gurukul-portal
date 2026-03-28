@@ -59,6 +59,19 @@ export const adminApi = {
   },
   members: {
     lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null }>("POST", "/members/lookup", { emailOrPhone }),
+    list: (params?: Record<string, string>) => {
+      const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+      return request<{
+        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number }>;
+        total: number; page: number; limit: number;
+        stats: { totalMembers: number; templeMembers: number; parentAccounts: number; policyAgreedCount: number; thisYear: number };
+      }>("GET", `/members${qs}`);
+    },
+    getById: (id: number) => request<{
+      id: number; name: string | null; email: string | null; phone: string | null;
+      isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string;
+      students: Array<{ id: number; studentCode: string; name: string; dob: string | null; grade: string | null; isActive: boolean }>;
+    }>("GET", `/members/${id}`),
     studentsByMember: (memberId: number) => request<Array<{
       id: number; studentCode: string; name: string;
       dob: string | null; grade: string | null; curriculumYear: string | null;
@@ -66,9 +79,12 @@ export const adminApi = {
       fatherName: string | null; fatherPhone: string | null; fatherEmail: string | null; fatherEmployer: string | null;
       address: string | null; volunteerParent: boolean | null; volunteerArea: string | null;
     }>>("GET", `/members/${memberId}/students`),
-    create: (data: { name: string; phone?: string | null; email?: string | null; isExistingMember?: boolean; policyAgreed?: boolean }) =>
+    create: (data: { name: string; phone?: string | null; email?: string | null; isExistingMember?: boolean; policyAgreed?: boolean; membershipYear?: number | null }) =>
       request<{ id: number; isExistingMember: boolean; name: string | null; email: string | null; phone: string | null }>("POST", "/members", data),
-    update: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
+    fullUpdate: (id: number, data: { name: string; email?: string | null; phone?: string | null; isExistingMember?: boolean; policyAgreed?: boolean; membershipYear?: number | null }) =>
+      request("PUT", `/members/${id}`, data),
+    patch: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
+    remove: (id: number) => request("DELETE", `/members/${id}`),
   },
   backfill: {
     linkMembers: () => request<{ created: number; linked: number; reusedExisting: number; totalStudentsFixed: number }>("POST", "/backfill/members", {}),

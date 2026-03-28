@@ -37,6 +37,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: "Dashboard",            icon: LayoutDashboard, path: "/admin/dashboard",         permission: "dashboard" },
       { label: "Student Registration", icon: UserPlus,        path: "/admin/register",          permission: "registration" },
       { label: "Student Management",    icon: Users,           path: "/admin/students",          permission: "students" },
+      { label: "Member Management",     icon: BookOpen,        path: "/admin/members",           permission: "members" },
     ],
   },
   {

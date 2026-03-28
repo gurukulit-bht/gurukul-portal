@@ -19,6 +19,7 @@ import WeeklyUpdates from "./pages/WeeklyUpdates";
 import UserManagement from "./pages/UserManagement";
 import StudentRegistration from "./pages/StudentRegistration";
 import MessagingCenter from "./pages/MessagingCenter";
+import Members from "./pages/Members";
 import NotesTab from "./components/NotesTab";
 import Help from "./pages/Help";
 import AccessDenied from "./components/AccessDenied";
@@ -113,6 +114,10 @@ function AdminRoutes() {
 
       <Route path="/admin/sticky-notes">
         <ProtectedRoute permission="messaging"><NotesTab standalone /></ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/members">
+        <ProtectedRoute permission="members"><Members /></ProtectedRoute>
       </Route>
 
       <Route path="/admin/roles">
