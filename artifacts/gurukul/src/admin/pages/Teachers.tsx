@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/adminApi";
 import {
-  Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck, KeyRound, Eye, EyeOff,
+  Plus, Edit2, Trash2, Check, X, Search, Phone, Mail, Loader2, BookOpen, UserCheck, KeyRound, Eye, EyeOff, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ type Teacher = {
   linkedTeacherName: string | null;
   courseNames:       string[];
   assignments:       Assignment[];
+  lastLoginAt:       string | null;
 };
 
 const CATEGORIES = ["Teacher", "Assistant"];
@@ -270,14 +271,14 @@ export default function Teachers() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-border">
               <tr>
-                {["Staff Member", "Category / Paired", "Courses", "Actions"].map((h) => (
+                {["Staff Member", "Category / Paired", "Courses", "Last Login", "Actions"].map((h) => (
                   <th key={h} className="text-left font-semibold text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="text-center py-12 text-muted-foreground">No staff found.</td></tr>
+                <tr><td colSpan={5} className="text-center py-12 text-muted-foreground">No staff found.</td></tr>
               )}
               {filtered.map((t) => {
                 const pairedName = t.category !== "Assistant" ? t.assistantName : t.linkedTeacherName;
@@ -337,6 +338,38 @@ export default function Teachers() {
                           </div>
                         ))}
                       </div>
+                    )}
+                  </td>
+
+                  {/* Last Login */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {t.lastLoginAt ? (
+                      <>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3 shrink-0 text-green-600" />
+                          <span className="font-medium text-green-700">
+                            {(() => {
+                              const diff = Date.now() - new Date(t.lastLoginAt).getTime();
+                              const mins = Math.floor(diff / 60000);
+                              if (mins < 1)  return "Just now";
+                              if (mins < 60) return `${mins}m ago`;
+                              const hrs = Math.floor(mins / 60);
+                              if (hrs < 24)  return `${hrs}h ago`;
+                              const days = Math.floor(hrs / 24);
+                              if (days < 7)  return `${days}d ago`;
+                              return new Date(t.lastLoginAt!).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 pl-4.5">
+                          {new Date(t.lastLoginAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
+                        <Clock className="w-3 h-3 shrink-0" />
+                        Never
+                      </span>
                     )}
                   </td>
 

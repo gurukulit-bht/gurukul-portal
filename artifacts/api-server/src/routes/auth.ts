@@ -59,6 +59,11 @@ router.post("/admin-login", async (req, res) => {
       const valid = await bcrypt.compare(secret, sa.pinHash);
       if (!valid) return res.status(401).json({ error: "Invalid email or password." });
 
+      // Record login timestamp
+      await db.update(adminUsersTable)
+        .set({ lastLoginAt: new Date() })
+        .where(eq(adminUsersTable.id, sa.id));
+
       return res.json({
         id:           sa.id,
         name:         sa.name,
@@ -91,6 +96,11 @@ router.post("/admin-login", async (req, res) => {
 
     const valid = await bcrypt.compare(secret, admin.pinHash);
     if (!valid) return res.status(401).json({ error: "Invalid phone number or PIN." });
+
+    // Record login timestamp
+    await db.update(adminUsersTable)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(adminUsersTable.id, admin.id));
 
     return res.json({
       id:           admin.id,
@@ -169,10 +179,10 @@ router.post("/pin-login", async (req, res) => {
       });
     }
 
-    // Success — reset attempts
+    // Success — reset attempts and record login time
     await db
       .update(portalUsersTable)
-      .set({ loginAttempts: 0, lockedUntil: null, updatedAt: new Date() })
+      .set({ loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(portalUsersTable.id, user.id));
 
     // Look up the teacher's email so the frontend can send X-User-Email on subsequent requests

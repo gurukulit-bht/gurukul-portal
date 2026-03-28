@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   ShieldCheck, Users, Phone, UserPlus, RefreshCw,
   Copy, Check, Eye, EyeOff, Loader2, Trash2, X, Edit2,
-  AlertCircle,
+  AlertCircle, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ type AdminUser = {
   status:      string;
   createdBy:   string | null;
   updatedBy:   string | null;
+  lastLoginAt: string | null;
   createdAt:   string | null;
   updatedAt:   string | null;
 };
@@ -30,6 +31,21 @@ function formatPhone(p: string | null | undefined) {
   if (!p) return "—";
   if (p.length === 10) return `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}`;
   return p;
+}
+
+function formatLastLogin(dt: string | null | undefined): string {
+  if (!dt) return "Never";
+  const d = new Date(dt);
+  const now = Date.now();
+  const diff = now - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7)  return `${days}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function Initials({ name }: { name: string }) {
@@ -330,7 +346,7 @@ export default function UserManagement() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-border">
                 <tr>
-                  {["Admin", "Phone / Username", "Status", "Created By", "Actions"].map((h) => (
+                  {["Admin", "Phone / Username", "Status", "Last Login", "Created By", "Actions"].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                       {h}
                     </th>
@@ -369,6 +385,19 @@ export default function UserManagement() {
                         }`}>
                           {a.status === "active" ? "Active" : "Inactive"}
                         </span>
+                      </td>
+
+                      {/* Last Login */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span>{formatLastLogin(a.lastLoginAt)}</span>
+                        </div>
+                        {a.lastLoginAt && (
+                          <div className="text-[11px] text-muted-foreground/60 mt-0.5 pl-5">
+                            {new Date(a.lastLoginAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                          </div>
+                        )}
                       </td>
 
                       {/* Created by */}

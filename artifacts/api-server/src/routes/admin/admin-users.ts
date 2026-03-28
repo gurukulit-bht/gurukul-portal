@@ -23,6 +23,7 @@ function safeAdmin(u: typeof adminUsersTable.$inferSelect, creatorName?: string 
     createdBy:   creatorName ?? null,
     updatedById: u.updatedById ?? null,
     updatedBy:   updaterName ?? null,
+    lastLoginAt: u.lastLoginAt ?? null,
     createdAt:   u.createdAt,
     updatedAt:   u.updatedAt,
   };

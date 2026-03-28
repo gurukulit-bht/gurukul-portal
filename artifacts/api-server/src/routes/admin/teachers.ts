@@ -24,6 +24,12 @@ const router: IRouter = Router();
 async function buildTeacherList() {
   const teachers = await db.select().from(teachersTable).orderBy(teachersTable.id);
 
+  // Fetch portal login data for last login timestamp (keyed by phone)
+  const portalUsers = await db
+    .select({ phone: portalUsersTable.phone, lastLoginAt: portalUsersTable.lastLoginAt, role: portalUsersTable.role })
+    .from(portalUsersTable);
+  const lastLoginByPhone = new Map(portalUsers.map((p) => [p.phone, p.lastLoginAt ?? null]));
+
   // Section-level assignments (Course Management UI)
   const sectionRows = await db
     .select({
@@ -98,6 +104,8 @@ async function buildTeacherList() {
       (other) => other.category !== "Assistant" && other.assistantId === t.id
     );
 
+    const cleanPhone = (t.phone ?? "").replace(/\D/g, "");
+
     return {
       id:                t.id,
       name:              t.name,
@@ -111,6 +119,7 @@ async function buildTeacherList() {
       linkedTeacherName: linkedTeacher?.name ?? null,
       courseNames:       allCourseNames,
       assignments,
+      lastLoginAt:       cleanPhone ? (lastLoginByPhone.get(cleanPhone) ?? null) : null,
     };
   });
 }

@@ -98,6 +98,7 @@ export const adminUsersTable = pgTable("admin_users", {
   status:      text("status").notNull().default("active"), // "active" | "inactive"
   createdById: integer("created_by_id"),   // admin who created this account (null for super admin)
   updatedById: integer("updated_by_id"),
+  lastLoginAt: timestamp("last_login_at"), // most recent successful login
   createdAt:   timestamp("created_at").defaultNow(),
   updatedAt:   timestamp("updated_at").defaultNow(),
 });
@@ -501,6 +502,7 @@ export const portalUsersTable = pgTable("portal_users", {
   status:        portalUserStatusEnum("status").notNull().default("active"),
   loginAttempts: integer("login_attempts").notNull().default(0),
   lockedUntil:   timestamp("locked_until"),
+  lastLoginAt:   timestamp("last_login_at"), // most recent successful login
   createdAt:     timestamp("created_at").defaultNow().notNull(),
   updatedAt:     timestamp("updated_at").defaultNow().notNull(),
 });
