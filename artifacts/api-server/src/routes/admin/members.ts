@@ -65,7 +65,7 @@ router.get("/", async (req, res) => {
                    : membersTable.id;
     const orderFn  = dir === "asc" ? asc : desc;
 
-    // Execute query with student count sub-query
+    // Execute query with student count + isActive per row
     const rows = await db
       .select({
         id:               membersTable.id,
@@ -77,6 +77,7 @@ router.get("/", async (req, res) => {
         membershipYear:   membersTable.membershipYear,
         createdAt:        membersTable.createdAt,
         studentCount:     sql<number>`(SELECT COUNT(*) FROM students WHERE students.member_id = ${membersTable.id})`.as("student_count"),
+        isActive:         sql<boolean>`${membersTable.createdAt} >= NOW() - INTERVAL '1 year'`.as("is_active"),
       })
       .from(membersTable)
       .where(where)
@@ -90,16 +91,17 @@ router.get("/", async (req, res) => {
       .from(membersTable)
       .where(where);
 
-    // Stats (always full table)
+    // Stats — non-correlated subqueries so the counts are correct
     const curYear  = new Date().getFullYear();
     const curMonth = new Date().getMonth() + 1; // 1–12
     const [stats] = await db
       .select({
-        totalMembers:    count(),
-        thisYear:        sql<number>`COUNT(*) FILTER (WHERE membership_year = ${curYear})`,
-        withStudents:    sql<number>`COUNT(*) FILTER (WHERE (SELECT COUNT(*) FROM students WHERE students.member_id = ${membersTable.id}) > 0)`,
-        withoutStudents: sql<number>`COUNT(*) FILTER (WHERE (SELECT COUNT(*) FROM students WHERE students.member_id = ${membersTable.id}) = 0)`,
-        addedThisMonth:  sql<number>`COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM created_at) = ${curYear} AND EXTRACT(MONTH FROM created_at) = ${curMonth})`,
+        totalMembers:    sql<number>`COUNT(*)`,
+        activeCount:     sql<number>`SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 year' THEN 1 ELSE 0 END)`,
+        expiredCount:    sql<number>`SUM(CASE WHEN created_at < NOW() - INTERVAL '1 year' THEN 1 ELSE 0 END)`,
+        withStudents:    sql<number>`(SELECT COUNT(DISTINCT member_id) FROM students WHERE member_id IS NOT NULL)`,
+        withoutStudents: sql<number>`COUNT(*) - (SELECT COUNT(DISTINCT member_id) FROM students WHERE member_id IS NOT NULL)`,
+        addedThisMonth:  sql<number>`SUM(CASE WHEN EXTRACT(YEAR FROM created_at) = ${curYear} AND EXTRACT(MONTH FROM created_at) = ${curMonth} THEN 1 ELSE 0 END)`,
       })
       .from(membersTable);
 
@@ -110,10 +112,11 @@ router.get("/", async (req, res) => {
       limit:   pageSize,
       stats: {
         totalMembers:    Number(stats.totalMembers),
-        thisYear:        Number(stats.thisYear),
-        withStudents:    Number(stats.withStudents),
-        withoutStudents: Number(stats.withoutStudents),
-        addedThisMonth:  Number(stats.addedThisMonth),
+        activeCount:     Number(stats.activeCount  ?? 0),
+        expiredCount:    Number(stats.expiredCount  ?? 0),
+        withStudents:    Number(stats.withStudents  ?? 0),
+        withoutStudents: Number(stats.withoutStudents ?? 0),
+        addedThisMonth:  Number(stats.addedThisMonth ?? 0),
       },
     });
   } catch (err) {

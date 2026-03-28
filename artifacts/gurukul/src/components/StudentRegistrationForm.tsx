@@ -94,6 +94,7 @@ type FoundMember  = {
   email: string | null;
   phone: string | null;
   membershipYear: number | null;
+  createdAt: string;
 };
 
 type LinkedStudent = {
@@ -586,7 +587,13 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
   // PHASE 1: Temple Member Check
   // ─────────────────────────────────────────────────────────────────────────────
   if (phase === "member-check") {
-    const membershipIsCurrentYear = foundMember?.membershipYear === CURRENT_YEAR;
+    const memberIsActive = foundMember
+      ? new Date(foundMember.createdAt) >= new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+      : false;
+    const memberExpiry = foundMember
+      ? new Date(new Date(foundMember.createdAt).getTime() + 365 * 24 * 60 * 60 * 1000)
+      : null;
+    const membershipIsCurrentYear = memberIsActive; // kept for UI compat below
 
     return (
       <div className="space-y-6">
@@ -808,19 +815,25 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
               </p>
             </div>
 
-            {/* For existing members: show membership status */}
+            {/* For existing members: show membership active / expired status */}
             {isExistingMember && foundMember && (
-              <div className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 ${
-                membershipIsCurrentYear
+              <div className={`flex items-start gap-2 text-sm rounded-lg px-3 py-2 ${
+                memberIsActive
                   ? "bg-green-100 text-green-800 border border-green-200"
                   : "bg-red-50 text-red-700 border border-red-200"
               }`}>
-                {membershipIsCurrentYear
-                  ? <><RefreshCw className="w-3.5 h-3.5 shrink-0" /> Membership is active for {CURRENT_YEAR}.</>
-                  : <><AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      Membership was last renewed in{" "}
-                      {foundMember.membershipYear ?? "an unknown year"}.{" "}
-                      Renewal is required for {CURRENT_YEAR}.
+                {memberIsActive
+                  ? <><RefreshCw className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>Membership is active until{" "}
+                        <strong>{memberExpiry?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.
+                      </span>
+                    </>
+                  : <><AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>
+                        Membership expired on{" "}
+                        <strong>{memberExpiry?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.{" "}
+                        Please contact the Gurukul office to renew before registering students.
+                      </span>
                     </>
                 }
               </div>
@@ -862,7 +875,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
           <Button
             type="button"
             onClick={handleAdvanceToForm}
-            disabled={isExistingMember === null}
+            disabled={isExistingMember === null || (isExistingMember && foundMember !== null && !memberIsActive)}
             className="gap-2 min-w-40"
           >
             Continue <ChevronRight className="w-4 h-4" />

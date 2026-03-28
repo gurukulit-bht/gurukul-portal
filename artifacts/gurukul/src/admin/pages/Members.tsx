@@ -5,7 +5,7 @@ import { canAccess } from "../rbac";
 import {
   Search, Plus, Pencil, Trash2, X, Loader2, Users,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download,
-  CalendarDays, GraduationCap, Phone, Mail, ExternalLink, UserPlus,
+  GraduationCap, Phone, Mail, ExternalLink, UserPlus, ShieldAlert, CheckCircle2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ type Member = {
   membershipYear: number | null;
   createdAt: string;
   studentCount: number;
+  isActive: boolean;
 };
 
 type MemberDetail = Member & {
@@ -30,7 +31,8 @@ type MemberDetail = Member & {
 
 type Stats = {
   totalMembers: number;
-  thisYear: number;
+  activeCount: number;
+  expiredCount: number;
   withStudents: number;
   withoutStudents: number;
   addedThisMonth: number;
@@ -44,10 +46,8 @@ type FormData = {
 };
 
 const EMPTY_FORM: FormData = { name: "", email: "", phone: "", membershipYear: "" };
-
-const PAGE_SIZE = 50;
+const PAGE_SIZE   = 50;
 const CURRENT_YEAR = new Date().getFullYear();
-const CURRENT_MONTH = new Date().getMonth() + 1;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,17 +57,19 @@ function initials(name: string | null) {
 }
 
 function avatarColor(id: number) {
-  const PALETTE = [
-    "bg-red-100 text-red-700",
-    "bg-amber-100 text-amber-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-sky-100 text-sky-700",
-    "bg-violet-100 text-violet-700",
-    "bg-pink-100 text-pink-700",
-    "bg-orange-100 text-orange-700",
-    "bg-teal-100 text-teal-700",
+  const P = [
+    "bg-red-100 text-red-700", "bg-amber-100 text-amber-700",
+    "bg-emerald-100 text-emerald-700", "bg-sky-100 text-sky-700",
+    "bg-violet-100 text-violet-700", "bg-pink-100 text-pink-700",
+    "bg-orange-100 text-orange-700", "bg-teal-100 text-teal-700",
   ];
-  return PALETTE[id % PALETTE.length];
+  return P[id % P.length];
+}
+
+function expiresOn(createdAt: string) {
+  const d = new Date(createdAt);
+  d.setFullYear(d.getFullYear() + 1);
+  return d;
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
@@ -90,9 +92,7 @@ function StatCard({ label, value, icon: Icon, color }: {
 
 // ─── Member Form Modal ────────────────────────────────────────────────────────
 
-function MemberModal({
-  editing, onClose, onSaved,
-}: {
+function MemberModal({ editing, onClose, onSaved }: {
   editing: Member | null; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState<FormData>(
@@ -120,14 +120,24 @@ function MemberModal({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!form.name.trim())    e.name  = "Name is required";
-    if (!form.email.trim() && !form.phone.trim()) e.email = "At least email or phone is required";
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Invalid email address";
-    if (form.phone.trim()) {
+    if (!form.name.trim()) e.name = "Name is required";
+
+    // Email — mandatory
+    if (!form.email.trim()) {
+      e.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      e.email = "Invalid email address";
+    }
+
+    // Phone — mandatory
+    if (!form.phone.trim()) {
+      e.phone = "Phone is required";
+    } else {
       const digits = form.phone.replace(/\D/g, "");
       if (digits.length !== 10)      e.phone = "Phone must be 10 digits";
       else if (/^[01]/.test(digits)) e.phone = "US area codes cannot start with 0 or 1";
     }
+
     if (form.membershipYear) {
       const y = parseInt(form.membershipYear);
       if (isNaN(y) || y < 2000 || y > CURRENT_YEAR + 1)
@@ -144,8 +154,8 @@ function MemberModal({
     try {
       const payload = {
         name:             form.name.trim(),
-        email:            form.email.trim() || null,
-        phone:            form.phone ? form.phone.replace(/\D/g, "") : null,
+        email:            form.email.trim(),
+        phone:            form.phone.replace(/\D/g, ""),
         isExistingMember: true,
         policyAgreed:     true,
         membershipYear:   form.membershipYear ? parseInt(form.membershipYear) : null,
@@ -183,13 +193,13 @@ function MemberModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
             <Input type="email" value={form.email} onChange={(e) => field("email", e.target.value)} placeholder="anita@example.com" />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
             <Input
               value={form.phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
@@ -213,6 +223,10 @@ function MemberModal({
             <p className="text-xs text-gray-400 mt-1">The year their temple membership was renewed or confirmed</p>
           </div>
 
+          <p className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            Membership is valid for <strong>1 year from the date of registration</strong>. Only active members may register students.
+          </p>
+
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
             <Button type="submit" disabled={saving} className="flex-1 bg-red-700 hover:bg-red-800 text-white">
@@ -232,6 +246,9 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
   member: MemberDetail; onClose: () => void; onEdit: () => void;
   onDelete: () => void; canEdit: boolean;
 }) {
+  const exp    = expiresOn(member.createdAt);
+  const active = member.isActive;
+
   return (
     <div className="fixed inset-0 z-40 flex">
       <div className="flex-1 bg-black/30 backdrop-blur-sm" onClick={onClose} />
@@ -243,9 +260,14 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
             </div>
             <div>
               <p className="font-bold text-gray-900">{member.name ?? "—"}</p>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                Temple Member #{member.id}
-              </span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  Member #{member.id}
+                </span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                  {active ? "Active" : "Expired"}
+                </span>
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
@@ -253,21 +275,24 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
           </button>
         </div>
 
+        {!active && (
+          <div className="mx-6 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+            <p>Membership expired on <strong>{exp.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>. This member cannot register new students until renewed.</p>
+          </div>
+        )}
+
         <div className="p-6 space-y-6">
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact Info</h3>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-700">
                 <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                {member.email
-                  ? <span>{member.email}</span>
-                  : <span className="text-gray-400 italic">No email on record</span>}
+                {member.email ? <span>{member.email}</span> : <span className="text-gray-400 italic">No email on record</span>}
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-700">
                 <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                {member.phone
-                  ? <span>{formatUSPhone(member.phone.replace(/\D/g, ""))}</span>
-                  : <span className="text-gray-400 italic">No phone on record</span>}
+                {member.phone ? <span>{formatUSPhone(member.phone.replace(/\D/g, ""))}</span> : <span className="text-gray-400 italic">No phone on record</span>}
               </div>
             </div>
           </section>
@@ -283,10 +308,16 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
                 <p className="text-xs text-gray-500">Membership Year</p>
                 <p className="text-sm font-semibold text-gray-800">{member.membershipYear ?? "Not recorded"}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3 col-span-2">
+              <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs text-gray-500">Registered</p>
                 <p className="text-sm font-semibold text-gray-800">
-                  {new Date(member.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                  {new Date(member.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </p>
+              </div>
+              <div className={`rounded-xl p-3 ${active ? "bg-emerald-50" : "bg-red-50"}`}>
+                <p className="text-xs text-gray-500">Expires</p>
+                <p className={`text-sm font-semibold ${active ? "text-emerald-700" : "text-red-700"}`}>
+                  {exp.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
               </div>
             </div>
@@ -325,11 +356,7 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
               <Pencil className="w-4 h-4 mr-2" /> Edit
             </Button>
             {member.students.length === 0 && (
-              <Button
-                variant="outline"
-                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                onClick={onDelete}
-              >
+              <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={onDelete}>
                 <Trash2 className="w-4 h-4 mr-2" /> Delete
               </Button>
             )}
@@ -346,16 +373,14 @@ export default function Members() {
   const { user } = useAuth();
   const canEdit = canAccess(user?.role ?? "teacher", "members");
 
-  const [members, setMembers] = useState<Member[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalMembers: 0, thisYear: 0, withStudents: 0, withoutStudents: 0, addedThisMonth: 0 });
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-
-  const [search, setSearch] = useState("");
-  const [sortCol, setSortCol] = useState<"id" | "name" | "email" | "createdAt">("id");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
+  const [members, setMembers]           = useState<Member[]>([]);
+  const [stats, setStats]               = useState<Stats>({ totalMembers: 0, activeCount: 0, expiredCount: 0, withStudents: 0, withoutStudents: 0, addedThisMonth: 0 });
+  const [total, setTotal]               = useState(0);
+  const [page, setPage]                 = useState(1);
+  const [loading, setLoading]           = useState(false);
+  const [search, setSearch]             = useState("");
+  const [sortCol, setSortCol]           = useState<"id" | "name" | "email" | "createdAt">("id");
+  const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc");
   const [modalOpen, setModalOpen]       = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [detailMember, setDetailMember] = useState<MemberDetail | null>(null);
@@ -370,23 +395,11 @@ export default function Members() {
       const p = opts?.resetPage ? 1 : page;
       if (opts?.resetPage) setPage(1);
       const res = await adminApi.members.list({
-        q:     search,
-        sort:  sortCol,
-        dir:   sortDir,
-        page:  String(p),
-        limit: String(PAGE_SIZE),
+        q: search, sort: sortCol, dir: sortDir, page: String(p), limit: String(PAGE_SIZE),
       });
       setMembers(res.data);
       setTotal(res.total);
-      // Map new stats shape (API returns the old shape; adapt here)
-      const s = res.stats as unknown as Record<string, number>;
-      setStats({
-        totalMembers:   s.totalMembers   ?? 0,
-        thisYear:       s.thisYear       ?? 0,
-        withStudents:   s.withStudents   ?? s.templeMembers    ?? 0,
-        withoutStudents: s.withoutStudents ?? s.parentAccounts  ?? 0,
-        addedThisMonth: s.addedThisMonth ?? 0,
-      });
+      setStats(res.stats);
     } catch (err) {
       toast.error((err as Error).message ?? "Failed to load members");
     } finally {
@@ -410,7 +423,7 @@ export default function Members() {
   function SortIcon({ col }: { col: typeof sortCol }) {
     if (sortCol !== col) return <ChevronUp className="w-3 h-3 text-gray-300" />;
     return sortDir === "asc"
-      ? <ChevronUp className="w-3 h-3 text-red-600" />
+      ? <ChevronUp   className="w-3 h-3 text-red-600" />
       : <ChevronDown className="w-3 h-3 text-red-600" />;
   }
 
@@ -426,8 +439,8 @@ export default function Members() {
     }
   }
 
-  function openAdd() { setEditingMember(null); setModalOpen(true); }
-  function openEdit(member: Member) { setDetailMember(null); setEditingMember(member); setModalOpen(true); }
+  function openAdd()            { setEditingMember(null); setModalOpen(true); }
+  function openEdit(m: Member)  { setDetailMember(null); setEditingMember(m); setModalOpen(true); }
 
   async function handleDelete(member: Member) {
     if (!confirm(`Delete member "${member.name}"? This cannot be undone.`)) return;
@@ -449,13 +462,12 @@ export default function Members() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function exportCSV() {
-    const header = ["ID", "Name", "Email", "Phone", "Membership Year", "Students", "Registered"];
+    const header = ["ID", "Name", "Email", "Phone", "Status", "Expires", "Students", "Registered"];
     const rows = members.map((m) => [
-      m.id,
-      m.name ?? "",
-      m.email ?? "",
+      m.id, m.name ?? "", m.email ?? "",
       m.phone ? formatUSPhone(m.phone.replace(/\D/g, "")) : "",
-      m.membershipYear ?? "",
+      m.isActive ? "Active" : "Expired",
+      expiresOn(m.createdAt).toLocaleDateString(),
       m.studentCount,
       new Date(m.createdAt).toLocaleDateString(),
     ]);
@@ -467,13 +479,15 @@ export default function Members() {
     URL.revokeObjectURL(url);
   }
 
+  const thisMonthLabel = new Date().toLocaleString("default", { month: "short" }) + " " + CURRENT_YEAR;
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-b border-gray-100 bg-white shrink-0">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Member Management</h1>
-          <p className="text-sm text-gray-500">Bhartiya Hindu Temple registered members</p>
+          <p className="text-sm text-gray-500">Bhartiya Hindu Temple registered members · active for 1 year from registration</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Button variant="outline" onClick={exportCSV} className="gap-2 text-sm">
@@ -490,11 +504,11 @@ export default function Members() {
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard label="Total Members"        value={stats.totalMembers}    icon={Users}        color="bg-red-50 text-red-700" />
-          <StatCard label={`Renewed ${CURRENT_YEAR}`} value={stats.thisYear}   icon={CalendarDays} color="bg-amber-50 text-amber-600" />
-          <StatCard label="With Students"        value={stats.withStudents}    icon={GraduationCap} color="bg-emerald-50 text-emerald-600" />
-          <StatCard label="No Students Yet"      value={stats.withoutStudents} icon={Users}        color="bg-slate-50 text-slate-500" />
-          <StatCard label={`Added in ${new Date().toLocaleString("default",{month:"short"})} ${CURRENT_YEAR}`} value={stats.addedThisMonth} icon={UserPlus} color="bg-sky-50 text-sky-600" />
+          <StatCard label="Total Members"         value={stats.totalMembers}    icon={Users}          color="bg-red-50 text-red-700" />
+          <StatCard label="Active"                value={stats.activeCount}     icon={CheckCircle2}   color="bg-emerald-50 text-emerald-600" />
+          <StatCard label="Expired"               value={stats.expiredCount}    icon={ShieldAlert}    color="bg-orange-50 text-orange-600" />
+          <StatCard label="With Students"         value={stats.withStudents}    icon={GraduationCap}  color="bg-sky-50 text-sky-600" />
+          <StatCard label={`Added in ${thisMonthLabel}`} value={stats.addedThisMonth} icon={UserPlus} color="bg-violet-50 text-violet-600" />
         </div>
 
         {/* Search */}
@@ -519,8 +533,7 @@ export default function Members() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
             <p className="text-sm text-gray-500">
-              {loading ? "Loading…" : `${total.toLocaleString()} member${total !== 1 ? "s" : ""}`}
-              {search && " (filtered)"}
+              {loading ? "Loading…" : `${total.toLocaleString()} member${total !== 1 ? "s" : ""}${search ? " (filtered)" : ""}`}
             </p>
           </div>
 
@@ -544,9 +557,9 @@ export default function Members() {
                     </button>
                   </th>
                   <th className="px-3 py-3 text-left hidden sm:table-cell">Phone</th>
-                  <th className="px-3 py-3 text-center hidden lg:table-cell">Mem. Year</th>
-                  <th className="px-3 py-3 text-center">Students</th>
-                  <th className="px-3 py-3 text-left hidden xl:table-cell">
+                  <th className="px-3 py-3 text-center">Status</th>
+                  <th className="px-3 py-3 text-center hidden lg:table-cell">Students</th>
+                  <th className="px-3 py-3 text-left">
                     <button className="flex items-center gap-1 hover:text-gray-700" onClick={() => toggleSort("createdAt")}>
                       Registered <SortIcon col="createdAt" />
                     </button>
@@ -584,39 +597,31 @@ export default function Members() {
                       </div>
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
-                      <span className="text-gray-600 truncate max-w-[200px] block">{m.email ?? <span className="text-gray-300 italic">—</span>}</span>
+                      <span className="text-gray-600 truncate max-w-[200px] block">{m.email ?? <span className="text-gray-300">—</span>}</span>
                     </td>
                     <td className="px-3 py-3 hidden sm:table-cell text-gray-600 whitespace-nowrap">
                       {m.phone ? formatUSPhone(m.phone.replace(/\D/g, "")) : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-3 py-3 text-center hidden lg:table-cell">
-                      {m.membershipYear
-                        ? <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.membershipYear === CURRENT_YEAR ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>{m.membershipYear}</span>
-                        : <span className="text-xs text-gray-300">—</span>}
-                    </td>
                     <td className="px-3 py-3 text-center">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
+                        {m.isActive ? "Active" : "Expired"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-center hidden lg:table-cell">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.studentCount > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>
                         {m.studentCount}
                       </span>
                     </td>
-                    <td className="px-3 py-3 hidden xl:table-cell text-xs text-gray-400 whitespace-nowrap">
+                    <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
                       {new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
-                        <button
-                          onClick={() => openDetail(m)}
-                          className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-400 hover:text-blue-600"
-                          title="View details"
-                        >
+                        <button onClick={() => openDetail(m)} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-400 hover:text-blue-600" title="View details">
                           <ExternalLink className="w-3.5 h-3.5" />
                         </button>
                         {canEdit && (
-                          <button
-                            onClick={() => openEdit(m)}
-                            className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-400 hover:text-amber-600"
-                            title="Edit"
-                          >
+                          <button onClick={() => openEdit(m)} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-400 hover:text-amber-600" title="Edit">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -627,9 +632,7 @@ export default function Members() {
                             className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center transition-colors text-gray-400 hover:text-red-600 disabled:opacity-40"
                             title="Delete"
                           >
-                            {deleting === m.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <Trash2 className="w-3.5 h-3.5" />}
+                            {deleting === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                           </button>
                         )}
                       </div>
@@ -656,7 +659,6 @@ export default function Members() {
         </div>
       </div>
 
-      {/* Detail loading overlay */}
       {detailLoading && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
           <div className="bg-white rounded-2xl p-8 shadow-xl text-center">

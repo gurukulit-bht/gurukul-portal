@@ -58,13 +58,13 @@ export const adminApi = {
       request("PATCH", `/students/enrollments/${enrollmentId}/section`, { sectionId }),
   },
   members: {
-    lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null }>("POST", "/members/lookup", { emailOrPhone }),
+    lookup: (emailOrPhone: string) => request<{ id: number; name: string | null; email: string | null; phone: string | null; membershipYear: number | null; createdAt: string }>("POST", "/members/lookup", { emailOrPhone }),
     list: (params?: Record<string, string>) => {
       const qs = params ? "?" + new URLSearchParams(params).toString() : "";
       return request<{
-        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number }>;
+        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number; isActive: boolean }>;
         total: number; page: number; limit: number;
-        stats: { totalMembers: number; thisYear: number; withStudents: number; withoutStudents: number; addedThisMonth: number };
+        stats: { totalMembers: number; activeCount: number; expiredCount: number; withStudents: number; withoutStudents: number; addedThisMonth: number };
       }>("GET", `/members${qs}`);
     },
     getById: (id: number) => request<{
