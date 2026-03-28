@@ -292,6 +292,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
 
   const [policyAgreed, setPolicyAgreed] = useState(false);
 
+  // ── Fee settings (loaded from portal settings) ──
+  const [membershipFee, setMembershipFee] = useState(150);
+  const [courseFee,     setCourseFee]     = useState(35);
+
   const [enrollments, setEnrollments] = useState<EnrollmentDraft[]>([
     { key: 0, courseId: "", levelId: "", sectionId: "", amountDue: "35.00" },
   ]);
@@ -304,6 +308,21 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    fetch("/api/settings")
+      .then(r => r.json())
+      .then((s: Record<string, string>) => {
+        const mf = parseFloat(s.stripe_membership_fee ?? "150");
+        const cf = parseFloat(s.stripe_course_fee ?? "35");
+        if (!isNaN(mf) && mf > 0) setMembershipFee(mf);
+        if (!isNaN(cf) && cf > 0) {
+          setCourseFee(cf);
+          setEnrollments(prev => prev.map(e => ({ ...e, amountDue: cf.toFixed(2) })));
+        }
+      })
+      .catch(() => { /* keep defaults on error */ });
+  }, []);
+
   // ── Computed employer values (resolve "Other" to custom text) ──
   const effectiveMotherEmployer = motherEmployer === "Other (please specify)"
     ? motherEmployerOther.trim() : motherEmployer;
@@ -312,7 +331,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
 
   // ── Enrollment helpers ──
   function addEnrollment() {
-    setEnrollments(prev => [...prev, { key: draftKey, courseId: "", levelId: "", sectionId: "", amountDue: "35.00" }]);
+    setEnrollments(prev => [...prev, { key: draftKey, courseId: "", levelId: "", sectionId: "", amountDue: courseFee.toFixed(2) }]);
     setDraftKey(k => k + 1);
   }
   function removeEnrollment(key: number) {
@@ -547,15 +566,15 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
         enrollments:    validEnrollments.map(e => ({
           courseLevelId: Number(e.levelId),
           sectionId:     e.sectionId ? Number(e.sectionId) : null,
-          amountDue:     e.amountDue || "35.00",
+          amountDue:     e.amountDue || courseFee.toFixed(2),
           enrollDate:    new Date().toISOString().slice(0, 10),
         })),
       }) as { studentCode: string };
 
       onSuccess(result.studentCode, `${firstName.trim()} ${lastName.trim()}`, {
         courseCount:   validEnrollments.length,
-        membershipFee: 150,
-        courseFee:     35,
+        membershipFee: membershipFee,
+        courseFee:     courseFee,
       });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Registration failed. Please try again.");
@@ -826,7 +845,7 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
             )}
 
             <p className="text-sm text-amber-800">
-              Temple annual membership is <strong>$150 per year</strong> and must be active to register
+              Temple annual membership is <strong>${membershipFee} per year</strong> and must be active to register
               students in Gurukul. Membership fees help support temple operations, events, and programs.
             </p>
 
@@ -840,10 +859,10 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
               <span className="text-sm text-secondary leading-relaxed">
                 {isExistingMember
                   ? <>I have reviewed my temple membership and confirm I will renew the{" "}
-                      <strong>$150 annual membership fee for {CURRENT_YEAR}</strong> as part of this
+                      <strong>${membershipFee} annual membership fee for {CURRENT_YEAR}</strong> as part of this
                       student registration.</>
                   : <>I understand that I will be enrolling as a new temple member and agree to pay the{" "}
-                      <strong>$150 annual membership fee for {CURRENT_YEAR}</strong> as part of this
+                      <strong>${membershipFee} annual membership fee for {CURRENT_YEAR}</strong> as part of this
                       student registration.</>
                 }
                 <span className="text-red-500 ml-0.5">*</span>

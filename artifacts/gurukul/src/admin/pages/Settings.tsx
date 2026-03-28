@@ -366,10 +366,6 @@ export default function Settings() {
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Default Fee per Session</Label>
-              <Input defaultValue="$150" className="rounded-xl" />
-            </div>
-            <div className="space-y-1.5">
               <Label>Class Duration</Label>
               <Input defaultValue="60 minutes" className="rounded-xl" />
             </div>

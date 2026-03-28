@@ -10,10 +10,16 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const PUBLIC_KEYS = ["active_curriculum_year"] as const;
+const PUBLIC_KEYS = [
+  "active_curriculum_year",
+  "stripe_membership_fee",
+  "stripe_course_fee",
+] as const;
 
 const DEFAULTS: Record<string, string> = {
   active_curriculum_year: "2027-28",
+  stripe_membership_fee:  "150",
+  stripe_course_fee:      "35",
 };
 
 // GET /api/settings — public, returns only safe settings
