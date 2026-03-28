@@ -3,10 +3,9 @@ import { adminApi } from "@/lib/adminApi";
 import { useAuth } from "../AuthContext";
 import { canAccess } from "../rbac";
 import {
-  Search, Plus, Pencil, Trash2, X, Loader2, Users, CheckCircle2,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Filter, Download,
-  ShieldCheck, UserCheck, CalendarDays, GraduationCap, Phone, Mail,
-  ExternalLink,
+  Search, Plus, Pencil, Trash2, X, Loader2, Users,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download,
+  CalendarDays, GraduationCap, Phone, Mail, ExternalLink, UserPlus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,8 +19,6 @@ type Member = {
   name: string | null;
   email: string | null;
   phone: string | null;
-  isExistingMember: boolean;
-  policyAgreed: boolean;
   membershipYear: number | null;
   createdAt: string;
   studentCount: number;
@@ -33,29 +30,26 @@ type MemberDetail = Member & {
 
 type Stats = {
   totalMembers: number;
-  templeMembers: number;
-  parentAccounts: number;
-  policyAgreedCount: number;
   thisYear: number;
+  withStudents: number;
+  withoutStudents: number;
+  addedThisMonth: number;
 };
 
 type FormData = {
   name: string;
   email: string;
   phone: string;
-  isExistingMember: boolean;
-  policyAgreed: boolean;
   membershipYear: string;
 };
 
-const EMPTY_FORM: FormData = {
-  name: "", email: "", phone: "", isExistingMember: false, policyAgreed: false, membershipYear: "",
-};
+const EMPTY_FORM: FormData = { name: "", email: "", phone: "", membershipYear: "" };
 
 const PAGE_SIZE = 50;
 const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_MONTH = new Date().getMonth() + 1;
 
-// ─── Helper: initials avatar ──────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function initials(name: string | null) {
   if (!name) return "?";
@@ -78,7 +72,9 @@ function avatarColor(id: number) {
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: React.ElementType; color: string }) {
+function StatCard({ label, value, icon: Icon, color }: {
+  label: string; value: number; icon: React.ElementType; color: string;
+}) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
@@ -95,32 +91,26 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 // ─── Member Form Modal ────────────────────────────────────────────────────────
 
 function MemberModal({
-  editing,
-  onClose,
-  onSaved,
+  editing, onClose, onSaved,
 }: {
-  editing: Member | null;
-  onClose: () => void;
-  onSaved: () => void;
+  editing: Member | null; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState<FormData>(
     editing
       ? {
-          name:             editing.name ?? "",
-          email:            editing.email ?? "",
-          phone:            editing.phone ? formatUSPhone(editing.phone.replace(/\D/g, "")) : "",
-          isExistingMember: editing.isExistingMember,
-          policyAgreed:     editing.policyAgreed,
-          membershipYear:   editing.membershipYear?.toString() ?? "",
+          name:           editing.name ?? "",
+          email:          editing.email ?? "",
+          phone:          editing.phone ? formatUSPhone(editing.phone.replace(/\D/g, "")) : "",
+          membershipYear: editing.membershipYear?.toString() ?? "",
         }
       : EMPTY_FORM
   );
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  function field(key: keyof FormData, value: string | boolean) {
+  function field(key: keyof FormData, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => { const n = { ...e }; delete n[key as string]; return n; });
+    setErrors((e) => { const n = { ...e }; delete n[key]; return n; });
   }
 
   function handlePhoneChange(raw: string) {
@@ -130,16 +120,18 @@ function MemberModal({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.name.trim())    e.name  = "Name is required";
     if (!form.email.trim() && !form.phone.trim()) e.email = "At least email or phone is required";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Invalid email address";
     if (form.phone.trim()) {
       const digits = form.phone.replace(/\D/g, "");
-      if (digits.length !== 10) e.phone = "Phone must be 10 digits";
+      if (digits.length !== 10)      e.phone = "Phone must be 10 digits";
       else if (/^[01]/.test(digits)) e.phone = "US area codes cannot start with 0 or 1";
     }
-    if (form.membershipYear && (isNaN(Number(form.membershipYear)) || Number(form.membershipYear) < 2000 || Number(form.membershipYear) > CURRENT_YEAR + 1)) {
-      e.membershipYear = `Year must be between 2000 and ${CURRENT_YEAR + 1}`;
+    if (form.membershipYear) {
+      const y = parseInt(form.membershipYear);
+      if (isNaN(y) || y < 2000 || y > CURRENT_YEAR + 1)
+        e.membershipYear = `Year must be between 2000 and ${CURRENT_YEAR + 1}`;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -154,8 +146,8 @@ function MemberModal({
         name:             form.name.trim(),
         email:            form.email.trim() || null,
         phone:            form.phone ? form.phone.replace(/\D/g, "") : null,
-        isExistingMember: form.isExistingMember,
-        policyAgreed:     form.policyAgreed,
+        isExistingMember: true,
+        policyAgreed:     true,
         membershipYear:   form.membershipYear ? parseInt(form.membershipYear) : null,
       };
       if (editing) {
@@ -184,21 +176,18 @@ function MemberModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
             <Input value={form.name} onChange={(e) => field("name", e.target.value)} placeholder="e.g. Anita Sharma" />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <Input type="email" value={form.email} onChange={(e) => field("email", e.target.value)} placeholder="anita@example.com" />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
-          {/* Phone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <Input
@@ -210,32 +199,6 @@ function MemberModal({
             {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
           </div>
 
-          {/* Member type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Member Type</label>
-            <div className="flex gap-3">
-              {[
-                { label: "Temple Member", value: true, desc: "Verified BHT member" },
-                { label: "Parent Account", value: false, desc: "Created during registration" },
-              ].map((opt) => (
-                <button
-                  key={String(opt.value)}
-                  type="button"
-                  onClick={() => field("isExistingMember", opt.value)}
-                  className={`flex-1 border-2 rounded-xl px-3 py-2.5 text-left transition-all ${
-                    form.isExistingMember === opt.value
-                      ? "border-red-700 bg-red-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-gray-800">{opt.label}</p>
-                  <p className="text-xs text-gray-500">{opt.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Membership Year */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Membership Year</label>
             <Input
@@ -247,26 +210,13 @@ function MemberModal({
               max={CURRENT_YEAR + 1}
             />
             {errors.membershipYear && <p className="text-xs text-red-500 mt-1">{errors.membershipYear}</p>}
+            <p className="text-xs text-gray-400 mt-1">The year their temple membership was renewed or confirmed</p>
           </div>
-
-          {/* Policy Agreed */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.policyAgreed}
-              onChange={(e) => field("policyAgreed", e.target.checked)}
-              className="w-4 h-4 accent-red-700 rounded"
-            />
-            <div>
-              <span className="text-sm font-medium text-gray-800">Policy Agreed</span>
-              <p className="text-xs text-gray-500">Member has agreed to temple policies</p>
-            </div>
-          </label>
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
             <Button type="submit" disabled={saving} className="flex-1 bg-red-700 hover:bg-red-800 text-white">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               {editing ? "Save Changes" : "Add Member"}
             </Button>
           </div>
@@ -279,17 +229,13 @@ function MemberModal({
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
 function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
-  member: MemberDetail;
-  onClose: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  canEdit: boolean;
+  member: MemberDetail; onClose: () => void; onEdit: () => void;
+  onDelete: () => void; canEdit: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-40 flex">
       <div className="flex-1 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-y-auto">
-        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <div className="flex items-center gap-3">
             <div className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-bold shrink-0 ${avatarColor(member.id)}`}>
@@ -297,8 +243,8 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
             </div>
             <div>
               <p className="font-bold text-gray-900">{member.name ?? "—"}</p>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${member.isExistingMember ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-700"}`}>
-                {member.isExistingMember ? "Temple Member" : "Parent Account"}
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                Temple Member #{member.id}
               </span>
             </div>
           </div>
@@ -308,49 +254,44 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Contact */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact Info</h3>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-700">
                 <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                <span>{member.email ?? <span className="text-gray-400 italic">No email</span>}</span>
+                {member.email
+                  ? <span>{member.email}</span>
+                  : <span className="text-gray-400 italic">No email on record</span>}
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-700">
                 <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                <span>{member.phone ? formatUSPhone(member.phone.replace(/\D/g, "")) : <span className="text-gray-400 italic">No phone</span>}</span>
+                {member.phone
+                  ? <span>{formatUSPhone(member.phone.replace(/\D/g, ""))}</span>
+                  : <span className="text-gray-400 italic">No phone on record</span>}
               </div>
             </div>
           </section>
 
-          {/* Membership */}
           <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Membership</h3>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Membership Details</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">ID</p>
+                <p className="text-xs text-gray-500">Member ID</p>
                 <p className="text-sm font-semibold text-gray-800">#{member.id}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Year</p>
-                <p className="text-sm font-semibold text-gray-800">{member.membershipYear ?? "—"}</p>
+                <p className="text-xs text-gray-500">Membership Year</p>
+                <p className="text-sm font-semibold text-gray-800">{member.membershipYear ?? "Not recorded"}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Policy Agreed</p>
-                <p className={`text-sm font-semibold ${member.policyAgreed ? "text-emerald-700" : "text-red-600"}`}>
-                  {member.policyAgreed ? "Yes ✓" : "No"}
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
+              <div className="bg-gray-50 rounded-xl p-3 col-span-2">
                 <p className="text-xs text-gray-500">Registered</p>
                 <p className="text-sm font-semibold text-gray-800">
-                  {new Date(member.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  {new Date(member.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 </p>
               </div>
             </div>
           </section>
 
-          {/* Linked students */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
               Linked Students ({member.students.length})
@@ -378,7 +319,6 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
           </section>
         </div>
 
-        {/* Actions */}
         {canEdit && (
           <div className="px-6 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
             <Button variant="outline" className="flex-1" onClick={onEdit}>
@@ -407,24 +347,20 @@ export default function Members() {
   const canEdit = canAccess(user?.role ?? "teacher", "members");
 
   const [members, setMembers] = useState<Member[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalMembers: 0, templeMembers: 0, parentAccounts: 0, policyAgreedCount: 0, thisYear: 0 });
+  const [stats, setStats] = useState<Stats>({ totalMembers: 0, thisYear: 0, withStudents: 0, withoutStudents: 0, addedThisMonth: 0 });
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Filters
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "temple" | "parent">("all");
-  const [policyFilter, setPolicyFilter] = useState<"all" | "agreed" | "not_agreed">("all");
   const [sortCol, setSortCol] = useState<"id" | "name" | "email" | "createdAt">("id");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  // UI state
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen, setModalOpen]       = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [detailMember, setDetailMember] = useState<MemberDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleting, setDeleting]         = useState<number | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -433,32 +369,36 @@ export default function Members() {
     try {
       const p = opts?.resetPage ? 1 : page;
       if (opts?.resetPage) setPage(1);
-      const params: Record<string, string> = {
-        q:      search,
-        type:   typeFilter,
-        policy: policyFilter,
-        sort:   sortCol,
-        dir:    sortDir,
-        page:   String(p),
-        limit:  String(PAGE_SIZE),
-      };
-      const res = await adminApi.members.list(params);
+      const res = await adminApi.members.list({
+        q:     search,
+        sort:  sortCol,
+        dir:   sortDir,
+        page:  String(p),
+        limit: String(PAGE_SIZE),
+      });
       setMembers(res.data);
       setTotal(res.total);
-      setStats(res.stats);
+      // Map new stats shape (API returns the old shape; adapt here)
+      const s = res.stats as unknown as Record<string, number>;
+      setStats({
+        totalMembers:   s.totalMembers   ?? 0,
+        thisYear:       s.thisYear       ?? 0,
+        withStudents:   s.withStudents   ?? s.templeMembers    ?? 0,
+        withoutStudents: s.withoutStudents ?? s.parentAccounts  ?? 0,
+        addedThisMonth: s.addedThisMonth ?? 0,
+      });
     } catch (err) {
       toast.error((err as Error).message ?? "Failed to load members");
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter, policyFilter, sortCol, sortDir, page]);
+  }, [search, sortCol, sortDir, page]);
 
-  // Debounced search
   useEffect(() => {
     clearTimeout(searchTimer.current ?? 0);
     searchTimer.current = setTimeout(() => fetchMembers({ resetPage: true }), 350);
     return () => clearTimeout(searchTimer.current ?? 0);
-  }, [search, typeFilter, policyFilter, sortCol, sortDir]);
+  }, [search, sortCol, sortDir]);
 
   useEffect(() => { fetchMembers(); }, [page]);
 
@@ -486,16 +426,8 @@ export default function Members() {
     }
   }
 
-  function openAdd() {
-    setEditingMember(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(member: Member) {
-    setDetailMember(null);
-    setEditingMember(member);
-    setModalOpen(true);
-  }
+  function openAdd() { setEditingMember(null); setModalOpen(true); }
+  function openEdit(member: Member) { setDetailMember(null); setEditingMember(member); setModalOpen(true); }
 
   async function handleDelete(member: Member) {
     if (!confirm(`Delete member "${member.name}"? This cannot be undone.`)) return;
@@ -512,35 +444,26 @@ export default function Members() {
     }
   }
 
-  function handleSaved() {
-    setModalOpen(false);
-    setEditingMember(null);
-    fetchMembers({ resetPage: false });
-  }
+  function handleSaved() { setModalOpen(false); setEditingMember(null); fetchMembers({ resetPage: false }); }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Export CSV
   function exportCSV() {
-    const header = ["ID", "Name", "Email", "Phone", "Type", "Policy Agreed", "Membership Year", "Students", "Registered"];
+    const header = ["ID", "Name", "Email", "Phone", "Membership Year", "Students", "Registered"];
     const rows = members.map((m) => [
       m.id,
       m.name ?? "",
       m.email ?? "",
       m.phone ? formatUSPhone(m.phone.replace(/\D/g, "")) : "",
-      m.isExistingMember ? "Temple Member" : "Parent Account",
-      m.policyAgreed ? "Yes" : "No",
       m.membershipYear ?? "",
       m.studentCount,
       new Date(m.createdAt).toLocaleDateString(),
     ]);
     const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -550,7 +473,7 @@ export default function Members() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-b border-gray-100 bg-white shrink-0">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Member Management</h1>
-          <p className="text-sm text-gray-500">Temple members and parent accounts</p>
+          <p className="text-sm text-gray-500">Bhartiya Hindu Temple registered members</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Button variant="outline" onClick={exportCSV} className="gap-2 text-sm">
@@ -567,67 +490,28 @@ export default function Members() {
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard label="Total Members"    value={stats.totalMembers}      icon={Users}        color="bg-blue-50 text-blue-600" />
-          <StatCard label="Temple Members"   value={stats.templeMembers}     icon={ShieldCheck}  color="bg-amber-50 text-amber-600" />
-          <StatCard label="Parent Accounts"  value={stats.parentAccounts}    icon={GraduationCap} color="bg-sky-50 text-sky-600" />
-          <StatCard label="Policy Agreed"    value={stats.policyAgreedCount} icon={UserCheck}    color="bg-emerald-50 text-emerald-600" />
-          <StatCard label={`Year ${CURRENT_YEAR}`} value={stats.thisYear}    icon={CalendarDays} color="bg-violet-50 text-violet-600" />
+          <StatCard label="Total Members"        value={stats.totalMembers}    icon={Users}        color="bg-red-50 text-red-700" />
+          <StatCard label={`Renewed ${CURRENT_YEAR}`} value={stats.thisYear}   icon={CalendarDays} color="bg-amber-50 text-amber-600" />
+          <StatCard label="With Students"        value={stats.withStudents}    icon={GraduationCap} color="bg-emerald-50 text-emerald-600" />
+          <StatCard label="No Students Yet"      value={stats.withoutStudents} icon={Users}        color="bg-slate-50 text-slate-500" />
+          <StatCard label={`Added in ${new Date().toLocaleString("default",{month:"short"})} ${CURRENT_YEAR}`} value={stats.addedThisMonth} icon={UserPlus} color="bg-sky-50 text-sky-600" />
         </div>
 
-        {/* Search + Filters */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search by name, email, or phone…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Filter chips */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-
-            {/* Type */}
-            {(["all", "temple", "parent"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-                  typeFilter === t
-                    ? "bg-red-700 text-white border-red-700"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                {t === "all" ? "All Types" : t === "temple" ? "Temple Members" : "Parent Accounts"}
+        {/* Search */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              className="pl-9"
+              placeholder="Search by name, email, or phone…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-3.5 h-3.5" />
               </button>
-            ))}
-
-            <div className="h-4 border-l border-gray-200" />
-
-            {/* Policy */}
-            {(["all", "agreed", "not_agreed"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPolicyFilter(p)}
-                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-                  policyFilter === p
-                    ? "bg-red-700 text-white border-red-700"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                {p === "all" ? "Any Policy" : p === "agreed" ? "Policy Agreed" : "Policy Pending"}
-              </button>
-            ))}
+            )}
           </div>
         </div>
 
@@ -636,7 +520,7 @@ export default function Members() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
             <p className="text-sm text-gray-500">
               {loading ? "Loading…" : `${total.toLocaleString()} member${total !== 1 ? "s" : ""}`}
-              {(search || typeFilter !== "all" || policyFilter !== "all") && " (filtered)"}
+              {search && " (filtered)"}
             </p>
           </div>
 
@@ -660,9 +544,7 @@ export default function Members() {
                     </button>
                   </th>
                   <th className="px-3 py-3 text-left hidden sm:table-cell">Phone</th>
-                  <th className="px-3 py-3 text-left">Type</th>
-                  <th className="px-3 py-3 text-center hidden lg:table-cell">Policy</th>
-                  <th className="px-3 py-3 text-center hidden lg:table-cell">Year</th>
+                  <th className="px-3 py-3 text-center hidden lg:table-cell">Mem. Year</th>
                   <th className="px-3 py-3 text-center">Students</th>
                   <th className="px-3 py-3 text-left hidden xl:table-cell">
                     <button className="flex items-center gap-1 hover:text-gray-700" onClick={() => toggleSort("createdAt")}>
@@ -674,12 +556,12 @@ export default function Members() {
               </thead>
               <tbody>
                 {loading && members.length === 0 && (
-                  <tr><td colSpan={10} className="py-12 text-center">
+                  <tr><td colSpan={8} className="py-12 text-center">
                     <Loader2 className="w-5 h-5 animate-spin text-gray-400 mx-auto" />
                   </td></tr>
                 )}
                 {!loading && members.length === 0 && (
-                  <tr><td colSpan={10} className="py-12 text-center text-gray-400 text-sm">
+                  <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-sm">
                     No members found.{" "}
                     {canEdit && <button className="text-red-700 hover:underline font-medium" onClick={openAdd}>Add the first member</button>}
                   </td></tr>
@@ -698,32 +580,22 @@ export default function Members() {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor(m.id)}`}>
                           {initials(m.name)}
                         </div>
-                        <span className="font-medium text-gray-900 truncate max-w-[140px]">{m.name ?? "—"}</span>
+                        <span className="font-medium text-gray-900 truncate max-w-[160px]">{m.name ?? "—"}</span>
                       </div>
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
-                      <span className="text-gray-600 truncate max-w-[180px] block">{m.email ?? <span className="text-gray-300">—</span>}</span>
+                      <span className="text-gray-600 truncate max-w-[200px] block">{m.email ?? <span className="text-gray-300 italic">—</span>}</span>
                     </td>
                     <td className="px-3 py-3 hidden sm:table-cell text-gray-600 whitespace-nowrap">
                       {m.phone ? formatUSPhone(m.phone.replace(/\D/g, "")) : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-3 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${m.isExistingMember ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-700"}`}>
-                        {m.isExistingMember ? "Temple" : "Parent"}
-                      </span>
-                    </td>
                     <td className="px-3 py-3 text-center hidden lg:table-cell">
-                      {m.policyAgreed
-                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
-                        : <span className="text-xs text-gray-400">—</span>}
-                    </td>
-                    <td className="px-3 py-3 text-center hidden lg:table-cell">
-                      <span className="text-xs text-gray-600">{m.membershipYear ?? "—"}</span>
+                      {m.membershipYear
+                        ? <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.membershipYear === CURRENT_YEAR ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>{m.membershipYear}</span>
+                        : <span className="text-xs text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        m.studentCount > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"
-                      }`}>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.studentCount > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>
                         {m.studentCount}
                       </span>
                     </td>
@@ -768,27 +640,14 @@ export default function Members() {
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500">
-                Page {page} of {totalPages} · {total} total
-              </p>
+              <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total} total</p>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -797,15 +656,16 @@ export default function Members() {
         </div>
       </div>
 
-      {/* Detail panel */}
+      {/* Detail loading overlay */}
       {detailLoading && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
-          <div className="bg-white rounded-2xl p-8 shadow-xl">
+          <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
             <Loader2 className="w-6 h-6 animate-spin text-red-700 mx-auto" />
-            <p className="text-sm text-gray-500 mt-3">Loading details…</p>
+            <p className="text-sm text-gray-500 mt-3">Loading…</p>
           </div>
         </div>
       )}
+
       {detailMember && !detailLoading && (
         <DetailPanel
           member={detailMember}
@@ -816,7 +676,6 @@ export default function Members() {
         />
       )}
 
-      {/* Add/Edit modal */}
       {modalOpen && (
         <MemberModal
           editing={editingMember}

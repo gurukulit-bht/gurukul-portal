@@ -64,7 +64,7 @@ export const adminApi = {
       return request<{
         data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number }>;
         total: number; page: number; limit: number;
-        stats: { totalMembers: number; templeMembers: number; parentAccounts: number; policyAgreedCount: number; thisYear: number };
+        stats: { totalMembers: number; thisYear: number; withStudents: number; withoutStudents: number; addedThisMonth: number };
       }>("GET", `/members${qs}`);
     },
     getById: (id: number) => request<{

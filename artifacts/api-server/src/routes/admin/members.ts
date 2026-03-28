@@ -91,13 +91,15 @@ router.get("/", async (req, res) => {
       .where(where);
 
     // Stats (always full table)
+    const curYear  = new Date().getFullYear();
+    const curMonth = new Date().getMonth() + 1; // 1–12
     const [stats] = await db
       .select({
-        totalMembers:      count(),
-        templeMembers:     sql<number>`COUNT(*) FILTER (WHERE is_existing_member = true)`,
-        parentAccounts:    sql<number>`COUNT(*) FILTER (WHERE is_existing_member = false)`,
-        policyAgreedCount: sql<number>`COUNT(*) FILTER (WHERE policy_agreed = true)`,
-        thisYear:          sql<number>`COUNT(*) FILTER (WHERE membership_year = ${new Date().getFullYear()})`,
+        totalMembers:    count(),
+        thisYear:        sql<number>`COUNT(*) FILTER (WHERE membership_year = ${curYear})`,
+        withStudents:    sql<number>`COUNT(*) FILTER (WHERE (SELECT COUNT(*) FROM students WHERE students.member_id = ${membersTable.id}) > 0)`,
+        withoutStudents: sql<number>`COUNT(*) FILTER (WHERE (SELECT COUNT(*) FROM students WHERE students.member_id = ${membersTable.id}) = 0)`,
+        addedThisMonth:  sql<number>`COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM created_at) = ${curYear} AND EXTRACT(MONTH FROM created_at) = ${curMonth})`,
       })
       .from(membersTable);
 
@@ -107,11 +109,11 @@ router.get("/", async (req, res) => {
       page:    pageNum,
       limit:   pageSize,
       stats: {
-        totalMembers:      Number(stats.totalMembers),
-        templeMembers:     Number(stats.templeMembers),
-        parentAccounts:    Number(stats.parentAccounts),
-        policyAgreedCount: Number(stats.policyAgreedCount),
-        thisYear:          Number(stats.thisYear),
+        totalMembers:    Number(stats.totalMembers),
+        thisYear:        Number(stats.thisYear),
+        withStudents:    Number(stats.withStudents),
+        withoutStudents: Number(stats.withoutStudents),
+        addedThisMonth:  Number(stats.addedThisMonth),
       },
     });
   } catch (err) {
