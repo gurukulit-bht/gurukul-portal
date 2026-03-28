@@ -241,17 +241,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {user && (
             <div className="flex items-center gap-3">
-              {/* Sticky Notes button */}
+              {/* Sticky Notes link */}
               <button
                 onClick={() => setNotesOpen(v => !v)}
-                title="My Sticky Notes"
-                className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ${
                   notesOpen
-                    ? "bg-amber-100 text-amber-600 shadow-inner"
-                    : "hover:bg-gray-100 text-muted-foreground hover:text-secondary"
+                    ? "bg-amber-100 text-amber-700"
+                    : "text-muted-foreground hover:text-secondary hover:bg-gray-100"
                 }`}
               >
-                <StickyNote className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+                <StickyNote className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">My Sticky Notes</span>
+                <span className="sm:hidden">Notes</span>
               </button>
 
               <div className="text-right hidden sm:block">

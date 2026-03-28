@@ -197,11 +197,11 @@ export default function NaradJiBot() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
 
-  // Auto-pop the speech bubble after 3 s, auto-hide after 30 s
+  // Auto-pop the speech bubble after 3 s, auto-hide after 10 s
   useEffect(() => {
     const showTimer = setTimeout(() => {
       setShowBubble(true);
-      const hideTimer = setTimeout(() => setShowBubble(false), 30000);
+      const hideTimer = setTimeout(() => setShowBubble(false), 10000);
       return () => clearTimeout(hideTimer);
     }, 3000);
     return () => clearTimeout(showTimer);
