@@ -5,7 +5,7 @@ import {
   Search, Download, ChevronUp, ChevronDown, Filter, Loader2,
   X, Plus, Trash2, UserPlus, BookOpen, GraduationCap, Users,
   Pencil, ChevronLeft, ChevronRight, UserX, UserCheck, AlertTriangle,
-  Phone, Mail,
+  Phone, Mail, CreditCard, Receipt,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -773,6 +773,117 @@ function RegisterStudentPanel({ onClose, onRegistered }: { onClose: () => void; 
   );
 }
 
+// ─── Payment Drawer ───────────────────────────────────────────────────────────
+
+function PaymentDrawer({ student, onClose }: { student: Student; onClose: () => void }) {
+  const PAY_BADGE: Record<string, string> = {
+    Paid:    "bg-green-100 text-green-700",
+    Pending: "bg-orange-100 text-orange-700",
+    Overdue: "bg-red-100 text-red-700",
+  };
+  const totalDue  = student.enrollments.reduce((a, e) => a + e.amountDue, 0);
+  const totalPaid = student.enrollments.reduce((a, e) => a + e.amountPaid, 0);
+  const balance   = totalDue - totalPaid;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
+      {/* Panel */}
+      <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-border">
+          <div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-secondary">Payment Details</span>
+            </div>
+            <div className="text-sm text-muted-foreground mt-0.5">{student.name}</div>
+            <div className="font-mono text-xs text-muted-foreground">{student.id}</div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-muted-foreground transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Enrollments */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          {student.enrollments.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No enrollments found.</p>
+          ) : student.enrollments.map((e, i) => (
+            <div key={i} className="rounded-xl border border-border p-4 space-y-2.5">
+              {/* Course + Level */}
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-secondary">
+                    <span>{e.courseIcon}</span>
+                    <span>{e.course}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {e.level}{e.section ? ` · ${e.section}` : ""}{e.timing ? ` · ${e.timing}` : ""}
+                  </div>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${PAY_BADGE[e.paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>
+                  {e.paymentStatus}
+                </span>
+              </div>
+
+              {/* Amounts */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-gray-50 rounded-lg px-2 py-1.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Due</div>
+                  <div className="text-sm font-semibold text-secondary">${e.amountDue.toFixed(0)}</div>
+                </div>
+                <div className="bg-green-50 rounded-lg px-2 py-1.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Paid</div>
+                  <div className="text-sm font-semibold text-green-700">${e.amountPaid.toFixed(0)}</div>
+                </div>
+                <div className={`rounded-lg px-2 py-1.5 ${e.amountDue - e.amountPaid > 0 ? "bg-orange-50" : "bg-green-50"}`}>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Balance</div>
+                  <div className={`text-sm font-semibold ${e.amountDue - e.amountPaid > 0 ? "text-orange-600" : "text-green-700"}`}>
+                    ${(e.amountDue - e.amountPaid).toFixed(0)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Method + Receipt */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                {e.paymentMethod && e.paymentMethod !== "-" ? (
+                  <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" />{e.paymentMethod}</span>
+                ) : <span>—</span>}
+                {e.receiptId && e.receiptId !== "-" ? (
+                  <span className="flex items-center gap-1"><Receipt className="w-3 h-3" />#{e.receiptId}</span>
+                ) : null}
+                {e.enrollDate && (
+                  <span>Enrolled: {new Date(e.enrollDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer summary */}
+        <div className="border-t border-border px-5 py-4 bg-gray-50">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Due</div>
+              <div className="text-base font-bold text-secondary">${totalDue.toFixed(0)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Paid</div>
+              <div className="text-base font-bold text-green-700">${totalPaid.toFixed(0)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Balance</div>
+              <div className={`text-base font-bold ${balance > 0 ? "text-orange-600" : "text-green-700"}`}>${balance.toFixed(0)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 type SortKey = "id" | "name" | "grade" | "primaryCourse" | "primaryLevel" | "totalPaid" | "worstPayStatus" | "isActive";
@@ -808,9 +919,10 @@ export default function Students() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // ── panels / dialogs
-  const [editStudent,   setEditStudent]   = useState<Student | null>(null);
-  const [showRegister,  setShowRegister]  = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editStudent,    setEditStudent]    = useState<Student | null>(null);
+  const [showRegister,   setShowRegister]   = useState(false);
+  const [confirmDelete,  setConfirmDelete]  = useState(false);
+  const [paymentDrawer,  setPaymentDrawer]  = useState<Student | null>(null);
   const [confirmInactive, setConfirmInactive] = useState(false);
   const [confirmActive,   setConfirmActive]   = useState(false);
   const [actionLoading,   setActionLoading]   = useState(false);
@@ -1230,9 +1342,7 @@ export default function Students() {
                   { label: "Level",   key: "primaryLevel" as SortKey, w: "w-16"  },
                   { label: "Section",                                  w: "w-24", noSort: true },
                   { label: "Parent Contact",                           w: "w-52", noSort: true },
-                  { label: "Payment", key: "worstPayStatus"as SortKey,w: "w-20"  },
-                  { label: "Paid",    key: "totalPaid"    as SortKey, w: "w-16"  },
-                  { label: "Method",                                   w: "w-20", noSort: true },
+                  { label: "Payment", key: "worstPayStatus"as SortKey,w: "w-28"  },
                   { label: "Status",  key: "isActive"     as SortKey, w: "w-20"  },
                   { label: "",                                         w: "w-16", noSort: true },
                 ].map((col) => (
@@ -1250,7 +1360,7 @@ export default function Students() {
             <tbody>
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="text-center py-16 text-muted-foreground text-sm">
+                  <td colSpan={10} className="text-center py-16 text-muted-foreground text-sm">
                     No students found.
                     {isAdmin && <> <button onClick={() => setShowRegister(true)} className="text-primary hover:underline ml-1">Register one?</button></>}
                   </td>
@@ -1307,14 +1417,18 @@ export default function Students() {
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-2">
-                    <span className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${statusBadge[s.worstPayStatus]}`}>
-                      {s.worstPayStatus}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 font-medium text-green-700 whitespace-nowrap">${s.totalPaid.toFixed(0)}</td>
-                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                    {s.enrollments[0]?.paymentMethod !== "-" ? s.enrollments[0]?.paymentMethod : "—"}
+                  <td
+                    className="px-3 py-2 cursor-pointer group"
+                    title="Click to view payment details"
+                    onClick={() => setPaymentDrawer(s)}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${statusBadge[s.worstPayStatus]}`}>
+                        {s.worstPayStatus}
+                      </span>
+                      <span className="text-xs font-medium text-green-700 whitespace-nowrap">${s.totalPaid.toFixed(0)}</span>
+                      <CreditCard className="w-3 h-3 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
@@ -1445,6 +1559,10 @@ export default function Students() {
           onConfirm={() => doBulkSetStatus(true)}
           onCancel={() => setConfirmActive(false)}
         />
+      )}
+
+      {paymentDrawer && (
+        <PaymentDrawer student={paymentDrawer} onClose={() => setPaymentDrawer(null)} />
       )}
     </div>
   );
