@@ -8,6 +8,7 @@ import {
   ShieldCheck, UserPlus, Layers, Quote, Mail, Newspaper, HelpCircle, StickyNote,
 } from "lucide-react";
 import NaradJiBot from "./components/NaradJiBot";
+import NotesTab from "./components/NotesTab";
 import { Button } from "@/components/ui/button";
 
 type Permission_ = Permission;
@@ -67,7 +68,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     emoji: "⚙️",
     items: [
       { label: "User Management",      icon: ShieldCheck,     path: "/admin/roles",             permission: "roles" },
-      { label: "My Sticky Notes",      icon: StickyNote,      path: "/admin/sticky-notes",      permission: "messaging" },
       { label: "Settings",             icon: Settings,        path: "/admin/settings",          permission: "settings" },
       { label: "Help & Guide",         icon: HelpCircle,      path: "/admin/help",              permission: "help" },
     ],
@@ -81,7 +81,6 @@ const TEACHER_NAV_ITEMS: NavItem[] = [
   { label: "Courses & Classes",  icon: BookOpen,      path: "/admin/courses",        permission: "courses" },
   { label: "Course Documents",   icon: FileText,      path: "/admin/documents",      permission: "documents" },
   { label: "Messaging Center",   icon: Newspaper,     path: "/admin/weekly-updates", permission: "weeklyUpdates" },
-  { label: "My Sticky Notes",   icon: StickyNote,    path: "/admin/sticky-notes",   permission: "messaging" },
   { label: "Settings",           icon: Settings,      path: "/admin/settings",       permission: "settings" },
   { label: "Help & Guide",       icon: HelpCircle,    path: "/admin/help",           permission: "help" },
 ];
@@ -91,6 +90,7 @@ const TEACHER_NAV_ITEMS: NavItem[] = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notesOpen,   setNotesOpen]   = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -241,6 +241,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {user && (
             <div className="flex items-center gap-3">
+              {/* Sticky Notes button */}
+              <button
+                onClick={() => setNotesOpen(v => !v)}
+                title="My Sticky Notes"
+                className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                  notesOpen
+                    ? "bg-amber-100 text-amber-600 shadow-inner"
+                    : "hover:bg-gray-100 text-muted-foreground hover:text-secondary"
+                }`}
+              >
+                <StickyNote className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+              </button>
+
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-semibold text-secondary">{user.displayName}</div>
                 <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleBadgeColor(user.role)}`}>
@@ -260,6 +273,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       <NaradJiBot />
+
+      {/* ── Sticky Notes drawer ── */}
+      {notesOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px]"
+          onClick={() => setNotesOpen(false)}
+        />
+      )}
+      <div className={`
+        fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-white shadow-2xl flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${notesOpen ? "translate-x-0" : "translate-x-full"}
+      `}>
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+              <StickyNote className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="font-bold text-secondary text-sm">My Sticky Notes</h2>
+              <p className="text-xs text-muted-foreground">Private — only visible to you</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setNotesOpen(false)}
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center text-muted-foreground hover:text-secondary transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Drawer body */}
+        <div className="flex-1 overflow-y-auto p-5">
+          <NotesTab />
+        </div>
+      </div>
     </div>
   );
 }
