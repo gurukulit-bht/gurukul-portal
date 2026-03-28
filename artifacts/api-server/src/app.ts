@@ -31,6 +31,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Disable caching for all API routes — query params change results but ETags
+// are body-based so identical result sets (e.g. same 37 members) return 304
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
+
 app.use("/api", router);
 
 // In production, serve the built frontend and handle SPA fallback
