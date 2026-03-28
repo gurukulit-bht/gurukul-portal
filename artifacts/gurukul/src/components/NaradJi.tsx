@@ -184,7 +184,7 @@ export function NaradJi() {
     if (!pagesWithBubble.includes(location)) return;
     const showTimer = setTimeout(() => {
       setShowBubble(true);
-      const hideTimer = setTimeout(() => setShowBubble(false), 30000);
+      const hideTimer = setTimeout(() => setShowBubble(false), 5000);
       return () => clearTimeout(hideTimer);
     }, 3000);
     return () => clearTimeout(showTimer);
