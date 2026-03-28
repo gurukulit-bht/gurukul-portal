@@ -62,7 +62,7 @@ export const adminApi = {
     list: (params?: Record<string, string>) => {
       const qs = params ? "?" + new URLSearchParams(params).toString() : "";
       return request<{
-        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number; isActive: boolean }>;
+        data: Array<{ id: number; name: string | null; email: string | null; phone: string | null; isExistingMember: boolean; policyAgreed: boolean; membershipYear: number | null; createdAt: string; studentCount: number; isActive: boolean; expiringSoon: boolean }>;
         total: number; page: number; limit: number;
         stats: { totalMembers: number; activeCount: number; expiredCount: number; withStudents: number; withoutStudents: number; addedThisMonth: number };
       }>("GET", `/members${qs}`);
@@ -84,6 +84,7 @@ export const adminApi = {
     fullUpdate: (id: number, data: { name: string; email?: string | null; phone?: string | null; isExistingMember?: boolean; policyAgreed?: boolean; membershipYear?: number | null }) =>
       request("PUT", `/members/${id}`, data),
     patch: (id: number, data: unknown) => request("PATCH", `/members/${id}`, data),
+    renew: (id: number) => request<{ id: number; createdAt: string; membershipYear: number | null }>("PATCH", `/members/${id}/renew`, {}),
     remove: (id: number) => request("DELETE", `/members/${id}`),
   },
   backfill: {

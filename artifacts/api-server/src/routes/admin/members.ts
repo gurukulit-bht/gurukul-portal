@@ -76,8 +76,9 @@ router.get("/", async (req, res) => {
         policyAgreed:     membersTable.policyAgreed,
         membershipYear:   membersTable.membershipYear,
         createdAt:        membersTable.createdAt,
-        studentCount:     sql<number>`(SELECT COUNT(*) FROM students WHERE students.member_id = ${membersTable.id})`.as("student_count"),
-        isActive:         sql<boolean>`${membersTable.createdAt} >= NOW() - INTERVAL '1 year'`.as("is_active"),
+        studentCount:     sql<number>`(SELECT COUNT(*)::int FROM students WHERE students.member_id = members.id)`.as("student_count"),
+        isActive:         sql<boolean>`(members.created_at >= NOW() - INTERVAL '1 year')`.as("is_active"),
+        expiringSoon:     sql<boolean>`(members.created_at >= NOW() - INTERVAL '1 year' AND members.created_at < NOW() - INTERVAL '335 days')`.as("expiring_soon"),
       })
       .from(membersTable)
       .where(where)
@@ -253,6 +254,30 @@ router.put("/:id", async (req, res) => {
     }
     req.log.error({ err }, "Member update failed");
     res.status(500).json({ error: "Member update failed" });
+  }
+});
+
+// PATCH /api/admin/members/:id/renew — reset membership clock to now
+router.patch("/:id/renew", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid member id" });
+
+    const [member] = await db
+      .update(membersTable)
+      .set({
+        createdAt:     sql`NOW()`,
+        membershipYear: new Date().getFullYear(),
+      })
+      .where(eq(membersTable.id, id))
+      .returning();
+
+    if (!member) return res.status(404).json({ error: "Member not found" });
+
+    res.json(member);
+  } catch (err) {
+    req.log.error({ err }, "Member renew failed");
+    res.status(500).json({ error: "Member renewal failed" });
   }
 });
 

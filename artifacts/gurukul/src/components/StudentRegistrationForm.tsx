@@ -236,6 +236,23 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
   const [memberPhone, setMemberPhone] = useState("");
   const [p1Errors,    setP1Errors]    = useState<Errors>({});
 
+  // Inline member renewal (during registration for expired members)
+  const [renewingMember, setRenewingMember] = useState(false);
+
+  async function handleRenewMember() {
+    if (!foundMember) return;
+    setRenewingMember(true);
+    try {
+      const renewed = await adminApi.members.renew(foundMember.id);
+      setFoundMember({ ...foundMember, createdAt: renewed.createdAt });
+      toast.success("Membership renewed — you may now continue.");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Renewal failed");
+    } finally {
+      setRenewingMember(false);
+    }
+  }
+
   // Membership renewal acknowledgment
   const [membershipConfirmed, setMembershipConfirmed] = useState(false);
   const [membershipError,     setMembershipError]     = useState("");
@@ -828,12 +845,26 @@ export function StudentRegistrationForm({ onSuccess, onBack, submitLabel = "Regi
                         <strong>{memberExpiry?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.
                       </span>
                     </>
-                  : <><AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                      <span>
-                        Membership expired on{" "}
-                        <strong>{memberExpiry?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.{" "}
-                        Please contact the Gurukul office to renew before registering students.
-                      </span>
+                  : <>
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p>
+                          Membership expired on{" "}
+                          <strong>{memberExpiry?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.{" "}
+                          Renew to continue.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleRenewMember}
+                          disabled={renewingMember}
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 transition-colors"
+                        >
+                          {renewingMember
+                            ? <><Loader2 className="w-3 h-3 animate-spin" /> Renewing…</>
+                            : <><RefreshCw className="w-3 h-3" /> Renew Membership</>
+                          }
+                        </button>
+                      </div>
                     </>
                 }
               </div>

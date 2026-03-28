@@ -6,6 +6,7 @@ import {
   Search, Plus, Pencil, Trash2, X, Loader2, Users,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download,
   GraduationCap, Phone, Mail, ExternalLink, UserPlus, ShieldAlert, CheckCircle2,
+  AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ type Member = {
   createdAt: string;
   studentCount: number;
   isActive: boolean;
+  expiringSoon: boolean;
 };
 
 type MemberDetail = Member & {
@@ -242,12 +244,27 @@ function MemberModal({ editing, onClose, onSaved }: {
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
+function DetailPanel({ member, onClose, onEdit, onDelete, onRenew, canEdit }: {
   member: MemberDetail; onClose: () => void; onEdit: () => void;
-  onDelete: () => void; canEdit: boolean;
+  onDelete: () => void; onRenew: () => void; canEdit: boolean;
 }) {
+  const [renewing, setRenewing] = useState(false);
   const exp    = expiresOn(member.createdAt);
   const active = member.isActive;
+
+  async function handleRenew() {
+    if (!confirm(`Renew membership for "${member.name}"? This resets the 1-year membership clock to today.`)) return;
+    setRenewing(true);
+    try {
+      await adminApi.members.renew(member.id);
+      toast.success("Membership renewed — active for another year");
+      onRenew();
+    } catch (err) {
+      toast.error((err as Error).message ?? "Renewal failed");
+    } finally {
+      setRenewing(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex">
@@ -264,9 +281,12 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
                   Member #{member.id}
                 </span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                  {active ? "Active" : "Expired"}
-                </span>
+                {!active
+                  ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">Expired</span>
+                  : member.expiringSoon
+                    ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-200 text-amber-800">Expiring Soon</span>
+                    : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>
+                }
               </div>
             </div>
           </div>
@@ -279,6 +299,12 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
           <div className="mx-6 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
             <p>Membership expired on <strong>{exp.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>. This member cannot register new students until renewed.</p>
+          </div>
+        )}
+        {active && member.expiringSoon && (
+          <div className="mx-6 mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <p>Membership expires on <strong>{exp.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong> — within the next 30 days. Consider renewing now.</p>
           </div>
         )}
 
@@ -351,10 +377,21 @@ function DetailPanel({ member, onClose, onEdit, onDelete, canEdit }: {
         </div>
 
         {canEdit && (
-          <div className="px-6 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
+          <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap gap-2 sticky bottom-0 bg-white">
             <Button variant="outline" className="flex-1" onClick={onEdit}>
               <Pencil className="w-4 h-4 mr-2" /> Edit
             </Button>
+            {(!active || member.expiringSoon) && (
+              <Button
+                variant="outline"
+                className="flex-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                onClick={handleRenew}
+                disabled={renewing}
+              >
+                {renewing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Renew
+              </Button>
+            )}
             {member.students.length === 0 && (
               <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={onDelete}>
                 <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -603,9 +640,12 @@ export default function Members() {
                       {m.phone ? formatUSPhone(m.phone.replace(/\D/g, "")) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
-                        {m.isActive ? "Active" : "Expired"}
-                      </span>
+                      {!m.isActive
+                        ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-red-100 text-red-600">Expired</span>
+                        : m.expiringSoon
+                          ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-amber-100 text-amber-700">Expiring Soon</span>
+                          : <span className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-emerald-100 text-emerald-700">Active</span>
+                      }
                     </td>
                     <td className="px-3 py-3 text-center hidden lg:table-cell">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.studentCount > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>
@@ -674,6 +714,7 @@ export default function Members() {
           onClose={() => setDetailMember(null)}
           onEdit={() => openEdit(detailMember)}
           onDelete={() => handleDelete(detailMember)}
+          onRenew={() => { setDetailMember(null); fetchMembers({ resetPage: false }); }}
           canEdit={canEdit}
         />
       )}
