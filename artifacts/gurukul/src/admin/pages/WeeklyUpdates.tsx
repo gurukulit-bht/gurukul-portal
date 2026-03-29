@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Send, Trash2, Pencil, Loader2, BookOpen, Lock, X, Check,
   Eye, AlertTriangle, Bell, ChevronDown, ChevronRight, Pin,
-  StickyNote, MessageSquare, CalendarDays, MapPin, Clock, RefreshCw,
+  MessageSquare, CalendarDays, MapPin, Clock, RefreshCw,
 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 import { useAuth } from "../AuthContext";
 import { toast } from "sonner";
-import NotesTab from "../components/NotesTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -550,11 +549,7 @@ export default function WeeklyUpdates() {
         </p>
       </div>
 
-      {/* Two-column layout: main content + sticky notes sidebar */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-
-        {/* ── Main content column ── */}
-        <div className="xl:col-span-2 space-y-4">
+      <div className="space-y-4">
 
           {/* Tabs */}
           <div className="flex gap-0 border-b border-border overflow-x-auto">
@@ -908,21 +903,7 @@ export default function WeeklyUpdates() {
         </div>
       )}
 
-        </div>{/* end main content column */}
-
-        {/* ── Sticky Notes sidebar ── */}
-        <div className="xl:col-span-1">
-          <div className="sticky top-4 space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <StickyNote className="w-4 h-4 text-amber-500" />
-              <h3 className="font-bold text-secondary text-sm">My Sticky Notes</h3>
-              <span className="text-xs text-muted-foreground">(private)</span>
-            </div>
-            <NotesTab />
-          </div>
-        </div>
-
-      </div>{/* end grid */}
+      </div>
     </div>
   );
 }
