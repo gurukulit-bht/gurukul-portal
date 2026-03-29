@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { teacherNotesTable } from "@workspace/db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, count } from "drizzle-orm";
+
+const NOTE_LIMIT = 25;
 
 const router = Router();
 
@@ -41,6 +43,15 @@ router.post("/", async (req, res) => {
     content: string; date: string; color?: string;
   };
   if (!content?.trim() || !date) return res.status(400).json({ error: "content and date are required" });
+
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(teacherNotesTable)
+    .where(eq(teacherNotesTable.ownerKey, ownerKey));
+
+  if (total >= NOTE_LIMIT) {
+    return res.status(422).json({ error: `You can save at most ${NOTE_LIMIT} sticky notes. Delete one to add a new note.` });
+  }
 
   const [note] = await db
     .insert(teacherNotesTable)

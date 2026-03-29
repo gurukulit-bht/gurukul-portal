@@ -25,6 +25,8 @@ function noteStyle(color: string) {
   return NOTE_COLORS.find(c => c.key === color) ?? NOTE_COLORS[0];
 }
 
+const NOTE_LIMIT = 25;
+
 function todayStr() { return new Date().toISOString().split("T")[0]; }
 
 function fmtDateLong(d: string) {
@@ -122,61 +124,74 @@ export default function NotesTab({ standalone = false }: { standalone?: boolean 
       )}
 
       {/* Compose */}
-      <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex flex-col gap-1 min-w-[130px]">
-            <label className="text-xs font-medium text-muted-foreground">Date</label>
-            <input
-              type="date"
-              className="input text-sm h-9 px-3"
-              value={noteDate}
-              onChange={e => setNoteDate(e.target.value)}
-            />
+      {notes.length >= NOTE_LIMIT ? (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 flex items-start gap-3">
+          <StickyNote className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">{NOTE_LIMIT} / {NOTE_LIMIT} notes — limit reached</p>
+            <p className="text-xs text-amber-700 mt-0.5">Delete a note to add a new one.</p>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Palette className="w-3 h-3" /> Color
-            </label>
-            <div className="flex items-center gap-1.5 h-9">
-              {NOTE_COLORS.map(c => (
-                <button
-                  key={c.key}
-                  onClick={() => setColor(c.key)}
-                  title={c.label}
-                  className={`w-6 h-6 rounded-full ${c.dot} transition-all border-2 ${
-                    color === c.key ? "border-secondary scale-125 shadow" : "border-transparent hover:scale-110"
-                  }`}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex flex-col gap-1 min-w-[130px]">
+                <label className="text-xs font-medium text-muted-foreground">Date</label>
+                <input
+                  type="date"
+                  className="input text-sm h-9 px-3"
+                  value={noteDate}
+                  onChange={e => setNoteDate(e.target.value)}
                 />
-              ))}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Palette className="w-3 h-3" /> Color
+                </label>
+                <div className="flex items-center gap-1.5 h-9">
+                  {NOTE_COLORS.map(c => (
+                    <button
+                      key={c.key}
+                      onClick={() => setColor(c.key)}
+                      title={c.label}
+                      className={`w-6 h-6 rounded-full ${c.dot} transition-all border-2 ${
+                        color === c.key ? "border-secondary scale-125 shadow" : "border-transparent hover:scale-110"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
+            <span className="text-xs text-muted-foreground">{notes.length} / {NOTE_LIMIT}</span>
+          </div>
+
+          <textarea
+            className={`w-full rounded-xl border-2 px-4 py-3 text-sm text-secondary placeholder:text-muted-foreground focus:outline-none resize-none min-h-[100px] transition-colors ${currentStyle.bg} ${currentStyle.border}`}
+            placeholder="Jot down a note… (only you can see this)"
+            value={draft}
+            maxLength={2500}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAdd(); }}
+          />
+
+          <div className="flex items-center justify-between">
+            <span className={`text-xs ${draft.length >= 2250 ? (draft.length >= 2500 ? "text-red-600 font-semibold" : "text-amber-600") : "text-muted-foreground"}`}>
+              {draft.length > 0 ? `${draft.length} / 2500 chars${draft.length < 2500 ? " · Ctrl+Enter to save" : " — limit reached"}` : "Private — only visible to you · 2500 char limit"}
+            </span>
+            <button
+              onClick={handleAdd}
+              disabled={saving || !draft.trim()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-white text-sm font-semibold hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                : <><Plus className="w-4 h-4" /> Add Note</>}
+            </button>
           </div>
         </div>
-
-        <textarea
-          className={`w-full rounded-xl border-2 px-4 py-3 text-sm text-secondary placeholder:text-muted-foreground focus:outline-none resize-none min-h-[100px] transition-colors ${currentStyle.bg} ${currentStyle.border}`}
-          placeholder="Jot down a note… (only you can see this)"
-          value={draft}
-          maxLength={2500}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAdd(); }}
-        />
-
-        <div className="flex items-center justify-between">
-          <span className={`text-xs ${draft.length >= 2250 ? (draft.length >= 2500 ? "text-red-600 font-semibold" : "text-amber-600") : "text-muted-foreground"}`}>
-            {draft.length > 0 ? `${draft.length} / 2500 chars${draft.length < 2500 ? " · Ctrl+Enter to save" : " — limit reached"}` : "Private — only visible to you · 2500 char limit"}
-          </span>
-          <button
-            onClick={handleAdd}
-            disabled={saving || !draft.trim()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-white text-sm font-semibold hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-              : <><Plus className="w-4 h-4" /> Add Note</>}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Notes grid */}
       {loading ? (
