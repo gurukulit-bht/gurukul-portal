@@ -246,8 +246,11 @@ export default function MessagingCenter() {
     const allR = [...parentR, ...teacherR];
     if (!allR.length) { alert("No recipients selected."); return; }
 
+    // If ALL teachers are selected → null (broadcast). Only specify emails for a subset.
+    const selectedTeacherList = teacherList.filter(t => selectedTeacherEmails.has(t.email));
+    const allTeachersSelected = selectedTeacherList.length === teacherList.length && teacherList.length > 0;
     const chosenTeacherEmails = sendTo !== "parents"
-      ? teacherList.filter(t => selectedTeacherEmails.has(t.email)).map(t => t.email).join(",")
+      ? (allTeachersSelected ? undefined : selectedTeacherList.map(t => t.email).join(","))
       : undefined;
 
     setSending(true);

@@ -426,12 +426,14 @@ export default function WeeklyUpdates() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rows, levels] = await Promise.all([
+      const [rows, levels, msgs] = await Promise.all([
         adminApi.weeklyUpdates.list() as Promise<Update[]>,
         adminApi.courses.levels() as Promise<RawLevel[]>,
+        adminApi.messaging.teacherInbox().catch(() => [] as AdminMsg[]),
       ]);
       setUpdates(rows);
       setAllLevels(levels);
+      setAdminMsgs(msgs as AdminMsg[]);
 
       // Auto-cascade when teacher has only one course or level
       const uniqueCourses = [...new Map(levels.map(l => [l.courseId, l.courseName])).entries()];
